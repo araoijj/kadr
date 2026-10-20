@@ -9,9 +9,16 @@ struct LoupeView: View {
             ZStack {
                 if let p = lib.current {
                     if lib.zoom100 {
-                        FullResView(photo: p)
+                        FullResView(photo: p, adj: lib.showOriginal ? .none : p.adj)
                     } else {
-                        PreviewImage(photo: p)
+                        Group {
+                            // Для отбора хватает встроенного превью; с обработкой — проявляем RAW.
+                            if p.adj.isIdentity && lib.inspectorTab != .edit {
+                                PreviewImage(photo: p)
+                            } else {
+                                EditedImage(photo: p, adj: lib.showOriginal ? .none : p.adj)
+                            }
+                        }
                             .padding(20)
                             .onTapGesture(count: 2) { lib.zoom100 = true }
                             .photoContextMenu(p)
@@ -82,8 +89,36 @@ struct PreviewImage: View {
 }
 
 /// Полное проявление RAW, 1 пиксель снимка = 1 пиксель экрана. Тянуть мышью / скроллить.
+/// Кадр, проявленный из RAW с обработкой. Пока считается первый раз — показываем превью.
+struct EditedImage: View {
+    let photo: Photo
+    let adj: Adjustments
+    @State private var image: CGImage?
+    @State private var shownFor: URL?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(decorative: image, scale: 1)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .opacity(photo.rejected ? 0.45 : 1)
+            } else {
+                PreviewImage(photo: photo)
+            }
+        }
+        .task(id: ThumbKey(url: photo.url, adj: adj)) {
+            if shownFor != photo.url { image = nil; shownFor = photo.url }
+            let screen = NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560
+            if let img = await Renderer.shared.render(photo.url, adj, maxSide: min(screen, 3200)) { image = img }
+        }
+    }
+}
+
 struct FullResView: View {
     let photo: Photo
+    var adj: Adjustments = .none
     @State private var image: CGImage?
     @State private var failed = false
 
@@ -105,15 +140,13 @@ struct FullResView: View {
                 }
             }
         }
-        .task(id: photo.id) {
-            image = nil
+        .task(id: ThumbKey(url: photo.url, adj: adj)) {
             failed = false
-            let url = photo.url
-            let img = await Task.detached(priority: .userInitiated) { ImageStore.shared.fullImage(url) }.value
+            let img = await Renderer.shared.render(photo.url, adj, maxSide: nil, channel: "full")
             if Task.isCancelled { return }
-            image = img
-            failed = img == nil
+            if let img { image = img } else if image == nil { failed = true }
         }
+        .onChange(of: photo.id) { _, _ in image = nil }
     }
 }
 
@@ -171,10 +204,8 @@ struct StripCell: View {
                     .padding(3)
             }
         }
-        .task(id: photo.id) {
-            if let c = ImageStore.shared.cachedPreview(photo.url) { image = c; return }
-            let url = photo.url
-            image = await Task.detached(priority: .utility) { ImageStore.shared.preview(url) }.value
+        .task(id: ThumbKey(url: photo.url, adj: photo.adj)) {
+            if let img = await Renderer.thumb(for: photo) { image = img }
         }
     }
 }

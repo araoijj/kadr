@@ -69,6 +69,7 @@ struct Photo: Identifiable, Equatable {
     var rating: Int = 0          // 0…5
     var rejected: Bool = false   // в XMP хранится как Rating = -1
     var label: ColorLabel?
+    var adj = Adjustments()      // обработка (хранится в .kadr/edits.json)
 
     var exif = ExifInfo()
     var hash: UInt64?            // dHash превью — для поиска похожих

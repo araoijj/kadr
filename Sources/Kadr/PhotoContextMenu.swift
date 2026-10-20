@@ -31,6 +31,19 @@ struct PhotoContextMenu: ViewModifier {
         Button(photo.rejected ? "Вернуть" + suffix : "Отклонить" + suffix,
                systemImage: photo.rejected ? "arrow.uturn.backward" : "xmark.circle") { act { lib.toggleReject() } }
 
+        Menu("Применить стиль" + suffix) {
+            ForEach(lib.styles) { st in
+                Button(st.name) { act { lib.applyStyle(st) } }
+            }
+        }
+        if n == 1 {
+            Button("Копировать обработку", systemImage: "doc.on.doc") { act { lib.copyAdjustments() } }
+                .disabled(photo.adj.isIdentity)
+        }
+        Button("Вставить обработку" + suffix, systemImage: "doc.on.clipboard") { act { lib.pasteAdjustments() } }
+            .disabled(lib.copiedAdj == nil)
+        Button("Сбросить обработку" + suffix, systemImage: "arrow.counterclockwise") { act { lib.resetAdjustments() } }
+
         Divider()
 
         if n == 1 && !lib.loupe {

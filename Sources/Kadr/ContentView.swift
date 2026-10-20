@@ -24,8 +24,8 @@ struct ContentView: View {
                 if let t = lib.toast { Toast(text: t) }
             }
             .inspector(isPresented: $lib.showInfo) {
-                InfoPanel()
-                    .inspectorColumnWidth(min: 240, ideal: 270, max: 340)
+                Inspector()
+                    .inspectorColumnWidth(min: 260, ideal: 290, max: 360)
             }
         }
         .toolbar { toolbar }
@@ -151,6 +151,7 @@ struct KeyHints: View {
         ("6–9", "цвет"), ("Пробел", "сетка / кадр"), ("Z", "зум 100%"), ("I", "инфо"),
         ("S", "кадр в папку"), ("⌘S", "сохранить отобранные"),
         ("⌘ / ⇧ + клик", "выделить несколько"), ("⌘A", "выделить всё"),
+        ("E", "обработка"), ("\\", "до / после"),
     ]
 
     var body: some View {

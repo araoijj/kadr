@@ -54,6 +54,98 @@ final class Library {
     var toast: String?
 
     private var index: [URL: Int] = [:]
+
+    // MARK: - Обработка
+
+    enum InspectorTab: Hashable { case info, edit }
+    var inspectorTab: InspectorTab = .info
+    var showOriginal = false           // «до» — клавиша \
+    var styles: [Style] = Style.builtIns + StyleStore.load()
+    var luts: [String] = LUTStore.shared.list()
+    var copiedAdj: Adjustments?
+    private var saveEditsTask: Task<Void, Never>?
+
+    /// Ползунки двигают только текущий кадр (как основной вариант в Capture One).
+    func setAdjustments(_ a: Adjustments) {
+        guard let id = currentID, let i = index[id] else { return }
+        photos[i].adj = a
+        scheduleEditsSave()
+    }
+
+    /// Стиль, вставка и сброс — на все выделенные.
+    private func setAdjustmentsForTargets(_ change: (inout Adjustments) -> Void) {
+        for t in targets {
+            guard let i = index[t.id] else { continue }
+            change(&photos[i].adj)
+        }
+        scheduleEditsSave()
+    }
+
+    func applyStyle(_ st: Style) {
+        setAdjustmentsForTargets { $0 = st.adj }
+        flash("Стиль «\(st.name)»" + countSuffix)
+    }
+
+    func copyAdjustments() {
+        guard let p = current else { return }
+        copiedAdj = p.adj
+        flash("Обработка скопирована")
+    }
+
+    func pasteAdjustments() {
+        guard let a = copiedAdj else { flash("Сначала скопируйте обработку (⌘⇧C)"); return }
+        setAdjustmentsForTargets { $0 = a }
+        flash("Обработка вставлена" + countSuffix)
+    }
+
+    func resetAdjustments() {
+        setAdjustmentsForTargets { $0 = .none }
+        flash("Обработка сброшена" + countSuffix)
+    }
+
+    func saveStyle(named name: String) {
+        guard let p = current, !p.adj.isIdentity else { flash("Нечего сохранять: кадр без обработки"); return }
+        let n = name.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty else { return }
+        styles.removeAll { !$0.builtIn && $0.name == n }
+        styles.append(Style(name: n, adj: p.adj))
+        StyleStore.save(styles)
+        flash("Стиль «\(n)» сохранён")
+    }
+
+    func deleteStyle(_ st: Style) {
+        guard !st.builtIn else { return }
+        styles.removeAll { $0.id == st.id }
+        StyleStore.save(styles)
+    }
+
+    func importLUTs() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.allowedContentTypes = [.init(filenameExtension: "cube")!]
+        panel.message = "Выберите LUT-файлы .cube"
+        guard panel.runModal() == .OK else { return }
+        let ok = LUTStore.shared.importFiles(panel.urls)
+        luts = LUTStore.shared.list()
+        if let first = ok.first, var a = current?.adj {
+            a.lut = first
+            setAdjustments(a)
+        }
+        flash(ok.isEmpty ? "Не удалось прочитать LUT" : "Добавлено LUT: \(ok.count)")
+    }
+
+    func revealLUTFolder() { NSWorkspace.shared.open(AppFolders.luts) }
+
+    private func scheduleEditsSave() {
+        saveEditsTask?.cancel()
+        guard let folder else { return }
+        let edits = Dictionary(photos.map { ($0.name, $0.adj) }, uniquingKeysWith: { a, _ in a })
+        saveEditsTask = Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            await Task.detached { EditStore.save(edits, in: folder) }.value
+        }
+    }
     private var analysisTask: Task<Void, Never>?
 
     // MARK: - Выборка
@@ -118,10 +210,13 @@ final class Library {
             ImageStore.rawExtensions.contains($0.pathExtension.lowercased()) || !rawBases.contains($0.deletingPathExtension().lastPathComponent)
         }
 
+        let edits = EditStore.load(url)
         photos = chosen.map { f in
             let size = (try? f.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
             let s = Sidecar.read(for: f)
-            return Photo(id: f, fileSize: size, rating: s.rating, rejected: s.rejected, label: s.label)
+            var p = Photo(id: f, fileSize: size, rating: s.rating, rejected: s.rejected, label: s.label)
+            p.adj = edits[f.lastPathComponent] ?? .none
+            return p
         }
         photos.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         reindex()
@@ -438,18 +533,19 @@ final class Library {
         guard let target = Exporter.targetFolder(export, shoot: folder) else { chooseExportFolder(); return }
         export.save()
         let settings = export
-        let urls = list.map(\.url)
+        let items = exportItems(list)
+        let shoot = folder?.lastPathComponent
         exportDone = 0
-        exportTotal = urls.count
+        exportTotal = items.count
         exportTask = Task { [weak self] in
             var ok = 0
             // RAW → JPEG тяжёлый (~1–2 с на кадр 50 Мп), поэтому по 3 параллельно.
             let workers = settings.format == .jpeg ? 3 : 1
             await withTaskGroup(of: Bool.self) { group in
-                var it = urls.makeIterator()
+                var it = items.makeIterator()
                 func add() {
-                    guard let u = it.next() else { return }
-                    group.addTask { Exporter.export(u, to: target, settings) }
+                    guard let item = it.next() else { return }
+                    group.addTask { Exporter.export(item, to: target, settings, shootName: shoot) }
                 }
                 for _ in 0..<workers { add() }
                 while let r = await group.next() {
@@ -464,6 +560,10 @@ final class Library {
     }
 
     func cancelExport() { exportTask?.cancel() }
+
+    private func exportItems(_ list: [Photo]) -> [ExportItem] {
+        list.enumerated().map { ExportItem(url: $1.url, adj: $1.adj, date: $1.exif.date, index: $0 + 1) }
+    }
 
     private func finishExport(ok: Int, target: URL, moved: Bool) {
         exportTotal = 0
@@ -486,9 +586,10 @@ final class Library {
         s.format = .original
         s.move = false
         guard let target = Exporter.targetFolder(s, shoot: folder) else { return }
-        let urls = list.map(\.url)
+        let items = exportItems(list)
+        let shoot = folder?.lastPathComponent
         Task {
-            let ok = await Task.detached { urls.filter { Exporter.export($0, to: target, s) }.count }.value
+            let ok = await Task.detached { items.filter { Exporter.export($0, to: target, s, shootName: shoot) }.count }.value
             flash(ok > 0 ? "→ \(target.lastPathComponent): \(ok) шт." : "Уже есть в \(target.lastPathComponent)")
         }
     }

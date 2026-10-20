@@ -23,13 +23,30 @@ struct KadrApp: App {
                 Button("Открыть папку…") { library.chooseFolder() }
                     .keyboardShortcut("o")
             }
+            CommandMenu("Обработка") {
+                Button("Копировать обработку") { library.copyAdjustments() }
+                    .keyboardShortcut("c", modifiers: [.command, .shift])
+                Button("Вставить обработку") { library.pasteAdjustments() }
+                    .keyboardShortcut("v", modifiers: [.command, .shift])
+                Button("Сбросить обработку") { library.resetAdjustments() }
+                    .keyboardShortcut("r", modifiers: [.command, .option])
+                Divider()
+                Menu("Применить стиль") {
+                    ForEach(library.styles) { st in
+                        Button(st.name) { library.applyStyle(st) }
+                    }
+                }
+                Button("Загрузить LUT (.cube)…") { library.importLUTs() }
+                Divider()
+                Toggle("Показать до обработки", isOn: $library.showOriginal)
+            }
             CommandMenu("Отбор") {
                 Button("Перенести отклонённые в «_Отклонённые»") { library.moveRejected() }
                     .keyboardShortcut(.delete, modifiers: .command)
                 Button("Сохранить в папку…") { library.showExport = true }
                     .keyboardShortcut("s", modifiers: .command)
                 Button("Открыть в Capture One") { library.openVisibleInCaptureOne() }
-                    .keyboardShortcut("c", modifiers: [.command, .shift])
+                    .keyboardShortcut("o", modifiers: [.command, .shift])
                 Divider()
                 Button("Выделить всё") { library.selectAll() }
                 Button("Выделить серию") { library.selectSeries() }
@@ -77,6 +94,10 @@ struct KeyHandler {
         case "z", "я": if lib.currentID != nil { lib.loupe = true; lib.zoom100.toggle() }
         case "i", "ш": lib.showInfo.toggle()
         case "g", "п": lib.loupe = false
+        case "e", "у":
+            lib.inspectorTab = lib.inspectorTab == .edit ? .info : .edit
+            lib.showInfo = true
+        case "\\": lib.showOriginal.toggle()
         case "s", "ы": lib.quickSend()
         default: return false
         }

@@ -129,10 +129,8 @@ struct Thumbnail: View {
             .padding(.horizontal, 4)
         }
         .contentShape(Rectangle())
-        .task(id: photo.id) {
-            if let c = ImageStore.shared.cachedPreview(photo.url) { image = c; return }
-            let url = photo.url
-            image = await Task.detached(priority: .userInitiated) { ImageStore.shared.preview(url) }.value
+        .task(id: ThumbKey(url: photo.url, adj: photo.adj)) {
+            if let img = await Renderer.thumb(for: photo) { image = img }
         }
     }
 
@@ -146,6 +144,14 @@ struct Thumbnail: View {
                 }
                 if photo.duplicateOf != nil {
                     Badge(text: "Дубль", icon: "doc.on.doc", tint: .orange)
+                }
+                if !photo.adj.isIdentity {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .padding(4)
+                        .background(.black.opacity(0.55), in: Circle())
+                        .help("Есть обработка")
                 }
                 Spacer()
                 if photo.rejected {
@@ -188,4 +194,9 @@ struct Stars: View {
             .foregroundStyle(Theme.star)
         }
     }
+}
+
+struct ThumbKey: Hashable {
+    let url: URL
+    let adj: Adjustments
 }
