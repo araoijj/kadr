@@ -5,11 +5,21 @@ import SwiftUI
 /// «Подсказки» выключаются — тогда это чистый ручной отбор: кадр, лента, P / X / U и звёзды.
 struct CullView: View {
     @Environment(Library.self) private var lib
+    @State private var barHeight: CGFloat = 84
 
     var body: some View {
         VStack(spacing: 0) {
-            CullTopBar()
+            // Панель подстраивается под ширину центра, а не задаёт её: иначе вместе с «Инфо»
+            // она распирает окно и боковые панели уезжают за край.
+            Color.clear.frame(maxWidth: .infinity).frame(height: barHeight)
+                .overlay(alignment: .topLeading) {
+                    CullTopBar()
+                        .fixedSize(horizontal: false, vertical: true)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { barHeight = $0 }
+                }
+                .clipped()
             Divider()
+            GeometryReader { g in
             HStack(spacing: 0) {
                 ZStack {
                     if let p = lib.current {
@@ -21,10 +31,12 @@ struct CullView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                if lib.cullHints, let p = lib.current, !(p.cull?.faces.isEmpty ?? true) {
+                // Лица — только если кадру остаётся место (узкое окно: лица смотрятся зумом).
+                if lib.cullHints, g.size.width >= 640, let p = lib.current, !(p.cull?.faces.isEmpty ?? true) {
                     Divider()
                     FacesColumn(photo: p).frame(width: 210)
                 }
+            }
             }
             Filmstrip()
         }
@@ -38,66 +50,123 @@ struct CullTopBar: View {
     @Environment(Library.self) private var lib
 
     var body: some View {
-        @Bindable var lib = lib
-        let d = lib.decided
-        let total = lib.photos.count
-        let seen = lib.photos.filter { lib.viewed.contains($0.id) }.count
-        VStack(spacing: 6) {
-            HStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(tr("Просмотрено \(seen) из \(total)")).font(.callout.weight(.semibold)).monospacedDigit()
-                    ProgressView(value: Double(seen), total: Double(max(total, 1))).frame(width: 180)
-                }
-                counter(tr("Оставлено"), d.kept, .green)
-                counter(tr("Брак"), d.rejected, Theme.reject)
-                counter(tr("Без решения"), d.undecided, .secondary)
-                Spacer()
-                Picker("", selection: Binding(get: { lib.filter }, set: { lib.filter = $0; lib.move(0) })) {
-                    Text(tr("Все") + " \(total)").tag(PhotoFilter.all)
-                    Text(tr("Без решения") + " \(lib.count(.undecided))").tag(PhotoFilter.undecided)
-                    if lib.cullHints {
-                        Text(tr("Возможный брак") + " \(lib.count(.suspects))").tag(PhotoFilter.suspects)
-                        Text(tr("Быстрый проход") + " \(lib.count(.leaders))").tag(PhotoFilter.leaders)
+        // Широкое окно — две строки с сегментами очередей; узкое — компактно в три строки.
+        // Иначе панель распирает окно и боковые панели уезжают за край.
+        ViewThatFits(in: .horizontal) {
+            VStack(spacing: 6) {
+                HStack(spacing: 14) {
+                    progress(width: 180)
+                    counters
+                    Spacer(minLength: 8)
+                    ViewThatFits(in: .horizontal) {
+                        queuePicker.pickerStyle(.segmented).fixedSize()
+                        queuePicker.pickerStyle(.menu).fixedSize()
                     }
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-                .help(tr("Очередь: какие кадры листать"))
+                HStack(spacing: 12) {
+                    hints
+                    if lib.cullHints { strictness(labels: true); actions }
+                    Spacer(minLength: 8)
+                    ViewThatFits(in: .horizontal) {
+                        Text(tr("P — оставить · X — брак · U — снять · ← → — листать · 1–5 — звёзды"))
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
+                        Text(tr("P · X · U · ← →")).font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
+                        Color.clear.frame(width: 0, height: 0)
+                    }
+                    summary
+                }
+                .controlSize(.small)
             }
-            HStack(spacing: 12) {
-                Toggle(tr("Подсказки"), isOn: $lib.cullHints)
-                    .toggleStyle(.switch).controlSize(.small)
-                    .help(tr("Выключите — и отбор полностью ручной: без значков, очередей и автоанализа на экране"))
-                if lib.cullHints {
-                    HStack(spacing: 6) {
-                        Text(tr("мягко")).font(.caption).foregroundStyle(.secondary)
-                        Slider(value: $lib.cullStrictness, in: 0...1).frame(width: 130).controlSize(.small)
-                        Text(tr("строго")).font(.caption).foregroundStyle(.secondary)
-                    }
-                    .help(tr("Строгость поиска брака: мягко — только явный, строго — всё сомнительное"))
-                    Menu(tr("Действия")) {
-                        Button(tr("Отклонить предложенный брак…")) { lib.acceptSuggestions() }
-                        Button(tr("Оставить лучшие в сериях, остальные в брак…")) { lib.keepBestInSeries() }
-                        Divider()
-                        Button(tr("Турнир по серии или выделенным (T)")) { lib.startTournament() }
-                    }
-                    .fixedSize()
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 12) {
+                    progress(width: 110)
+                    counters
                 }
-                Spacer()
-                Text(tr("P — оставить · X — брак · U — снять · ← → — листать · 1–5 — звёзды"))
-                    .font(.caption).foregroundStyle(.secondary)
-                Button(tr("Итог…")) { lib.showCullSummary = true }
+                HStack(spacing: 8) {
+                    queuePicker.pickerStyle(.menu).fixedSize()
+                    if lib.cullHints { actions }
+                    Spacer(minLength: 0)
+                    summary
+                }
+                .controlSize(.small)
+                HStack(spacing: 8) {
+                    hints
+                    if lib.cullHints { strictness(labels: false) }
+                }
+                .controlSize(.small)
             }
-            .controlSize(.small)
         }
         .padding(.horizontal, 14).padding(.vertical, 8)
         .background(.black.opacity(0.2))
     }
 
+    private func progress(width: CGFloat) -> some View {
+        let total = lib.photos.count
+        let seen = lib.photos.filter { lib.viewed.contains($0.id) }.count
+        return VStack(alignment: .leading, spacing: 3) {
+            Text(tr("Просмотрено \(seen) из \(total)")).font(.callout.weight(.semibold)).monospacedDigit().lineLimit(1).fixedSize()
+            ProgressView(value: Double(seen), total: Double(max(total, 1))).frame(width: width)
+        }
+    }
+
+    private var counters: some View {
+        let d = lib.decided
+        return HStack(spacing: 14) {
+            counter(tr("Оставлено"), d.kept, .green)
+            counter(tr("Брак"), d.rejected, Theme.reject)
+            counter(tr("Без решения"), d.undecided, .secondary)
+        }
+        .fixedSize()
+    }
+
+    private var hints: some View {
+        @Bindable var lib = lib
+        return Toggle(tr("Подсказки"), isOn: $lib.cullHints)
+            .toggleStyle(.switch).fixedSize()
+            .help(tr("Выключите — и отбор полностью ручной: без значков, очередей и автоанализа на экране"))
+    }
+
+    private func strictness(labels: Bool) -> some View {
+        @Bindable var lib = lib
+        return HStack(spacing: 6) {
+            Text(tr("мягко")).font(.caption).foregroundStyle(.secondary).fixedSize()
+            Slider(value: $lib.cullStrictness, in: 0...1).frame(width: labels ? 130 : 100)
+            Text(tr("строго")).font(.caption).foregroundStyle(.secondary).fixedSize()
+        }
+        .help(tr("Строгость поиска брака: мягко — только явный, строго — всё сомнительное"))
+    }
+
+    private var actions: some View {
+        Menu(tr("Действия")) {
+            Button(tr("Отклонить предложенный брак…")) { lib.acceptSuggestions() }
+            Button(tr("Оставить лучшие в сериях, остальные в брак…")) { lib.keepBestInSeries() }
+            Divider()
+            Button(tr("Турнир по серии или выделенным (T)")) { lib.startTournament() }
+        }
+        .fixedSize()
+    }
+
+    private var summary: some View {
+        Button(tr("Итог…")) { lib.showCullSummary = true }.fixedSize()
+    }
+
+    private var queuePicker: some View {
+        let total = lib.photos.count
+        return Picker("", selection: Binding(get: { lib.filter }, set: { lib.filter = $0; lib.move(0) })) {
+            Text(tr("Все") + " \(total)").tag(PhotoFilter.all)
+            Text(tr("Без решения") + " \(lib.count(.undecided))").tag(PhotoFilter.undecided)
+            if lib.cullHints {
+                Text(tr("Возможный брак") + " \(lib.count(.suspects))").tag(PhotoFilter.suspects)
+                Text(tr("Быстрый проход") + " \(lib.count(.leaders))").tag(PhotoFilter.leaders)
+            }
+        }
+        .labelsHidden()
+        .help(tr("Очередь: какие кадры листать"))
+    }
+
     private func counter(_ title: String, _ n: Int, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text("\(n)").font(.title3.monospacedDigit().weight(.semibold)).foregroundStyle(color)
+            Text(verbatim: "\(n)").font(.title3.monospacedDigit().weight(.semibold)).foregroundStyle(color)
             Text(title).font(.caption2).foregroundStyle(.secondary)
         }
     }
