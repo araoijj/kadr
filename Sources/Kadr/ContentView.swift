@@ -79,16 +79,7 @@ struct ContentView: View {
                 .help("Импорт с карты памяти (⌘I)")
         }
         ToolbarItem(placement: .principal) {
-            if lib.folder != nil {
-                Picker("Вид", selection: $lib.loupe) {
-                    Image(systemName: "square.grid.2x2").tag(false)
-                    Image(systemName: "rectangle").tag(true)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 90)
-                .help("Сетка / Просмотр (пробел)")
-                .disabled(lib.comparing)
-            }
+            ToolsBar()
         }
         ToolbarItemGroup(placement: .primaryAction) {
             if lib.folder != nil {
@@ -121,11 +112,6 @@ struct ContentView: View {
                         .frame(width: 110)
                         .help("Размер превью")
                 }
-                Button { lib.comparing ? lib.stopCompare() : lib.startCompare() } label: {
-                    Label("Сравнить", systemImage: lib.comparing ? "rectangle.split.2x1.fill" : "rectangle.split.2x1")
-                }
-                .help("Сравнить выделенные или серию (C)")
-                .disabled(!lib.comparing && !lib.canCompare)
                 Button { lib.showExport = true } label: {
                     Label("Сохранить в папку", systemImage: "square.and.arrow.down.on.square")
                 }

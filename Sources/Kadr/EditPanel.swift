@@ -316,7 +316,7 @@ struct EditPanel: View {
     private func actions(_ p: Photo) -> some View {
         @Bindable var lib = lib
         return HStack(spacing: 6) {
-            Toggle(isOn: $lib.showOriginal) { Label("До", systemImage: "rectangle.lefthalf.inset.filled") }
+            Toggle(isOn: $lib.showOriginal) { Image(systemName: "rectangle.lefthalf.inset.filled") }
                 .toggleStyle(.button)
                 .help("Показать снимок камеры без обработки (клавиша \\)")
             Button { lib.copyAdjustments() } label: { Image(systemName: "doc.on.doc") }
@@ -328,7 +328,7 @@ struct EditPanel: View {
                 .disabled(p.adj.isIdentity)
                 .help("Сохранить как стиль")
             Spacer()
-            Button(role: .destructive) { lib.resetAdjustments() } label: { Label("Исходник", systemImage: "arrow.counterclockwise") }
+            Button(role: .destructive) { lib.resetAdjustments() } label: { Label("Исходник", systemImage: "arrow.counterclockwise").fixedSize() }
                 .help("Вернуть кадр как снято: сбросить всю обработку и кадрирование (⌥⌘R)")
                 .disabled(lib.targets.allSatisfy(\.adj.isIdentity))
         }
