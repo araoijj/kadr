@@ -3783,5 +3783,10 @@
   "What's in the photos",
   "Qué hay en las fotos",
   "Cosa c’è nelle foto"
+ ],
+ "Улыбка (MediaPipe): явная ≥ 0.6": [
+  "Smile (MediaPipe): clear ≥ 0.6",
+  "Sonrisa (MediaPipe): clara ≥ 0.6",
+  "Sorriso (MediaPipe): netto ≥ 0.6"
  ]
 }
