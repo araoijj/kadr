@@ -8,26 +8,12 @@ struct LoupeView: View {
         VStack(spacing: 0) {
             ZStack {
                 if let p = lib.current {
-                    if lib.zoom100 {
-                        FullResView(photo: p, adj: lib.showOriginal ? .none : p.adj)
-                    } else {
-                        Group {
-                            // Без правок (и в режиме «До») — JPEG камеры как есть: открытие вкладки
-                            // «Обработка» ничего не меняет. С правками — проявляем RAW с профилем камеры.
-                            if p.adj.isIdentity || lib.showOriginal {
-                                PreviewImage(photo: p)
-                            } else {
-                                EditedImage(photo: p, adj: p.adj)
-                            }
-                        }
-                            .padding(20)
-                            .onTapGesture(count: 2) { lib.zoom100 = true }
-                            .photoContextMenu(p)
-                    }
+                    ZoomableLoupe(photo: p)
                     overlay(p)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(alignment: .bottom) { ZoomBar().padding(.bottom, 12) }
             .task(id: lib.currentID) {
                 // Готовим RAW текущего кадра заранее, чтобы первый стиль применился сразу.
                 guard let u = lib.currentID, ImageStore.rawExtensions.contains(u.pathExtension.lowercased()) else { return }
@@ -51,9 +37,7 @@ struct LoupeView: View {
                           tint: p.isBestInSeries ? Theme.star : .white.opacity(0.8))
                 }
                 Spacer()
-                if lib.zoom100 {
-                    Badge(text: "100%  ·  Esc — назад", icon: "plus.magnifyingglass", tint: .white.opacity(0.85))
-                }
+
             }
             Spacer()
             HStack {
@@ -145,40 +129,6 @@ struct EditedImage: View {
             }
             rendering = false
         }
-    }
-}
-
-struct FullResView: View {
-    let photo: Photo
-    var adj: Adjustments = .none
-    @State private var image: CGImage?
-    @State private var failed = false
-
-    var body: some View {
-        Group {
-            if let image {
-                let scale = NSScreen.main?.backingScaleFactor ?? 2
-                ScrollView([.horizontal, .vertical]) {
-                    Image(decorative: image, scale: scale)
-                        .interpolation(.none)
-                }
-                .defaultScrollAnchor(.center)
-            } else if failed {
-                ContentUnavailableView("Не удалось проявить RAW", systemImage: "exclamationmark.triangle")
-            } else {
-                VStack(spacing: 12) {
-                    ProgressView()
-                    Text("Проявляю RAW…").font(.callout).foregroundStyle(.secondary)
-                }
-            }
-        }
-        .task(id: ThumbKey(url: photo.url, adj: adj)) {
-            failed = false
-            let img = await Renderer.shared.render(photo.url, adj, maxSide: nil, channel: "full")
-            if Task.isCancelled { return }
-            if let img { image = img } else if image == nil { failed = true }
-        }
-        .onChange(of: photo.id) { _, _ in image = nil }
     }
 }
 

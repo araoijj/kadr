@@ -25,6 +25,13 @@ struct KadrApp: App {
                 Button("Импорт с карты памяти…") { library.showImport = true }
                     .keyboardShortcut("i")
             }
+            CommandGroup(after: .toolbar) {
+                Button("Увеличить") { library.zoomIn() }.keyboardShortcut("=")
+                Button("Уменьшить") { library.zoomOut() }.keyboardShortcut("-")
+                Button("Вписать в окно") { library.setZoom(nil) }.keyboardShortcut("0")
+                Button("Масштаб 100%") { library.loupe = true; library.setZoom(1, at: library.loupeCenter) }.keyboardShortcut("1")
+                Divider()
+            }
             CommandMenu("Обработка") {
                 Button("Копировать обработку") { library.copyAdjustments() }
                     .keyboardShortcut("c", modifiers: [.command, .shift])
@@ -108,6 +115,8 @@ struct KeyHandler {
         switch ch {
         case "x", "ч": lib.toggleReject()
         case "z", "я": if lib.currentID != nil { lib.loupe = true; lib.zoom100.toggle() }
+        case "=", "+": lib.zoomIn()
+        case "-": lib.zoomOut()
         case "i", "ш": lib.showInfo.toggle()
         case "g", "п": lib.loupe = false
         case "e", "у":

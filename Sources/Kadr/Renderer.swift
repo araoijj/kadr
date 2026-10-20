@@ -33,6 +33,32 @@ final class Renderer: @unchecked Sendable {
         }
     }
 
+    /// Видимый кусок кадра при увеличении. region — доли кадра (y сверху вниз), pixels — размер на экране.
+    /// Считается только этот кусок; при нехватке разрешения берётся полноразмерное проявление RAW.
+    func renderRegion(_ url: URL, _ adj: Adjustments, region: CGRect, pixels: CGSize, channel: String = "region") async -> CGImage? {
+        let gen = bump(channel)
+        return await withCheckedContinuation { cont in
+            queue.async {
+                guard self.current(channel) == gen, pixels.width >= 1, pixels.height >= 1, region.width > 0 else { cont.resume(returning: nil); return }
+                guard var base = self.base(url, maxSide: 3200) else { cont.resume(returning: nil); return }
+                if pixels.width / region.width > base.extent.width * 1.05, let full = self.base(url, maxSide: nil) { base = full }
+                guard self.current(channel) == gen else { cont.resume(returning: nil); return }
+                let cube = adj.profile == .camera ? CameraMatch.shared.cube(for: url) : nil
+                let out = EditPipeline.apply(adj, to: base, cameraCube: cube)
+                let e = base.extent
+                let r = CGRect(x: e.minX + region.minX * e.width, y: e.minY + (1 - region.maxY) * e.height,
+                               width: region.width * e.width, height: region.height * e.height)
+                let k = pixels.width / r.width
+                var img = out.cropped(to: r).transformed(by: CGAffineTransform(translationX: -r.minX, y: -r.minY))
+                if k > 1 { img = img.samplingNearest() }   // крупнее 100% — без размытия, видны настоящие пиксели
+                img = img.transformed(by: CGAffineTransform(scaleX: k, y: k))
+                let cg = self.context.createCGImage(img, from: CGRect(origin: .zero, size: pixels).integral, format: .RGBA8,
+                                                    colorSpace: CGColorSpace(name: CGColorSpace.displayP3))
+                cont.resume(returning: cg)
+            }
+        }
+    }
+
     /// Заранее проявляет RAW и подбирает профиль камеры — первая правка будет мгновенной.
     func prewarm(_ url: URL, maxSide: CGFloat) {
         queue.async {
@@ -90,9 +116,13 @@ final class Renderer: @unchecked Sendable {
         if let b = bases[key] { return b }
         guard let src = EditPipeline.source(url, maxSide: maxSide) else { return nil }
         let b = src.insertingIntermediate(cache: true)
+        // Полноразмерная основа (50 Мп ≈ 400 МБ) — только одна, остальные — до 4 уменьшенных.
+        if maxSide == nil {
+            for k in baseOrder where k.hasSuffix("|0") { bases[k] = nil }
+            baseOrder.removeAll { $0.hasSuffix("|0") }
+        }
         bases[key] = b
         baseOrder.append(key)
-        // Держим 4 последних кадра: текущий и соседей.
         while baseOrder.count > 4 { bases[baseOrder.removeFirst()] = nil }
         return b
     }

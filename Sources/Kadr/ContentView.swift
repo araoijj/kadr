@@ -48,9 +48,10 @@ struct ContentView: View {
                 let u = URL(fileURLWithPath: CommandLine.arguments[1])
                 if FileManager.default.fileExists(atPath: u.path) { lib.open(u) }
             }
-            monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown]) { e in
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown, .scrollWheel]) { e in
                 MainActor.assumeIsolated {
                     if e.type == .leftMouseDown { return ClickModifiers.handle(e, lib) }
+                    if e.type == .scrollWheel { return ScrollZoom.handle(e, lib) }
                     return KeyHandler.handle(e, lib) ? nil : e
                 }
             }

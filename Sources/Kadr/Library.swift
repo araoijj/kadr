@@ -43,7 +43,54 @@ final class Library {
     var filter: PhotoFilter = .all
     var currentID: URL?
     var loupe = false
-    var zoom100 = false
+    /// Масштаб просмотра: nil — вписать в окно, 1 — 100% (пиксель кадра = пиксель экрана), 2 — 200%…
+    var loupeZoom: CGFloat?
+    var loupeZoomBase: CGFloat?                    // начало щипка
+    var loupeCenter = CGPoint(x: 0.5, y: 0.5)      // центр видимой области в долях кадра (y — сверху вниз)
+    var fitZoom: CGFloat = 0.25                    // масштаб режима «Вписать» (его считает просмотр)
+    var loupeDisplay: CGSize = .zero               // размер кадра на экране при текущем масштабе, точки
+    static let zoomSteps: [CGFloat] = [0.25, 0.5, 1, 2, 4]
+
+    var zoom100: Bool {
+        get { loupeZoom != nil }
+        set { setZoom(newValue ? 1 : nil) }
+    }
+
+    /// point — куда приблизить (доли кадра); меньше «вписать» не уменьшаем.
+    func setZoom(_ z: CGFloat?, at point: CGPoint? = nil) {
+        if let z, z > fitZoom * 1.01 {
+            loupeZoom = min(z, 8)
+            if let point { loupeCenter = point }
+        } else {
+            loupeZoom = nil
+            loupeCenter = CGPoint(x: 0.5, y: 0.5)
+        }
+        loupeZoomBase = loupeZoom
+    }
+
+    /// Щипок и ⌘+колёсико: плавный масштаб, ниже «вписать» — возврат к нему.
+    func setZoomKeepingBase(_ z: CGFloat) {
+        let base = loupeZoomBase
+        if z > fitZoom * 1.01 { loupeZoom = min(z, 8) } else { loupeZoom = nil; loupeCenter = CGPoint(x: 0.5, y: 0.5) }
+        loupeZoomBase = base
+    }
+
+    func zoomIn() {
+        loupe = true
+        let cur = loupeZoom ?? fitZoom
+        setZoom(Self.zoomSteps.first { $0 > cur * 1.01 } ?? min(cur * 2, 8), at: loupeCenter)
+    }
+
+    func zoomOut() {
+        guard let cur = loupeZoom else { return }
+        setZoom(Self.zoomSteps.last { $0 < cur * 0.99 }, at: loupeCenter)
+    }
+
+    /// Сдвиг видимой области на dx, dy точек экрана (прокрутка, перетаскивание).
+    func pan(dx: CGFloat, dy: CGFloat) {
+        guard loupeZoom != nil, loupeDisplay.width > 0 else { return }
+        loupeCenter = CGPoint(x: loupeCenter.x - dx / loupeDisplay.width, y: loupeCenter.y - dy / loupeDisplay.height)
+    }
     var thumbSize: CGFloat = 220
     var autoAdvance = true
     var showInfo = true
@@ -58,7 +105,12 @@ final class Library {
     // MARK: - Обработка
 
     enum InspectorTab: Hashable { case info, edit }
-    var inspectorTab: InspectorTab = .info
+    var inspectorTab: InspectorTab = .info {
+        didSet {
+            // Обрабатывать удобнее на большом кадре — из сетки переходим в просмотр.
+            if inspectorTab == .edit, oldValue != .edit, !loupe, !comparing, currentID != nil { loupe = true }
+        }
+    }
     var showOriginal = false           // «до» — клавиша \
     var styles: [Style] = Style.builtIns + StyleStore.load()
     var luts: [String] = LUTStore.shared.list()
@@ -472,7 +524,7 @@ final class Library {
         lensFilter = nil
         dayFilter = nil
         loupe = false
-        zoom100 = false
+        loupeZoom = nil
         loading = true
         analyzed = 0
         photos = []
@@ -677,8 +729,7 @@ final class Library {
     func isSelected(_ p: Photo) -> Bool { p.id == currentID || selection.contains(p.id) }
 
     private func focus(_ id: URL?, extend: Bool = false) {
-        currentID = id
-        zoom100 = false
+        currentID = id   // масштаб сохраняется: удобно листать серию и сравнивать резкость в 100%
         guard let id else { selection = []; return }
         if extend, let anchor = anchorID { selectRange(from: anchor, to: id) } else {
             selection = [id]
