@@ -22,6 +22,7 @@ struct GridView: View {
                                 .id(p.id)
                                 .onTapGesture(count: 2) { lib.select(p); lib.loupe = true }
                                 .onTapGesture { lib.click(p) }
+                                .photoContextMenu(p)
                                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("grid")) } action: { frames[p.id] = $0 }
                                 .onDisappear { frames[p.id] = nil }
                         }

@@ -502,6 +502,43 @@ final class Library {
     }
 
     func revealCurrent() {
-        if let u = currentID { NSWorkspace.shared.activateFileViewerSelecting([u]) }
+        let urls = targets.map(\.url)
+        if !urls.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(urls) }
+    }
+
+    // MARK: - Контекстное меню
+
+    /// Правый клик как в Finder: по выделенному — действие над всем выделением,
+    /// по невыделенному — сначала выделяем только его.
+    func contextTarget(_ p: Photo) {
+        if !isSelected(p) { focus(p.id) }
+    }
+
+    /// Сколько снимков затронет действие из меню этого кадра.
+    func contextCount(_ p: Photo) -> Int { isSelected(p) && multiSelected ? targets.count : 1 }
+
+    func openTargetsInCaptureOne() {
+        let urls = targets.map(\.url)
+        guard !urls.isEmpty else { return }
+        NSWorkspace.shared.open(urls, withApplicationAt: URL(fileURLWithPath: "/Applications/Capture One.app"),
+                                configuration: NSWorkspace.OpenConfiguration())
+    }
+
+    func openTargetsInDefaultApp() {
+        for u in targets.map(\.url) { NSWorkspace.shared.open(u) }
+    }
+
+    func copyTargetPaths() {
+        let text = targets.map(\.url.path).joined(separator: "\n")
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        flash("Путь скопирован" + countSuffix)
+    }
+
+    /// Окно сохранения с уже выбранными «Выделенные» и нужным форматом.
+    func exportTargets(as format: ExportSettings.Format) {
+        export.scope = .selected
+        export.format = format
+        showExport = true
     }
 }

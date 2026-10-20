@@ -14,6 +14,7 @@ struct LoupeView: View {
                         PreviewImage(photo: p)
                             .padding(20)
                             .onTapGesture(count: 2) { lib.zoom100 = true }
+                            .photoContextMenu(p)
                     }
                     overlay(p)
                 }
@@ -127,6 +128,7 @@ struct Filmstrip: View {
                         StripCell(photo: p, selected: lib.isSelected(p))
                             .id(p.id)
                             .onTapGesture { lib.click(p) }
+                            .photoContextMenu(p)
                     }
                 }
                 .padding(.horizontal, 12)
