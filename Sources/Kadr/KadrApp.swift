@@ -127,10 +127,12 @@ struct KeyHandler {
         case 124: lib.move(1, extend: shift); return true                        // →
         case 126: lib.move(lib.loupe ? -1 : -lib.columns, extend: shift); return true // ↑
         case 125: lib.move(lib.loupe ? 1 : lib.columns, extend: shift); return true   // ↓
-        case 49: lib.loupe.toggle(); lib.zoom100 = false; return true  // пробел
+        case 49:                                                   // пробел: в отборе — следующий кадр
+            if lib.culling { lib.move(1) } else { lib.loupe.toggle(); lib.zoom100 = false }
+            return true
         case 36: lib.loupe = true; return true                    // Enter
         case 53:                                                   // Esc
-            if lib.zoom100 { lib.zoom100 = false } else if lib.loupe { lib.loupe = false } else { lib.clearSelection() }
+            if lib.zoom100 { lib.zoom100 = false } else if lib.culling { lib.culling = false } else if lib.loupe { lib.loupe = false } else { lib.clearSelection() }
             return true
         case 51, 117: lib.toggleReject(); return true              // Backspace / Delete
         default: break
@@ -153,6 +155,9 @@ struct KeyHandler {
         case "\\": lib.showOriginal.toggle()
         case "s", "ы": lib.quickSend()
         case "c", "с": lib.startCompare()
+        case "p", "з": lib.keep()
+        case "o", "щ": lib.culling.toggle()
+        case "u", "г": lib.unflag()
         case "y", "н": lib.splitCompare.toggle(); if lib.splitCompare { lib.loupe = true }
         case "r", "к": lib.startCrop()
         default: return false

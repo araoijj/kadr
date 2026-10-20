@@ -23,6 +23,7 @@ struct GeneralSettings: View {
     @AppStorage("pref.language") private var language = "system"
     @AppStorage("pref.reopenLast") private var reopenLast = true
     @AppStorage("pref.cardBanner") private var cardBanner = true
+    @AppStorage("pref.cullDefault") private var cullDefault = false
     @State private var startLanguage = Prefs.language
 
     var body: some View {
@@ -45,6 +46,7 @@ struct GeneralSettings: View {
             }
             Section(tr("Работа")) {
                 Toggle(tr("Открывать последнюю папку при запуске"), isOn: $reopenLast)
+                Toggle(tr("Открывать папку сразу в режиме «Отбор»"), isOn: $cullDefault)
                 Toggle(tr("Переходить к следующему кадру после оценки"), isOn: Binding(get: { lib.autoAdvance }, set: { lib.autoAdvance = $0 }))
                 Toggle(tr("Предлагать импорт при подключении карты памяти"), isOn: $cardBanner)
             }

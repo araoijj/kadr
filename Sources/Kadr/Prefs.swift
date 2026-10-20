@@ -12,6 +12,7 @@ enum Prefs {
     static var reopenLastFolder: Bool { bool("pref.reopenLast", true) }
     static var autoAdvance: Bool { bool("pref.autoAdvance", true) }
     static var cardBanner: Bool { bool("pref.cardBanner", true) }
+    static var cullByDefault: Bool { bool("pref.cullDefault", false) }   // открывать папку в режиме «Отбор»
 
     // Хранилище
     static var dataFolder: String? { d.string(forKey: "pref.dataFolder") }

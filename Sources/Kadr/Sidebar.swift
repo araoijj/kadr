@@ -9,6 +9,7 @@ struct Sidebar: View {
     @AppStorage("sb.lens") private var showLens = true
     @AppStorage("sb.days") private var showDays = true
     @AppStorage("sb.analysis") private var showAnalysis = true
+    @AppStorage("sb.cull") private var showCull = true
 
     var body: some View {
         @Bindable var lib = lib
@@ -72,6 +73,16 @@ struct Sidebar: View {
                                 lib.dayFilter = lib.dayFilter == d.day ? nil : d.day
                                 lib.move(0)
                             }
+                        }
+                    }
+                }
+                if lib.cullHints {
+                    Section(tr("Отбор"), isExpanded: $showCull) {
+                        row(.suspects, tint: .orange)
+                        row(.undecided)
+                        row(.leaders, tint: .green)
+                        ForEach(CullReason.allCases.filter { lib.count(.reason($0)) > 0 }) { r in
+                            row(.reason(r), tint: r.isDefect ? .orange : .yellow)
                         }
                     }
                 }

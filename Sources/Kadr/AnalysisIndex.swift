@@ -11,10 +11,11 @@ struct IndexEntry: Codable, Sendable {
     var exif: ExifInfo
     var hash: UInt64?
     var sharpness: Double?
+    var cull: CullData?
 }
 
 enum AnalysisIndex {
-    static let version = 1
+    static let version = 3   // 2 — анализ для отбора (лица, глаза, пересвет, горизонт, эстетика); 3 — средняя яркость
 
     private struct File: Codable {
         var version: Int

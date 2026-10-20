@@ -17,6 +17,8 @@ struct ContentView: View {
                     EmptyState()
                 } else if lib.comparing {
                     CompareView()
+                } else if lib.culling {
+                    CullView()
                 } else if lib.loupe {
                     LoupeView()
                 } else {

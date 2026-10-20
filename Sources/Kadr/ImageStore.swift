@@ -124,6 +124,30 @@ final class ImageStore: @unchecked Sendable {
         return sq / n - mean * mean
     }
 
+    /// Резкость внутри области (доли кадра, y сверху вниз), например лица. Область приводится к 160 px,
+    /// чтобы лица разного размера сравнивались честно.
+    func sharpness(_ img: CGImage, region r: CGRect) -> Double? {
+        let pad = 0.08
+        let rr = CGRect(x: max(0, r.minX - r.width * pad), y: max(0, r.minY - r.height * pad),
+                        width: min(1, r.width * (1 + 2 * pad)), height: min(1, r.height * (1 + 2 * pad)))
+        let px = CGRect(x: rr.minX * CGFloat(img.width), y: rr.minY * CGFloat(img.height),
+                        width: rr.width * CGFloat(img.width), height: rr.height * CGFloat(img.height)).integral
+        guard px.width >= 24, px.height >= 24, let crop = img.cropping(to: px) else { return nil }
+        let w = 160, h = max(24, Int(160 * px.height / px.width))
+        guard let g = grayscale(crop, width: w, height: h) else { return nil }
+        var sum = 0.0, sq = 0.0, n = 0.0
+        for y in 1..<(h - 1) {
+            for x in 1..<(w - 1) {
+                let i = y * w + x
+                let lap = Double(g[i - 1]) + Double(g[i + 1]) + Double(g[i - w]) + Double(g[i + w]) - 4 * Double(g[i])
+                sum += lap; sq += lap * lap; n += 1
+            }
+        }
+        guard n > 0 else { return nil }
+        let mean = sum / n
+        return sq / n - mean * mean
+    }
+
     private func grayscale(_ img: CGImage, width: Int, height: Int) -> [UInt8]? {
         var buf = [UInt8](repeating: 0, count: width * height)
         let ok = buf.withUnsafeMutableBytes { ptr -> Bool in

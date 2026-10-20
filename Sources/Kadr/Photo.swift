@@ -79,6 +79,7 @@ struct Photo: Identifiable, Equatable {
     var isBestInSeries = false
     var duplicateOf: URL?        // точная копия другого файла
     var indexed = false          // анализ есть (из индекса или посчитан сейчас)
+    var cull: CullData?          // данные для отбора (CullAnalysis.swift)
 
     var lensName: String { exif.lens?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? tr("Объектив не указан") }
     var day: Date? { exif.date.map { Calendar.current.startOfDay(for: $0) } }

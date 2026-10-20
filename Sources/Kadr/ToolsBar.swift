@@ -9,17 +9,19 @@ struct ToolsBar: View {
         @Bindable var lib = lib
         let hasPhoto = lib.current != nil
         HStack(spacing: 2) {
-            Picker(tr("Вид"), selection: Binding(get: { lib.loupe }, set: { v in
+            Picker(tr("Вид"), selection: Binding(get: { lib.culling ? 2 : lib.loupe ? 1 : 0 }, set: { v in
                 if lib.cropMode { lib.finishCrop() }
                 if lib.comparing { lib.stopCompare() }
-                lib.loupe = v
+                lib.culling = v == 2
+                lib.loupe = v == 1
             })) {
-                Image(systemName: "square.grid.2x2").tag(false)
-                Image(systemName: "rectangle").tag(true)
+                Image(systemName: "square.grid.2x2").help(tr("Сетка")).tag(0)
+                Image(systemName: "rectangle").help(tr("Кадр")).tag(1)
+                Image(systemName: "checkmark.rectangle.stack").help(tr("Отбор")).tag(2)
             }
             .pickerStyle(.segmented)
-            .frame(width: 76)
-            .help(tr("Сетка / Кадр (пробел)"))
+            .frame(width: 114)
+            .help(tr("Сетка / Кадр (пробел) / Отбор (O)"))
 
             Divider().frame(height: 18).padding(.horizontal, 6)
 

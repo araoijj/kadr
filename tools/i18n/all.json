@@ -2803,5 +2803,300 @@
   "Film",
   "Película",
   "Pellicola"
+ ],
+ "Нерезкий": [
+  "Blurry",
+  "Desenfocada",
+  "Sfocata"
+ ],
+ "Закрыты глаза": [
+  "Eyes closed",
+  "Ojos cerrados",
+  "Occhi chiusi"
+ ],
+ "Пересвет": [
+  "Overexposed",
+  "Sobreexpuesta",
+  "Sovraesposta"
+ ],
+ "Недосвет": [
+  "Underexposed",
+  "Subexpuesta",
+  "Sottoesposta"
+ ],
+ "Завален горизонт": [
+  "Tilted horizon",
+  "Horizonte torcido",
+  "Orizzonte storto"
+ ],
+ "Служебный кадр": [
+  "Utility shot",
+  "Foto utilitaria",
+  "Scatto di servizio"
+ ],
+ "Слабее в серии": [
+  "Weaker in series",
+  "Peor de la serie",
+  "Più debole della serie"
+ ],
+ "Горизонт выровнен: {}": [
+  "Horizon straightened: {}",
+  "Horizonte enderezado: {}",
+  "Orizzonte raddrizzato: {}"
+ ],
+ "Оставлено": [
+  "Kept",
+  "Conservada",
+  "Tenuta"
+ ],
+ "Решение снято": [
+  "Decision cleared",
+  "Decisión quitada",
+  "Decisione rimossa"
+ ],
+ "Предложений нет": [
+  "No suggestions",
+  "No hay sugerencias",
+  "Nessun suggerimento"
+ ],
+ "Отклонить {} кадров с признаками брака?": [
+  "Reject {} photos that look defective?",
+  "¿Rechazar {} fotos con indicios de defecto?",
+  "Scartare {} foto con segni di difetto?"
+ ],
+ "Оставленные вами (с оценкой) не трогаются. Отменить — ⌘Z.": [
+  "Photos you kept (rated) are left alone. Undo — ⌘Z.",
+  "Las que conservaste (con valoración) no se tocan. Deshacer — ⌘Z.",
+  "Quelle che hai tenuto (con valutazione) restano invariate. Annulla — ⌘Z."
+ ],
+ "Брак отклонён: {}": [
+  "Defects rejected: {}",
+  "Defectuosas rechazadas: {}",
+  "Difettose scartate: {}"
+ ],
+ "Отклонено: {}": [
+  "Rejected: {}",
+  "Rechazadas: {}",
+  "Scartate: {}"
+ ],
+ "Серий нет": [
+  "No series",
+  "No hay series",
+  "Nessuna serie"
+ ],
+ "Оставить лучший кадр в каждой из {} серий и отклонить остальные ({})?": [
+  "Keep the best photo in each of {} series and reject the rest ({})?",
+  "¿Conservar la mejor foto de cada una de las {} series y rechazar el resto ({})?",
+  "Tenere la foto migliore in ciascuna delle {} serie e scartare le altre ({})?"
+ ],
+ "Кадры, которым вы уже поставили оценку, не трогаются. Отменить — ⌘Z.": [
+  "Photos you already rated are left alone. Undo — ⌘Z.",
+  "Las fotos que ya valoraste no se tocan. Deshacer — ⌘Z.",
+  "Le foto già valutate restano invariate. Annulla — ⌘Z."
+ ],
+ "Лучшие в сериях: {}, отклонено {}": [
+  "Best in series: {}, rejected {}",
+  "Mejores de las series: {}, rechazadas {}",
+  "Migliori delle serie: {}, scartate {}"
+ ],
+ "Готово: {} серий": [
+  "Done: {} series",
+  "Listo: {} series",
+  "Fatto: {} serie"
+ ],
+ "Да": [
+  "Yes",
+  "Sí",
+  "Sì"
+ ],
+ "Очередь пуста": [
+  "Queue is empty",
+  "La cola está vacía",
+  "La coda è vuota"
+ ],
+ "В этой очереди не осталось кадров — выберите другую сверху.": [
+  "No photos left in this queue — pick another one above.",
+  "No quedan fotos en esta cola: elige otra arriba.",
+  "Non restano foto in questa coda: scegline un’altra in alto."
+ ],
+ "Просмотрено {} из {}": [
+  "Viewed {} of {}",
+  "Vistas {} de {}",
+  "Viste {} di {}"
+ ],
+ "Брак": [
+  "Rejected",
+  "Descartadas",
+  "Scartate"
+ ],
+ "Без решения": [
+  "Undecided",
+  "Sin decidir",
+  "Da decidere"
+ ],
+ "Все": [
+  "All",
+  "Todas",
+  "Tutte"
+ ],
+ "Возможный брак": [
+  "Possible defects",
+  "Posibles defectos",
+  "Possibili difetti"
+ ],
+ "Быстрый проход": [
+  "Quick pass",
+  "Pasada rápida",
+  "Passata rapida"
+ ],
+ "Очередь: какие кадры листать": [
+  "Queue: which photos to go through",
+  "Cola: qué fotos recorrer",
+  "Coda: quali foto scorrere"
+ ],
+ "Подсказки": [
+  "Hints",
+  "Sugerencias",
+  "Suggerimenti"
+ ],
+ "Выключите — и отбор полностью ручной: без значков, очередей и автоанализа на экране": [
+  "Turn off for fully manual culling: no badges, queues or on-screen analysis",
+  "Desactívalo para una selección totalmente manual: sin marcas, colas ni análisis en pantalla",
+  "Disattiva per una selezione del tutto manuale: senza badge, code né analisi a schermo"
+ ],
+ "мягко": [
+  "lenient",
+  "suave",
+  "morbido"
+ ],
+ "строго": [
+  "strict",
+  "estricto",
+  "rigido"
+ ],
+ "Строгость поиска брака: мягко — только явный, строго — всё сомнительное": [
+  "Defect search strictness: lenient — only obvious, strict — anything doubtful",
+  "Rigor de la búsqueda de defectos: suave — solo lo evidente, estricto — todo lo dudoso",
+  "Rigore nella ricerca dei difetti: morbido — solo quelli evidenti, rigido — tutto ciò che è dubbio"
+ ],
+ "Отклонить предложенный брак…": [
+  "Reject suggested defects…",
+  "Rechazar los defectos sugeridos…",
+  "Scarta i difetti suggeriti…"
+ ],
+ "Оставить лучшие в сериях, остальные в брак…": [
+  "Keep the best in each series, reject the rest…",
+  "Conservar las mejores de cada serie, rechazar el resto…",
+  "Tieni le migliori di ogni serie, scarta le altre…"
+ ],
+ "P — оставить · X — брак · U — снять · ← → — листать · 1–5 — звёзды": [
+  "P — keep · X — reject · U — clear · ← → — browse · 1–5 — stars",
+  "P — conservar · X — rechazar · U — quitar · ← → — navegar · 1–5 — estrellas",
+  "P — tieni · X — scarta · U — togli · ← → — sfoglia · 1–5 — stelle"
+ ],
+ "Итог…": [
+  "Summary…",
+  "Resumen…",
+  "Riepilogo…"
+ ],
+ "Лучший в серии": [
+  "Best in series",
+  "La mejor de la serie",
+  "La migliore della serie"
+ ],
+ "Выровнять": [
+  "Straighten",
+  "Enderezar",
+  "Raddrizza"
+ ],
+ "Оценка {}": [
+  "Score {}",
+  "Puntuación {}",
+  "Punteggio {}"
+ ],
+ "Техника и эстетика кадра, 0–100. Подсказка, а не приговор.": [
+  "Technique and aesthetics of the photo, 0–100. A hint, not a verdict.",
+  "Técnica y estética de la foto, 0–100. Una pista, no un veredicto.",
+  "Tecnica ed estetica della foto, 0–100. Un suggerimento, non un verdetto."
+ ],
+ "Лица · 100%": [
+  "Faces · 100%",
+  "Caras · 100%",
+  "Volti · 100%"
+ ],
+ "глаза закрыты?": [
+  "eyes closed?",
+  "¿ojos cerrados?",
+  "occhi chiusi?"
+ ],
+ "глаза открыты": [
+  "eyes open",
+  "ojos abiertos",
+  "occhi aperti"
+ ],
+ "Качество лица по оценке macOS": [
+  "Face quality as rated by macOS",
+  "Calidad de la cara según macOS",
+  "Qualità del volto secondo macOS"
+ ],
+ "Итог отбора": [
+  "Culling summary",
+  "Resumen de la selección",
+  "Riepilogo della selezione"
+ ],
+ "оставлено": [
+  "kept",
+  "conservadas",
+  "tenute"
+ ],
+ "в браке": [
+  "rejected",
+  "descartadas",
+  "scartate"
+ ],
+ "без решения": [
+  "undecided",
+  "sin decidir",
+  "da decidere"
+ ],
+ "Что нашёл анализ": [
+  "What the analysis found",
+  "Qué encontró el análisis",
+  "Cosa ha trovato l’analisi"
+ ],
+ "Перенести брак в «_Отклонённые»…": [
+  "Move rejects to “_Отклонённые”…",
+  "Mover las descartadas a «_Отклонённые»…",
+  "Sposta le scartate in «_Отклонённые»…"
+ ],
+ "Сохранить оставленные в папку…": [
+  "Save kept photos to a folder…",
+  "Guardar las conservadas en una carpeta…",
+  "Salva le foto tenute in una cartella…"
+ ],
+ "Показать только оставленные": [
+  "Show kept only",
+  "Mostrar solo las conservadas",
+  "Mostra solo le tenute"
+ ],
+ "Продолжить: кадры без решения ({})": [
+  "Continue: undecided photos ({})",
+  "Continuar: fotos sin decidir ({})",
+  "Continua: foto da decidere ({})"
+ ],
+ "Открывать папку сразу в режиме «Отбор»": [
+  "Open folders straight in Culling mode",
+  "Abrir las carpetas directamente en modo Selección",
+  "Apri le cartelle direttamente in modalità Selezione"
+ ],
+ "Сетка": [
+  "Grid",
+  "Cuadrícula",
+  "Griglia"
+ ],
+ "Сетка / Кадр (пробел) / Отбор (O)": [
+  "Grid / Photo (Space) / Culling (O)",
+  "Cuadrícula / Foto (Espacio) / Selección (O)",
+  "Griglia / Foto (Spazio) / Selezione (O)"
  ]
 }

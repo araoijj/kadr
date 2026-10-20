@@ -7,6 +7,9 @@ enum PhotoFilter: Hashable {
     case stars(Int)
     case label(ColorLabel)
     case duplicates
+    // Отбор
+    case suspects, undecided, leaders
+    case reason(CullReason)
 
     var title: String {
         switch self {
@@ -18,6 +21,10 @@ enum PhotoFilter: Hashable {
         case .stars(let n): String(repeating: "★", count: n) + (n < 5 ? tr(" и выше") : "")
         case .label(let l): l.title
         case .duplicates: tr("Точные дубли")
+        case .suspects: tr("Возможный брак")
+        case .undecided: tr("Без решения")
+        case .leaders: tr("Быстрый проход")
+        case .reason(let r): r.title
         }
     }
 
@@ -31,6 +38,10 @@ enum PhotoFilter: Hashable {
         case .stars: "star.fill"
         case .label: "circle.fill"
         case .duplicates: "doc.on.doc"
+        case .suspects: "exclamationmark.triangle"
+        case .undecided: "questionmark.circle"
+        case .leaders: "hare"
+        case .reason(let r): r.icon
         }
     }
 }
@@ -105,6 +116,23 @@ final class Library {
     var toast: String?
 
     private var index: [URL: Int] = [:]
+
+    // Режим «Отбор» (Cull.swift, CullView.swift).
+    var culling = false {
+        didSet { if culling { loupe = false; comparing = false; if let c = currentID { viewed.insert(c) } } }
+    }
+    var cullHints = Prefs.d.object(forKey: "pref.cullHints") as? Bool ?? true {
+        didSet { Prefs.d.set(cullHints, forKey: "pref.cullHints") }
+    }
+    var cullStrictness = Prefs.d.object(forKey: "pref.cullStrictness") as? Double ?? 0.5 {
+        didSet { Prefs.d.set(cullStrictness, forKey: "pref.cullStrictness") }
+    }
+    var viewed: Set<URL> = []
+    var showCullSummary = false
+    static let cullFacePixels: CGFloat = 380   // лицо в колонке отбора: 190 pt на Retina
+    var cullMedianSharpness = 0.0
+    var cullMedianFaceSharpness = 0.0
+    var seriesBestSharpness: [Int: Double] = [:]
 
     // Журнал изменений (History.swift).
     var history: [HistoryEntry] = []
@@ -363,7 +391,7 @@ final class Library {
 
     var visible: [Photo] {
         photos.filter { p in
-            Self.matches(p, filter)
+            matches(p, filter)
                 && (lensFilter == nil || p.lensName == lensFilter)
                 && (dayFilter == nil || p.day == dayFilter)
         }
@@ -565,9 +593,9 @@ final class Library {
     private func cmp<T: Comparable>(_ a: T, _ b: T) -> ComparisonResult { a < b ? .orderedAscending : a > b ? .orderedDescending : .orderedSame }
     private func flip(_ r: ComparisonResult) -> ComparisonResult { r == .orderedAscending ? .orderedDescending : r == .orderedDescending ? .orderedAscending : r }
 
-    func count(_ f: PhotoFilter) -> Int { photos.reduce(0) { $0 + (Self.matches($1, f) ? 1 : 0) } }
+    func count(_ f: PhotoFilter) -> Int { photos.reduce(0) { $0 + (matches($1, f) ? 1 : 0) } }
 
-    static func matches(_ p: Photo, _ f: PhotoFilter) -> Bool {
+    func matches(_ p: Photo, _ f: PhotoFilter) -> Bool {
         switch f {
         case .all: true
         case .unrated: p.rating == 0 && !p.rejected
@@ -577,6 +605,10 @@ final class Library {
         case .stars(let n): p.rating >= n && !p.rejected
         case .label(let l): p.label == l
         case .duplicates: p.duplicateOf != nil
+        case .suspects: !p.rejected && verdict(p).suspect
+        case .undecided: p.rating == 0 && !p.rejected
+        case .leaders: !p.rejected && (p.seriesID == nil || p.isBestInSeries) && p.duplicateOf == nil
+        case .reason(let r): verdict(p).reasons.contains(r)
         }
     }
 
@@ -612,6 +644,8 @@ final class Library {
         dayFilter = nil
         loupe = false
         loupeZoom = nil
+        viewed = []
+        culling = Prefs.cullByDefault
         loading = true
         analyzed = 0
         photos = []
@@ -640,7 +674,7 @@ final class Library {
             p.adj = edits[f.deletingLastPathComponent()]?[f.lastPathComponent] ?? .none
             // Уже анализировали и файл не менялся — берём из индекса, не пересчитываем.
             if let c = indexes[f.deletingLastPathComponent()]?[f.lastPathComponent], c.size == size, c.mtime == p.mtime {
-                p.exif = c.exif; p.hash = c.hash; p.sharpness = c.sharpness; p.indexed = true
+                p.exif = c.exif; p.hash = c.hash; p.sharpness = c.sharpness; p.cull = c.cull; p.indexed = true
             }
             return p
         }
@@ -697,20 +731,21 @@ final class Library {
             let store = ImageStore.shared
             let workers = min(max(1, Prefs.analysisThreads), 4)
             var sinceSave = 0
-            await withTaskGroup(of: (URL, ExifInfo, UInt64?, Double?).self) { group in
+            await withTaskGroup(of: (URL, ExifInfo, UInt64?, Double?, CullData?).self) { group in
                 var it = urls.makeIterator()
                 func add() -> Bool {
                     guard let u = it.next() else { return false }
                     group.addTask(priority: .utility) {
                         _ = store.asShotK(u)
                         let exif = store.exif(u)
-                        guard let img = store.preview(u) else { return (u, exif, nil, nil) }
-                        return (u, exif, store.dHash(img), store.sharpness(img))
+                        guard let img = store.preview(u) else { return (u, exif, nil, nil, nil) }
+                        let cull = await CullAnalyzer.analyze(img)
+                        return (u, exif, store.dHash(img), store.sharpness(img), cull)
                     }
                     return true
                 }
                 for _ in 0..<workers { _ = add() }
-                while let (u, exif, h, s) = await group.next() {
+                while let (u, exif, h, s, cull) = await group.next() {
                     if Task.isCancelled { group.cancelAll(); break }
                     sinceSave += 1
                     let save = sinceSave >= 50
@@ -720,6 +755,7 @@ final class Library {
                         self.photos[i].exif = exif
                         self.photos[i].hash = h
                         self.photos[i].sharpness = s
+                        self.photos[i].cull = cull
                         self.photos[i].indexed = true
                         self.analyzed += 1
                         if save { self.saveIndex() }
@@ -739,7 +775,7 @@ final class Library {
         var byDir: [URL: [String: IndexEntry]] = [:]
         for p in photos where p.indexed {
             byDir[p.url.deletingLastPathComponent(), default: [:]][p.name] =
-                IndexEntry(size: p.fileSize, mtime: p.mtime, exif: p.exif, hash: p.hash, sharpness: p.sharpness)
+                IndexEntry(size: p.fileSize, mtime: p.mtime, exif: p.exif, hash: p.hash, sharpness: p.sharpness, cull: p.cull)
         }
         Task.detached(priority: .utility) { for (dir, e) in byDir { AnalysisIndex.save(e, for: dir) } }
     }
@@ -755,6 +791,7 @@ final class Library {
         reindex()
         groupSeries()
         findDuplicates()
+        updateCullStats()
     }
 
     /// Серия = подряд идущие кадры с похожей картинкой (расстояние Хэмминга ≤ 12)
@@ -765,7 +802,8 @@ final class Library {
         func close(_ end: Int) {
             if end - runStart >= 2 {
                 for k in runStart..<end { photos[k].seriesID = next }
-                let best = (runStart..<end).max { (photos[$0].sharpness ?? 0) < (photos[$1].sharpness ?? 0) }
+                let maxSharp = (runStart..<end).compactMap { photos[$0].cull?.subjectSharpness ?? photos[$0].sharpness }.max() ?? 1
+                let best = (runStart..<end).max { seriesRank(photos[$0], maxSharp: maxSharp) < seriesRank(photos[$1], maxSharp: maxSharp) }
                 if let best { photos[best].isBestInSeries = true }
                 next += 1
             }
@@ -819,6 +857,7 @@ final class Library {
 
     private func focus(_ id: URL?, extend: Bool = false) {
         currentID = id   // масштаб сохраняется: удобно листать серию и сравнивать резкость в 100%
+        if culling, let id { viewed.insert(id) }
         guard let id else { selection = []; return }
         if extend, let anchor = anchorID { selectRange(from: anchor, to: id) } else {
             selection = [id]
@@ -917,9 +956,9 @@ final class Library {
         flash((clear ? tr("Метка снята") : l.title) + countSuffix)
     }
 
-    private var countSuffix: String { multiSelected ? tr(" · \(targets.count) шт.") : "" }
+    var countSuffix: String { multiSelected ? tr(" · \(targets.count) шт.") : "" }
 
-    private func update(_ title: String? = nil, _ change: (inout Photo) -> Void) {
+    func update(_ title: String? = nil, _ change: (inout Photo) -> Void) {
         let before = snapshot(targets.map(\.id))
         defer { if let title { record(title + countSuffix, before: before) } }
         var failed = 0
@@ -931,6 +970,8 @@ final class Library {
         }
         if failed > 0 { flash(tr("Не удалось записать XMP: \(failed) шт.")) }
     }
+
+    func advanceAfterDecision() { advanceIfNeeded() }
 
     private func advanceIfNeeded() {
         guard autoAdvance, !comparing, let cur = currentID else { return }

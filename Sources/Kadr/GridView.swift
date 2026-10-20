@@ -99,6 +99,7 @@ struct GridView: View {
 }
 
 struct Thumbnail: View {
+    @Environment(Library.self) private var lib
     let photo: Photo
     let selected: Bool
     var focused = false
@@ -155,6 +156,14 @@ struct Thumbnail: View {
                 }
                 if photo.duplicateOf != nil {
                     Badge(text: tr("Дубль"), icon: "doc.on.doc", tint: .orange)
+                }
+                if lib.cullHints, lib.verdict(photo).suspect, !photo.rejected {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.orange)
+                        .padding(4)
+                        .background(.black.opacity(0.55), in: Circle())
+                        .help(lib.verdict(photo).reasons.filter(\.isDefect).map(\.title).joined(separator: ", "))
                 }
                 if !photo.adj.isIdentity {
                     Image(systemName: "slider.horizontal.3")
