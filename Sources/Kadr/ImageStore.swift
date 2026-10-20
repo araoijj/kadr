@@ -12,8 +12,15 @@ final class ImageStore: @unchecked Sendable {
     private let ciContext = CIContext(options: [.cacheIntermediates: false])
 
     init() {
-        thumbs.countLimit = Prefs.thumbCache
+        applyMemoryLimit()
         full.countLimit = 3
+    }
+
+    /// Previews are limited by bytes, not by count: a decoded 1616×1080 preview is ~7 MB,
+    /// so "4000 previews" could mean tens of gigabytes on a big shoot.
+    func applyMemoryLimit() {
+        thumbs.totalCostLimit = Prefs.previewBytes
+        Renderer.shared.applyMemoryLimit()
     }
 
     static let rawExtensions: Set<String> = ["arw", "srf", "sr2", "cr2", "cr3", "nef", "nrw", "raf", "orf", "rw2", "dng", "pef", "3fr", "iiq"]
@@ -44,7 +51,7 @@ final class ImageStore: @unchecked Sendable {
             img = m
         }
         if raw, max(img.width, img.height) < 1000, let big = make(true) { img = big }
-        thumbs.setObject(img, forKey: url as NSURL)
+        thumbs.setObject(img, forKey: url as NSURL, cost: img.bytesPerRow * img.height)
         return img
     }
 

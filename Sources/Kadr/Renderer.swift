@@ -14,7 +14,10 @@ final class Renderer: @unchecked Sendable {
     private var generation: [String: Int] = [:]
     private let thumbs = NSCache<NSString, CGImage>()
 
-    init() { thumbs.countLimit = 2000 }
+    init() { applyMemoryLimit() }
+
+    /// Edited thumbnails: a quarter of the preview memory budget.
+    func applyMemoryLimit() { thumbs.totalCostLimit = Prefs.previewBytes / 4 }
 
     /// Developed image for viewing. If a new request came in on the same channel while this one
     /// was being computed, return nil (the old image is left untouched).
@@ -79,7 +82,7 @@ final class Renderer: @unchecked Sendable {
         let out = EditPipeline.apply(adj, to: img, asShotK: ImageStore.shared.asShotK(url))
         guard let cg = context.createCGImage(out, from: out.extent.integral, format: .RGBA8,
                                              colorSpace: CGColorSpace(name: CGColorSpace.displayP3)) else { return nil }
-        thumbs.setObject(cg, forKey: key)
+        thumbs.setObject(cg, forKey: key, cost: cg.bytesPerRow * cg.height)
         return cg
     }
 

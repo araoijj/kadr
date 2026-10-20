@@ -157,7 +157,7 @@ struct StorageStats: Sendable {
 
 struct PerformanceSettings: View {
     @AppStorage("pref.threads") private var threads = 2
-    @AppStorage("pref.thumbCache") private var thumbCache = 4000
+    @AppStorage("pref.previewMB") private var previewMB = 0
     @AppStorage("pref.renderCache") private var renderCache = 4
     @AppStorage("pref.historyLimit") private var historyLimit = 100
     @AppStorage("pref.historyKeep") private var historyKeep = true
@@ -183,18 +183,20 @@ struct PerformanceSettings: View {
             }
             FaceMeshSection()
             Section(tr("Память")) {
-                Picker(tr("Превью в памяти"), selection: $thumbCache) {
-                    Text(tr("1000 — экономно")).tag(1000)
-                    Text("2000").tag(2000)
-                    Text(tr("4000 — по умолчанию")).tag(4000)
-                    Text(tr("8000 — большие съёмки")).tag(8000)
+                Picker(tr("Память под превью"), selection: $previewMB) {
+                    Text(tr("Авто — \(ByteCountFormatter.string(fromByteCount: Int64(Prefs.previewBytesAuto), countStyle: .memory))")).tag(0)
+                    Text(tr("512 МБ — экономно")).tag(512)
+                    Text(tr("1 ГБ")).tag(1024)
+                    Text(tr("2 ГБ")).tag(2048)
+                    Text(tr("4 ГБ — большие съёмки")).tag(4096)
                 }
+                .onChange(of: previewMB) { _, _ in ImageStore.shared.applyMemoryLimit() }
                 Picker(tr("Проявленных кадров в памяти"), selection: $renderCache) {
                     Text(tr("2 — экономно")).tag(2)
                     Text(tr("4 — по умолчанию")).tag(4)
                     Text(tr("6 — быстрее листать")).tag(6)
                 }
-                Text(tr("Превью ~0,3–1 МБ каждое, проявленный кадр ~60–80 МБ. Меньше — экономнее память, больше — быстрее листать назад. Применяется после перезапуска."))
+                Text(tr("Превью в памяти ~7–11 МБ каждое (1 ГБ — ~100–150 кадров мгновенно), проявленный кадр ~60–80 МБ. Больше — быстрее листать назад, меньше — свободнее остальным программам. Память под превью меняется сразу, число проявленных — после перезапуска."))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section(tr("Журнал изменений")) {
