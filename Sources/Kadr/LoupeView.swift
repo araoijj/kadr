@@ -1,0 +1,178 @@
+import AppKit
+import SwiftUI
+
+struct LoupeView: View {
+    @Environment(Library.self) private var lib
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                if let p = lib.current {
+                    if lib.zoom100 {
+                        FullResView(photo: p)
+                    } else {
+                        PreviewImage(photo: p)
+                            .padding(20)
+                            .onTapGesture(count: 2) { lib.zoom100 = true }
+                    }
+                    overlay(p)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Filmstrip()
+        }
+    }
+
+    private func overlay(_ p: Photo) -> some View {
+        VStack {
+            HStack(alignment: .top) {
+                if p.seriesID != nil {
+                    let s = lib.series(of: p)
+                    let pos = (s.firstIndex { $0.id == p.id } ?? 0) + 1
+                    Badge(text: "Серия: \(pos) из \(s.count)" + (p.isBestInSeries ? " · самый резкий" : ""),
+                          icon: p.isBestInSeries ? "sparkles" : "square.stack.3d.up",
+                          tint: p.isBestInSeries ? Theme.star : .white.opacity(0.8))
+                }
+                Spacer()
+                if lib.zoom100 {
+                    Badge(text: "100%  ·  Esc — назад", icon: "plus.magnifyingglass", tint: .white.opacity(0.85))
+                }
+            }
+            Spacer()
+            HStack {
+                if p.rejected {
+                    Label("Отклонён", systemImage: "xmark.circle.fill")
+                        .font(.headline)
+                        .foregroundStyle(Theme.reject)
+                }
+                Stars(rating: p.rating, size: 16)
+                if let l = p.label { Circle().fill(l.color).frame(width: 12, height: 12) }
+                Spacer()
+            }
+        }
+        .padding(16)
+        .allowsHitTesting(false)
+    }
+}
+
+struct PreviewImage: View {
+    let photo: Photo
+    @State private var image: CGImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(decorative: image, scale: 1)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .opacity(photo.rejected ? 0.45 : 1)
+            } else {
+                ProgressView()
+            }
+        }
+        .task(id: photo.id) {
+            if let c = ImageStore.shared.cachedPreview(photo.url) { image = c } else {
+                let url = photo.url
+                image = await Task.detached(priority: .userInitiated) { ImageStore.shared.preview(url) }.value
+            }
+        }
+    }
+}
+
+/// Полное проявление RAW, 1 пиксель снимка = 1 пиксель экрана. Тянуть мышью / скроллить.
+struct FullResView: View {
+    let photo: Photo
+    @State private var image: CGImage?
+    @State private var failed = false
+
+    var body: some View {
+        Group {
+            if let image {
+                let scale = NSScreen.main?.backingScaleFactor ?? 2
+                ScrollView([.horizontal, .vertical]) {
+                    Image(decorative: image, scale: scale)
+                        .interpolation(.none)
+                }
+                .defaultScrollAnchor(.center)
+            } else if failed {
+                ContentUnavailableView("Не удалось проявить RAW", systemImage: "exclamationmark.triangle")
+            } else {
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Проявляю RAW…").font(.callout).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .task(id: photo.id) {
+            image = nil
+            failed = false
+            let url = photo.url
+            let img = await Task.detached(priority: .userInitiated) { ImageStore.shared.fullImage(url) }.value
+            if Task.isCancelled { return }
+            image = img
+            failed = img == nil
+        }
+    }
+}
+
+struct Filmstrip: View {
+    @Environment(Library.self) private var lib
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 6) {
+                    ForEach(lib.visible) { p in
+                        StripCell(photo: p, selected: lib.isSelected(p))
+                            .id(p.id)
+                            .onTapGesture { lib.click(p) }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+            .frame(height: 92)
+            .background(.black.opacity(0.25))
+            .onChange(of: lib.currentID, initial: true) { _, id in
+                guard let id else { return }
+                withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .center) }
+            }
+        }
+    }
+}
+
+struct StripCell: View {
+    let photo: Photo
+    let selected: Bool
+    @State private var image: CGImage?
+
+    var body: some View {
+        ZStack {
+            if let image {
+                Image(decorative: image, scale: 1)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .opacity(photo.rejected ? 0.3 : 1)
+            } else {
+                Color.white.opacity(0.05)
+            }
+        }
+        .frame(width: 76, height: 76)
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 2))
+        .overlay(alignment: .bottomLeading) {
+            if photo.rating > 0 {
+                Text("\(photo.rating)★")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Theme.star)
+                    .padding(3)
+            }
+        }
+        .task(id: photo.id) {
+            if let c = ImageStore.shared.cachedPreview(photo.url) { image = c; return }
+            let url = photo.url
+            image = await Task.detached(priority: .utility) { ImageStore.shared.preview(url) }.value
+        }
+    }
+}
