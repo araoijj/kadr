@@ -108,6 +108,20 @@ struct EditPanel: View {
                      : tr("Форматы Instagram: пост 4:5, квадрат, сторис 9:16, горизонтальный 1.91:1."))
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Button { lib.removeMode ? lib.finishRemove() : lib.startRemove() } label: {
+                Label(lib.removeMode ? tr("Готово") : tr("Убрать объект (AI)"), systemImage: "eraser").frame(maxWidth: .infinity)
+            }
+            .controlSize(.large)
+            .disabled(!Retouch.shared.installed)
+            .help(Retouch.shared.installed ? tr("Клик по лишнему объекту — AI выделит и закрасит его. Убранное хранится отдельно, ⌘Z возвращает.")
+                                            : tr("Модели «Убрать объект» не установлены (Настройки → AI)"))
+            if !p.adj.removals.isEmpty {
+                HStack {
+                    Text(tr("Убрано объектов: \(p.adj.removals.count)")).font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button(tr("Вернуть все")) { var a = p.adj; a.removals = []; lib.setAdjustments(a) }.controlSize(.small)
+                }
+            }
             // AI noise reduction: computed once per photo (~1 min), then a strength slider.
             VStack(alignment: .leading, spacing: 8) {
                 HStack {

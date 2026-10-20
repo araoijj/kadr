@@ -135,6 +135,13 @@ struct KeyHandler {
         if e.charactersIgnoringModifiers == "?" || (shift && e.keyCode == 44) {   // ? — Shift + the "/" key on any layout
             lib.showShortcuts = true; return true
         }
+        if lib.removeMode {
+            switch e.keyCode {
+            case 36, 76: lib.applyRemove(); return true                                          // Enter: remove
+            case 53: if lib.removePoints.isEmpty { lib.finishRemove() } else { lib.clearRemoveSelection() }; return true   // Esc
+            default: break
+            }
+        }
         if lib.tournamentActive {
             switch e.keyCode {
             case 123: lib.pickTournament(left: true); return true    // ← left is better

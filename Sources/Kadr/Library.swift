@@ -251,6 +251,12 @@ final class Library {
     // MARK: - Crop
 
     var cropMode = false
+    // Remove Object mode (Retouch.swift).
+    var removeMode = false
+    var removePoints: [CGPoint] = []
+    var removeMask: CGImage?
+    var removeBusy = false
+    var removeFor: URL?
     private var cropBackup: Adjustments?
 
     // Auto crop review (AutoCrop.swift): suggestions open one by one in the crop editor.

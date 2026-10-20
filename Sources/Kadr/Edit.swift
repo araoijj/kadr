@@ -29,6 +29,7 @@ struct Adjustments: Codable, Equatable, Hashable {
     var grain: Double = 0         // 0…100
     var lut: String?              // path inside the LUT folder (.cube or HaldCLUT .png)
     var lutAmount: Double = 100   // 0…200: above 100 amplifies the LUT effect
+    var removals: [Removal] = []  // objects painted out by "Remove Object" (Retouch.swift)
     var aiDenoise: Double = 0     // 0…100: AI noise reduction strength (needs the cached SCUNet result)
 
     // Crop: a rectangle in frame fractions (y from top to bottom) plus horizon straightening, in degrees.
@@ -88,6 +89,7 @@ extension Adjustments {
         lut = try? c.decodeIfPresent(String.self, forKey: .lut)
         lutAmount = v(.lutAmount) ?? 100
         aiDenoise = v(.aiDenoise) ?? 0
+        removals = (try? c.decodeIfPresent([Removal].self, forKey: .removals)) ?? []
         cropX = v(.cropX) ?? 0; cropY = v(.cropY) ?? 0; cropW = v(.cropW) ?? 1; cropH = v(.cropH) ?? 1
         angle = v(.angle) ?? 0
         cropAspect = try? c.decodeIfPresent(String.self, forKey: .cropAspect)
@@ -435,7 +437,8 @@ enum EditPipeline {
                       denoised: CIImage? = nil) -> CIImage {
         // 0. AI noise reduction — on the RAW base, before everything else.
         let base = a.aiDenoise > 0 && denoised != nil ? Denoiser.apply(input, denoised: denoised!, amount: a.aiDenoise / 100) : input
-        var img = a.hasGeometry ? geometry(base, a) : base
+        let cleaned = a.removals.isEmpty ? base : Retouch.composite(base, a.removals)
+        var img = a.hasGeometry ? geometry(cleaned, a) : cleaned
         let e = img.extent
         let longSide = max(e.width, e.height)
 

@@ -8,13 +8,13 @@ struct LoupeView: View {
         VStack(spacing: 0) {
             ZStack {
                 if let p = lib.current {
-                    if lib.cropMode { CropEditor(photo: p) } else { ZoomableLoupe(photo: p) }
+                    if lib.cropMode { CropEditor(photo: p) } else if lib.removeMode { RemoveView(photo: p) } else { ZoomableLoupe(photo: p) }
                     overlay(p)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay(alignment: .bottom) {
-                if lib.cropMode { CropBar().padding(.bottom, 12) } else { ZoomBar().padding(.bottom, 12) }
+                if lib.cropMode { CropBar().padding(.bottom, 12) } else if lib.removeMode { RemoveBar().padding(.bottom, 12) } else { ZoomBar().padding(.bottom, 12) }
             }
             .task(id: lib.currentID) {
                 // Prepare the current frame's RAW in advance so the first style applies instantly.

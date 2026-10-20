@@ -3948,5 +3948,220 @@
   "Heavy on the Mac. When off, start it with “Run AI Analysis” in Culling mode (⌥⌘A).",
   "Exige al Mac. Desactivado: se inicia con «Ejecutar análisis IA» en el modo Selección (⌥⌘A).",
   "Impegna il Mac. Se disattivato, avviala con «Avvia analisi IA» in modalità Selezione (⌥⌘A)."
+ ],
+ "Кто на снимке (люди)": [
+  "Who's in the photo (people)",
+  "Quién está en la foto (personas)",
+  "Chi c’è nella foto (persone)"
+ ],
+ "Фильтр по людям: лица группируются по человеку (модель SFace, 18 МБ)": [
+  "People filter: faces grouped by person (SFace model, 18 MB)",
+  "Filtro de personas: caras agrupadas por persona (modelo SFace, 18 MB)",
+  "Filtro persone: volti raggruppati per persona (modello SFace, 18 MB)"
+ ],
+ "Модель шумоподавления не установлена (Настройки → AI)": [
+  "The noise reduction model isn't installed (Settings → AI)",
+  "El modelo de reducción de ruido no está instalado (Ajustes → IA)",
+  "Il modello di riduzione del rumore non è installato (Impostazioni → IA)"
+ ],
+ "Не удалось убрать шум: {}": [
+  "Couldn't remove noise: {}",
+  "No se pudo eliminar el ruido: {}",
+  "Impossibile rimuovere il rumore: {}"
+ ],
+ "Шум убран: {} из {}": [
+  "Noise removed: {} of {}",
+  "Ruido eliminado: {} de {}",
+  "Rumore rimosso: {} su {}"
+ ],
+ "Убрать объект (AI)": [
+  "Remove Object (AI)",
+  "Eliminar objeto (IA)",
+  "Rimuovi oggetto (IA)"
+ ],
+ "Клик по лишнему объекту — AI выделит и закрасит его. Убранное хранится отдельно, ⌘Z возвращает.": [
+  "Click an unwanted object — AI selects and paints it out. Removals are stored separately; ⌘Z brings them back.",
+  "Haz clic en un objeto sobrante: la IA lo selecciona y lo borra. Lo eliminado se guarda aparte; ⌘Z lo recupera.",
+  "Fai clic su un oggetto indesiderato: l’IA lo seleziona e lo cancella. Le rimozioni sono salvate a parte; ⌘Z le ripristina."
+ ],
+ "Модели «Убрать объект» не установлены (Настройки → AI)": [
+  "The Remove Object models aren't installed (Settings → AI)",
+  "Los modelos de Eliminar objeto no están instalados (Ajustes → IA)",
+  "I modelli di Rimuovi oggetto non sono installati (Impostazioni → IA)"
+ ],
+ "Убрано объектов: {}": [
+  "Objects removed: {}",
+  "Objetos eliminados: {}",
+  "Oggetti rimossi: {}"
+ ],
+ "Вернуть все": [
+  "Restore All",
+  "Recuperar todos",
+  "Ripristina tutti"
+ ],
+ "AI-шумоподавление": [
+  "AI noise reduction",
+  "Reducción de ruido IA",
+  "Riduzione rumore IA"
+ ],
+ "Кадр {} из {}…": [
+  "Photo {} of {}…",
+  "Foto {} de {}…",
+  "Foto {} di {}…"
+ ],
+ "Убрать шум у выделенных ({})": [
+  "Remove Noise from Selected ({})",
+  "Eliminar ruido de las seleccionadas ({})",
+  "Rimuovi rumore dalle selezionate ({})"
+ ],
+ "Убрать шум": [
+  "Remove Noise",
+  "Eliminar ruido",
+  "Rimuovi rumore"
+ ],
+ "Модель SCUNet на видеокарте: ~1 минута на кадр 24 Мп, потом — мгновенно. Света из RAW не теряются.": [
+  "SCUNet on the GPU: ~1 minute per 24 MP photo, then instant. RAW highlights are kept.",
+  "SCUNet en la GPU: ~1 minuto por foto de 24 MP, luego al instante. Se conservan las luces del RAW.",
+  "SCUNet sulla GPU: ~1 minuto per foto da 24 MP, poi istantaneo. Le alte luci del RAW restano."
+ ],
+ "Люди: распознавание лиц": [
+  "People: face recognition",
+  "Personas: reconocimiento facial",
+  "Persone: riconoscimento volti"
+ ],
+ "Убрать объект": [
+  "Remove Object",
+  "Eliminar objeto",
+  "Rimuovi oggetto"
+ ],
+ "SFace (OpenCV Zoo, Apache 2.0) — фильтр «Люди»": [
+  "SFace (OpenCV Zoo, Apache 2.0) — the People filter",
+  "SFace (OpenCV Zoo, Apache 2.0): filtro Personas",
+  "SFace (OpenCV Zoo, Apache 2.0): filtro Persone"
+ ],
+ "SCUNet (Apache 2.0) — ~1 минута на кадр 24 Мп, на видеокарте": [
+  "SCUNet (Apache 2.0) — ~1 minute per 24 MP photo, on the GPU",
+  "SCUNet (Apache 2.0): ~1 minuto por foto de 24 MP, en la GPU",
+  "SCUNet (Apache 2.0): ~1 minuto per foto da 24 MP, sulla GPU"
+ ],
+ "18 МБ": [
+  "18 MB",
+  "18 MB",
+  "18 MB"
+ ],
+ "77 МБ": [
+  "77 MB",
+  "77 MB",
+  "77 MB"
+ ],
+ "300 МБ": [
+  "300 MB",
+  "300 MB",
+  "300 MB"
+ ],
+ "установлен": [
+  "installed",
+  "instalado",
+  "installato"
+ ],
+ "Скачать · {}": [
+  "Download · {}",
+  "Descargar · {}",
+  "Scarica · {}"
+ ],
+ "Из файла…": [
+  "From File…",
+  "Desde archivo…",
+  "Da file…"
+ ],
+ "Пакеты моделей": [
+  "Model packages",
+  "Paquetes de modelos",
+  "Pacchetti di modelli"
+ ],
+ "Тяжёлые модели ставятся по желанию и хранятся в папке данных «Кадра». Работают офлайн, на этом Mac.": [
+  "Heavy models are optional and stored in Kadr's data folder. They run offline, on this Mac.",
+  "Los modelos pesados son opcionales y se guardan en la carpeta de datos de Kadr. Funcionan sin conexión, en este Mac.",
+  "I modelli pesanti sono facoltativi e salvati nella cartella dati di Kadr. Funzionano offline, su questo Mac."
+ ],
+ "Папка или .zip с моделями пакета «{}»": [
+  "A folder or .zip with the “{}” models",
+  "Carpeta o .zip con los modelos de «{}»",
+  "Cartella o .zip con i modelli di «{}»"
+ ],
+ "Человек {}": [
+  "Person {}",
+  "Persona {}",
+  "Persona {}"
+ ],
+ "Не удалось выделить — кликните в другое место объекта": [
+  "Couldn't select — click another spot on the object",
+  "No se pudo seleccionar: haz clic en otro punto del objeto",
+  "Selezione non riuscita: fai clic su un altro punto dell’oggetto"
+ ],
+ "Не удалось убрать объект": [
+  "Couldn't remove the object",
+  "No se pudo eliminar el objeto",
+  "Impossibile rimuovere l’oggetto"
+ ],
+ "Объект убран — ⌘Z, чтобы вернуть": [
+  "Object removed — ⌘Z to bring it back",
+  "Objeto eliminado: ⌘Z para recuperarlo",
+  "Oggetto rimosso: ⌘Z per ripristinarlo"
+ ],
+ "Кликните по объекту — AI выделит его целиком; ещё клик — добавить часть": [
+  "Click an object — AI selects all of it; another click adds a part",
+  "Haz clic en un objeto: la IA lo selecciona entero; otro clic añade una parte",
+  "Fai clic su un oggetto: l’IA lo seleziona intero; un altro clic aggiunge una parte"
+ ],
+ "Enter — убрать · клик — добавить к выделению · Esc — сбросить": [
+  "Enter — remove · click — add to selection · Esc — clear",
+  "Enter: eliminar · clic: añadir a la selección · Esc: borrar",
+  "Invio: rimuovi · clic: aggiungi alla selezione · Esc: azzera"
+ ],
+ "Сбросить выделение": [
+  "Clear Selection",
+  "Borrar selección",
+  "Azzera selezione"
+ ],
+ "Убрать (Enter)": [
+  "Remove (Enter)",
+  "Eliminar (Enter)",
+  "Rimuovi (Invio)"
+ ],
+ "Как зовут?": [
+  "What's their name?",
+  "¿Cómo se llama?",
+  "Come si chiama?"
+ ],
+ "Имя": [
+  "Name",
+  "Nombre",
+  "Nome"
+ ],
+ "Сохранить": [
+  "Save",
+  "Guardar",
+  "Salva"
+ ],
+ "Имя запомнится: этот человек будет узнаваться и в других съёмках. Дайте то же имя второй группе (например, профилю) — они объединятся.": [
+  "The name is remembered: this person will be recognized in other shoots too. Give the same name to a second group (e.g. a profile) to merge them.",
+  "El nombre se recuerda: esta persona se reconocerá también en otras sesiones. Da el mismo nombre a un segundo grupo (p. ej., un perfil) para unirlos.",
+  "Il nome viene ricordato: questa persona sarà riconosciuta anche in altri servizi. Dai lo stesso nome a un secondo gruppo (es. un profilo) per unirli."
+ ],
+ "Люди": [
+  "People",
+  "Personas",
+  "Persone"
+ ],
+ "Назвать…": [
+  "Name…",
+  "Poner nombre…",
+  "Assegna nome…"
+ ],
+ "Клик — показать кадры с этим человеком; правый клик — назвать (одинаковые имена объединяют группы)": [
+  "Click — show photos with this person; right-click — name them (the same name merges groups)",
+  "Clic: mostrar fotos con esta persona; clic derecho: ponerle nombre (el mismo nombre une grupos)",
+  "Clic: mostra le foto con questa persona; clic destro: assegna un nome (lo stesso nome unisce i gruppi)"
  ]
 }

@@ -568,6 +568,7 @@ struct AISettings: View {
                 Toggle(tr("Запускать AI-анализ автоматически после индексации"), isOn: $aiAuto)
                     .help(tr("Нагружает Mac. Выключено — запуск кнопкой «Запустить AI-анализ» в режиме «Отбор» (⌥⌘A)."))
             }
+            ModelPackagesSection()
             FaceMeshSection()
         }
         .formStyle(.grouped)
