@@ -39,6 +39,12 @@ struct SelectionBar: View {
 
                 divider
 
+                Button { lib.startCompare() } label: {
+                    Label("Сравнить", systemImage: "rectangle.split.2x1")
+                }
+                .buttonStyle(.plain)
+                .help("C")
+
                 Button { lib.export.scope = .selected; lib.showExport = true } label: {
                     Label("Сохранить в папку", systemImage: "square.and.arrow.down.on.square")
                 }

@@ -60,8 +60,11 @@ struct PhotoContextMenu: ViewModifier {
         Button("Сохранить как JPEG…" + suffix, systemImage: "photo") { act { lib.exportTargets(as: .jpeg) } }
         Button("Сохранить оригиналы в папку…" + suffix, systemImage: "square.and.arrow.down.on.square") { act { lib.exportTargets(as: .original) } }
 
-        if photo.seriesID != nil {
+        if n > 1 || photo.seriesID != nil {
             Divider()
+            Button(n > 1 ? "Сравнить (\(min(n, 4)))" : "Сравнить кадры серии", systemImage: "rectangle.split.2x1") { act { lib.startCompare() } }
+        }
+        if photo.seriesID != nil {
             Button("Выделить всю серию", systemImage: "square.stack.3d.up") { act { lib.selectSeries() } }
         }
     }

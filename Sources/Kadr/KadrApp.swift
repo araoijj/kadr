@@ -22,6 +22,8 @@ struct KadrApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("Открыть папку…") { library.chooseFolder() }
                     .keyboardShortcut("o")
+                Button("Импорт с карты памяти…") { library.showImport = true }
+                    .keyboardShortcut("i")
             }
             CommandMenu("Обработка") {
                 Button("Копировать обработку") { library.copyAdjustments() }
@@ -70,7 +72,20 @@ struct KeyHandler {
         }
         if !e.modifierFlags.intersection([.command, .control, .option]).isEmpty { return false }
         let shift = e.modifierFlags.contains(.shift)
-        if NSApp.keyWindow?.firstResponder is NSTextView || lib.showExport { return false }
+        if NSApp.keyWindow?.firstResponder is NSTextView || lib.showExport || lib.showImport { return false }
+        if lib.comparing {
+            switch e.keyCode {
+            case 123, 126: lib.compareMove(-1); return true
+            case 124, 125: lib.compareMove(1); return true
+            case 53: lib.stopCompare(); return true
+            default: break
+            }
+            switch e.charactersIgnoringModifiers?.lowercased() {
+            case "z", "я": lib.toggleCompareZoom(); return true
+            case "c", "с": lib.stopCompare(); return true
+            default: break
+            }
+        }
         switch e.keyCode {
         case 123: lib.move(-1, extend: shift); return true                       // ←  (⇧ — расширить выделение)
         case 124: lib.move(1, extend: shift); return true                        // →
@@ -99,6 +114,7 @@ struct KeyHandler {
             lib.showInfo = true
         case "\\": lib.showOriginal.toggle()
         case "s", "ы": lib.quickSend()
+        case "c", "с": lib.startCompare()
         default: return false
         }
         return true

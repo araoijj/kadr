@@ -15,12 +15,15 @@ struct ContentView: View {
                 Theme.canvas.ignoresSafeArea()
                 if lib.folder == nil {
                     EmptyState()
+                } else if lib.comparing {
+                    CompareView()
                 } else if lib.loupe {
                     LoupeView()
                 } else {
                     GridView()
                 }
-                if lib.multiSelected && lib.folder != nil { SelectionBar() }
+                if lib.multiSelected && lib.folder != nil && !lib.comparing { SelectionBar() }
+                CardBanner()
                 if let t = lib.toast { Toast(text: t) }
             }
             .inspector(isPresented: $lib.showInfo) {
@@ -30,6 +33,7 @@ struct ContentView: View {
         }
         .toolbar { toolbar }
         .sheet(isPresented: $lib.showExport) { ExportSheet().environment(lib) }
+        .sheet(isPresented: $lib.showImport) { ImportSheet().environment(lib) }
         .navigationTitle(lib.folder?.lastPathComponent ?? "Кадр")
         .dropDestination(for: URL.self) { urls, _ in
             guard let u = urls.first else { return false }
@@ -60,6 +64,10 @@ struct ContentView: View {
             Button { lib.chooseFolder() } label: { Label("Открыть", systemImage: "folder") }
                 .help("Открыть папку (⌘O)")
         }
+        ToolbarItem(placement: .navigation) {
+            Button { lib.showImport = true } label: { Label("Импорт", systemImage: "sdcard") }
+                .help("Импорт с карты памяти (⌘I)")
+        }
         ToolbarItem(placement: .principal) {
             if lib.folder != nil {
                 Picker("Вид", selection: $lib.loupe) {
@@ -69,6 +77,7 @@ struct ContentView: View {
                 .pickerStyle(.segmented)
                 .frame(width: 90)
                 .help("Сетка / Просмотр (пробел)")
+                .disabled(lib.comparing)
             }
         }
         ToolbarItemGroup(placement: .primaryAction) {
@@ -102,6 +111,11 @@ struct ContentView: View {
                         .frame(width: 110)
                         .help("Размер превью")
                 }
+                Button { lib.comparing ? lib.stopCompare() : lib.startCompare() } label: {
+                    Label("Сравнить", systemImage: lib.comparing ? "rectangle.split.2x1.fill" : "rectangle.split.2x1")
+                }
+                .help("Сравнить выделенные или серию (C)")
+                .disabled(!lib.comparing && !lib.canCompare)
                 Button { lib.showExport = true } label: {
                     Label("Сохранить в папку", systemImage: "square.and.arrow.down.on.square")
                 }
@@ -168,7 +182,7 @@ struct KeyHints: View {
         ("6–9", "цвет"), ("Пробел", "сетка / кадр"), ("Z", "зум 100%"), ("I", "инфо"),
         ("S", "кадр в папку"), ("⌘S", "сохранить отобранные"),
         ("⌘ / ⇧ + клик", "выделить несколько"), ("⌘A", "выделить всё"),
-        ("E", "обработка"), ("\\", "до / после"),
+        ("E", "обработка"), ("C", "сравнить кадры"), ("⌘I", "импорт с карты"), ("\\", "до / после"),
     ]
 
     var body: some View {

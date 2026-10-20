@@ -27,6 +27,14 @@ struct Sidebar: View {
                 ForEach(lib.browser.volumes, id: \.self) { u in
                     FolderRow(url: u, icon: "sdcard")
                 }
+                Button {
+                    lib.showImport = true
+                } label: {
+                    Label("Импорт с карты…", systemImage: "square.and.arrow.down")
+                        .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+                .selectionDisabled()
                 Toggle("С вложенными папками", isOn: $lib.includeSubfolders)
                     .toggleStyle(.checkbox)
                     .font(.callout)

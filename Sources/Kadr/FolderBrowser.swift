@@ -9,6 +9,9 @@ final class FolderBrowser {
     var favorites: [URL] = []
     var recent: [URL] = []
     var volumes: [URL] = []
+    /// Вызывается, когда подключили новую карту камеры (в корне есть DCIM).
+    var onCardMounted: ((URL) -> Void)?
+    private var scannedOnce = false
 
     private let favKey = "favoriteFolders", recentKey = "recentFolders"
 
@@ -35,12 +38,18 @@ final class FolderBrowser {
     }
 
     func refreshVolumes() {
+        let before = Set(volumes)
         let keys: [URLResourceKey] = [.volumeIsRootFileSystemKey, .volumeIsBrowsableKey]
         volumes = (FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes]) ?? [])
             .filter { u in
                 let v = try? u.resourceValues(forKeys: Set(keys))
                 return v?.volumeIsRootFileSystem != true && v?.volumeIsBrowsable != false
             }
+        // При запуске уже вставленные карты плашку не вызывают — только новые подключения.
+        if scannedOnce {
+            for v in volumes where !before.contains(v) && CardImporter.isCameraCard(v) { onCardMounted?(v) }
+        }
+        scannedOnce = true
     }
 
     func addRecent(_ u: URL) {

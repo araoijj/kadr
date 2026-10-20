@@ -17,7 +17,7 @@ final class ImageStore: @unchecked Sendable {
     }
 
     static let rawExtensions: Set<String> = ["arw", "srf", "sr2", "cr2", "cr3", "nef", "nrw", "raf", "orf", "rw2", "dng", "pef", "3fr", "iiq"]
-    static let imageExtensions: Set<String> = rawExtensions.union(["jpg", "jpeg", "heic", "heif", "png", "tif", "tiff"])
+    static let imageExtensions: Set<String> = rawExtensions.union(["jpg", "jpeg", "heic", "heif", "hif", "png", "tif", "tiff"])
 
     /// Встроенное превью (или уменьшенная картинка, если превью нет).
     func preview(_ url: URL) -> CGImage? {

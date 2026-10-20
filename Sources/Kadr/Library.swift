@@ -163,6 +163,92 @@ final class Library {
     // MARK: - Сортировка, группировка, доп. фильтры
 
     let browser = FolderBrowser()
+    let importer = CardImporter()
+    var showImport = false
+    var cardBanner: URL?
+
+    init() {
+        browser.onCardMounted = { [weak self] card in
+            guard let self, !self.showImport else { return }
+            self.cardBanner = card
+        }
+    }
+
+    // MARK: - Сравнение
+
+    var comparing = false
+    var compareIDs: [URL] = []
+    var compareZoom: CGFloat = 1
+    var compareZoomBase: CGFloat = 1
+    var compareZoom100: CGFloat = 4
+    var compareCenter = CGPoint(x: 0.5, y: 0.5)
+
+    var comparePhotos: [Photo] { compareIDs.compactMap { index[$0].map { photos[$0] } } }
+
+    /// Можно ли сравнить: выделено 2+ кадра или текущий входит в серию.
+    var canCompare: Bool { multiSelected || (current.map { series(of: $0).count > 1 } ?? false) }
+
+    /// Выделенные (до 4), а если выделен один — до 4 кадров его серии начиная с него.
+    func startCompare() {
+        var ids: [URL]
+        if multiSelected {
+            ids = targets.map(\.id)
+            if ids.count > 4 { flash("Сравниваю первые 4 из \(ids.count)") }
+        } else if let p = current, p.seriesID != nil {
+            let s = series(of: p).map(\.id)
+            let i = s.firstIndex(of: p.id) ?? 0
+            ids = Array(s[max(0, min(i, s.count - 4))...])
+        } else {
+            flash("Выделите 2–4 кадра: ⌘-клик или рамкой")
+            return
+        }
+        ids = Array(ids.prefix(4))
+        guard ids.count >= 2 else { flash("Выделите 2–4 кадра: ⌘-клик или рамкой"); return }
+        compareIDs = ids
+        let focusID = ids.contains(currentID ?? ids[0]) ? (currentID ?? ids[0]) : ids[0]
+        focus(focusID)
+        compareZoom = 1
+        compareZoomBase = 1
+        compareCenter = CGPoint(x: 0.5, y: 0.5)
+        loupe = false
+        comparing = true
+    }
+
+    func stopCompare() {
+        comparing = false
+        compareZoom = 1
+        compareZoomBase = 1
+    }
+
+    func compareMove(_ delta: Int) {
+        guard let i = compareIDs.firstIndex(where: { $0 == currentID }) else { focus(compareIDs.first); return }
+        focus(compareIDs[(i + delta + compareIDs.count) % compareIDs.count])
+    }
+
+    func toggleCompareZoom() {
+        if compareZoom > 1 {
+            compareZoom = 1
+            compareCenter = CGPoint(x: 0.5, y: 0.5)
+        } else {
+            compareZoom = max(compareZoom100, 1.5)
+        }
+        compareZoomBase = compareZoom
+    }
+
+    /// Оставить кадр в фокусе, остальные сравниваемые — отклонить.
+    func rejectOthersInCompare() {
+        guard let keep = currentID else { return }
+        var n = 0
+        for id in compareIDs {
+            guard let i = index[id] else { continue }
+            photos[i].rejected = id != keep
+            if id != keep { n += 1 }
+            let p = photos[i]
+            try? Sidecar.write(.init(rating: p.rating, rejected: p.rejected, label: p.label), for: p.url)
+        }
+        stopCompare()
+        flash("Оставлен \(keep.lastPathComponent), отклонено: \(n)")
+    }
 
     var sortKey: SortKey = SortKey(rawValue: UserDefaults.standard.string(forKey: "sortKey") ?? "") ?? .date {
         didSet { UserDefaults.standard.set(sortKey.rawValue, forKey: "sortKey") }
@@ -587,7 +673,7 @@ final class Library {
     }
 
     private func advanceIfNeeded() {
-        guard autoAdvance, let cur = currentID else { return }
+        guard autoAdvance, !comparing, let cur = currentID else { return }
         let list = visible
         // Если кадр выпал из текущего фильтра — встаём на следующий за ним.
         if !list.contains(where: { $0.id == cur }) {
