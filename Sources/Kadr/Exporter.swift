@@ -125,6 +125,8 @@ struct ExportSettings: Codable, Equatable {
         watermarkPosition = (try? c.decode(Watermark.Position.self, forKey: .watermarkPosition)) ?? def.watermarkPosition
         preset = (try? c.decode(ExportPreset.self, forKey: .preset)) ?? def.preset
         presetCrop = (try? c.decode(Bool.self, forKey: .presetCrop)) ?? def.presetCrop
+        // Бывший пресет «Сайт/Telegram» — теперь просто размер 2560 px.
+        if preset == .web { preset = .custom; longSide = 2560 }
     }
 
     static func load() -> ExportSettings {

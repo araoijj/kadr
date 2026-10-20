@@ -15,7 +15,7 @@ struct ExportSheet: View {
             Divider()
             // Настроек много — прокручиваются, кнопки всегда видны внизу.
             ScrollView { settings.padding(24) }
-                .frame(maxHeight: 560)
+                .frame(maxHeight: max(420, (NSScreen.main?.visibleFrame.height ?? 900) - 260))
             Divider()
             footer.padding(24)
         }
@@ -37,67 +37,40 @@ struct ExportSheet: View {
                 .labelsHidden()
             }
 
-            section("Пресет") {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                    ForEach(ExportPreset.allCases) { pr in
-                        Button {
-                            lib.export.preset = pr
-                            if pr != .custom { lib.export.format = .jpeg; lib.export.applyEdits = true }
-                            if pr == .web { lib.export.jpegQuality = 0.85 }
-                        } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(pr.title).font(.callout.weight(.medium))
-                                Text(pr.subtitle).font(.caption).foregroundStyle(.secondary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(lib.export.preset == pr ? Color.accentColor.opacity(0.3) : .white.opacity(0.05)))
-                            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(lib.export.preset == pr ? Color.accentColor : .clear))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                if lib.export.preset == .story {
-                    Toggle("Кадры не 9:16 — обрезать по центру (иначе вписать без обрезки)", isOn: $lib.export.presetCrop)
-                }
-                if lib.export.preset != .custom {
-                    PlanSummary()
-                    quality
-                }
-            }
-
-            if lib.export.preset == .custom {
-            section("Формат") {
+            // Три независимых решения: формат файла → размер в пикселях → качество сжатия.
+            // Ни один пункт не меняет другой «за спиной».
+            section("Формат файла") {
                 Picker("", selection: $lib.export.format) {
                     Text("Оригиналы RAW + XMP").tag(ExportSettings.Format.original)
                     Text("JPEG (проявить RAW)").tag(ExportSettings.Format.jpeg)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-
                 if lib.export.format == .original {
                     Toggle("Перенести, а не копировать", isOn: $lib.export.move)
                         .help("Файлы исчезнут из текущей папки")
                     SizeEstimate()
-                } else {
-                    HStack {
-                        Text("Размер")
-                        Picker("", selection: $lib.export.longSide) {
-                            Text("Полный (50 Мп)").tag(0)
-                            Text("4000 px").tag(4000)
-                            Text("2560 px — для сайта").tag(2560)
-                            Text("1600 px — для соцсетей").tag(1600)
-                        }
-                        .labelsHidden()
-                        .frame(width: 210)
+                }
+            }
+
+            if lib.export.format == .jpeg {
+                section("Размер") {
+                    VStack(spacing: 6) {
+                        ForEach(SizeChoice.allCases) { c in sizeRow(c) }
                     }
-                    quality
+                    if lib.export.preset == .story {
+                        Toggle("Кадры не 9:16 — обрезать по центру (иначе вписать без обрезки)", isOn: $lib.export.presetCrop)
+                    }
+                    if lib.export.preset == .instagram || lib.export.preset == .story { PlanSummary() }
+                }
+
+                section("Качество") { quality }
+
+                section("Обработка") {
                     Toggle("С обработкой, стилями и кадрированием из «Кадра»", isOn: $lib.export.applyEdits)
                     Text("Проявление движком macOS; правки Capture One не переносятся. ~1–2 с на кадр.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-            }
-
             }
 
             section("Имя файла") {
@@ -121,7 +94,7 @@ struct ExportSheet: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
-            if lib.export.format == .jpeg || lib.export.preset != .custom {
+            if lib.export.format == .jpeg {
                 section("Водяной знак") {
                     Toggle("Добавить текст на фото", isOn: $lib.export.watermarkOn)
                     if lib.export.watermarkOn {
@@ -136,10 +109,14 @@ struct ExportSheet: View {
                             Spacer()
                         }
                         HStack {
-                            Text("Размер")
+                            Text("Величина текста").frame(width: 120, alignment: .leading)
                             Slider(value: $lib.export.watermarkSize, in: 1...8)
-                            Text("Прозрачность")
+                            Text(String(format: "%.0f%% кадра", lib.export.watermarkSize)).monospacedDigit().foregroundStyle(.secondary).frame(width: 70)
+                        }
+                        HStack {
+                            Text("Непрозрачность").frame(width: 120, alignment: .leading)
                             Slider(value: $lib.export.watermarkOpacity, in: 0.15...1)
+                            Text("\(Int((lib.export.watermarkOpacity * 100).rounded()))%").monospacedDigit().foregroundStyle(.secondary).frame(width: 70)
                         }
                         .font(.callout)
                     }
@@ -192,18 +169,47 @@ struct ExportSheet: View {
         }
     }
 
-    /// Качество JPEG и ориентировочный размер файлов.
+    /// Единственная настройка сжатия: качество JPEG. Размер в пикселях — в пункте «Размер».
     private var quality: some View {
         @Bindable var lib = lib
+        let q = Int((lib.export.jpegQuality * 100).rounded())
         return VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Качество")
                 Slider(value: $lib.export.jpegQuality, in: 0.6...1.0)
-                Text("\(Int((lib.export.jpegQuality * 100).rounded()))%")
-                    .monospacedDigit().foregroundStyle(.secondary).frame(width: 40)
+                Text("\(q)%").font(.body.monospacedDigit().weight(.semibold)).frame(width: 46, alignment: .trailing)
             }
+            HStack {
+                Text("экономно").frame(maxWidth: .infinity, alignment: .leading)
+                Text("хорошо").frame(maxWidth: .infinity, alignment: .center)
+                Text("максимум").frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .padding(.trailing, 52)
             SizeEstimate()
+            Text(q >= 95 ? "Почти без потерь — файлы крупные." : q >= 85 ? "Без видимых потерь — обычный выбор." : q >= 75 ? "Чуть заметно на градиентах неба и кожи." : "Заметные артефакты — только для превью.")
+                .font(.caption2).foregroundStyle(.secondary)
         }
+    }
+
+    /// Строка выбора размера (один выбор из списка).
+    private func sizeRow(_ c: SizeChoice) -> some View {
+        let on = SizeChoice.current(lib.export) == c
+        return Button { c.apply(&lib.export) } label: {
+            HStack(spacing: 10) {
+                Image(systemName: on ? "largecircle.fill.circle" : "circle")
+                    .foregroundStyle(on ? Color.accentColor : .secondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(c.title).font(.callout.weight(on ? .semibold : .regular))
+                    Text(c.subtitle).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 8).fill(on ? Color.accentColor.opacity(0.18) : .white.opacity(0.04)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var namePreview: String {
@@ -256,5 +262,50 @@ struct PlanSummary: View {
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.05)))
+    }
+}
+
+/// Размер выгружаемого JPEG — один выбор вместо «пресетов» и отдельного «размера».
+enum SizeChoice: String, CaseIterable, Identifiable {
+    case instagram, story, px2560, px1600, full
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .instagram: "Instagram лента"
+        case .story: "Сторис / Reels"
+        case .px2560: "2560 px"
+        case .px1600: "1600 px"
+        case .full: "Полный размер"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .instagram: "1080 по ширине; формат — из вашего кадрирования (4:5, 1:1, 1.91:1)"
+        case .story: "1080 × 1920"
+        case .px2560: "по длинной стороне — сайт, Telegram, ВКонтакте"
+        case .px1600: "по длинной стороне — мессенджеры, почта"
+        case .full: "как снято — для печати и архива"
+        }
+    }
+
+    static func current(_ s: ExportSettings) -> SizeChoice {
+        switch s.preset {
+        case .instagram: return .instagram
+        case .story: return .story
+        case .web: return .px2560
+        case .custom: return s.longSide == 0 ? .full : s.longSide <= 1600 ? .px1600 : .px2560
+        }
+    }
+
+    func apply(_ s: inout ExportSettings) {
+        switch self {
+        case .instagram: s.preset = .instagram
+        case .story: s.preset = .story
+        case .px2560: s.preset = .custom; s.longSide = 2560
+        case .px1600: s.preset = .custom; s.longSide = 1600
+        case .full: s.preset = .custom; s.longSide = 0
+        }
     }
 }
