@@ -12,6 +12,7 @@ final class FaceMesh: @unchecked Sendable {
     struct Eyes: Codable, Sendable, Hashable {
         var blink: Double      // blink of the less closed eye 0…1: both closed ≥ ~0.42, open ≤ ~0.3
         var squint: Double     // squint (laughing, sun)
+        var smile: Double      // mouthSmile, mean of both sides: ≥ ~0.5 — a clear smile
         var lookDown: Double   // downward gaze; the model also gives ≥ ~0.5 for closed lids, ~0 for dark glasses
     }
 
@@ -120,10 +121,10 @@ final class FaceMesh: @unchecked Sendable {
     /// Blink and squint for a face. `face` is the macOS box in frame fractions (y from top to bottom).
     func eyes(_ img: CGImage, face r: CGRect) -> Eyes? {
         guard let b = blendshapes(img, face: r) else { return nil }
-        // 9/10 — eyeBlinkLeft/Right, 11/12 — eyeLookDownLeft/Right, 19/20 — eyeSquintLeft/Right.
+        // 9/10 — eyeBlinkLeft/Right, 11/12 — eyeLookDownLeft/Right, 19/20 — eyeSquintLeft/Right, 44/45 — mouthSmileLeft/Right.
         // Blink uses the less closed eye: in a real blink both are closed, whereas when laughing,
         // looking sideways or in half-profile one eye stays open (calibrated on 2032 frames).
-        return Eyes(blink: min(b[9], b[10]), squint: max(b[19], b[20]), lookDown: (b[11] + b[12]) / 2)
+        return Eyes(blink: min(b[9], b[10]), squint: max(b[19], b[20]), smile: (b[44] + b[45]) / 2, lookDown: (b[11] + b[12]) / 2)
     }
 
     /// 52 MediaPipe blendshape scores (order as in face_blendshapes_graph.cc: 0 _neutral, 9/10 eyeBlink, 11/12 eyeLookDown…).

@@ -11,6 +11,8 @@ struct FaceInfo: Codable, Sendable, Hashable {
     var px: Double?             // face width in preview pixels: small faces are unreliable for eyes and sharpness
     var blink: Double?          // blink of both eyes from the MediaPipe face mesh 0…1 (closed ≥ ~0.42), if the models are installed
     var squint: Double?         // squint from MediaPipe: smiles and sun, not a blink
+    var smile: Double?          // smile per MediaPipe (mouthSmile), 0…1
+    var print: Data?            // face feature print (Vision, float32) — to group faces into people
     var lookDown: Double?       // downward gaze from MediaPipe
     var pitch: Double?          // head pitch from macOS, degrees (> 0 means the head is lowered)
 
@@ -46,6 +48,8 @@ struct CullData: Codable, Sendable, Hashable {
     var horizon: Double?            // horizon tilt, degrees
     var aesthetics: Double?         // frame aesthetics as scored by macOS (−1…1)
     var utility = false             // utility frame: screen, document, accidental shot
+    var tags: [String]?             // what is in the photo (Vision classifier, high-precision labels)
+    var print: Data?                // whole-photo feature print (Vision, float32) — similarity for bursts
     var people: [CGRectCodable]?    // full-body boxes of people (for auto crop: never cut a figure)
     var mesh: Bool?                 // eyes were measured by the MediaPipe face mesh (frames with faces are reanalyzed after the models are installed)
 }
@@ -53,6 +57,17 @@ struct CullData: Codable, Sendable, Hashable {
 struct CGRectCodable: Codable, Sendable, Hashable {
     var x: Double, y: Double, w: Double, h: Double
     var rect: CGRect { CGRect(x: x, y: y, width: w, height: h) }
+}
+
+/// Euclidean distance between two Vision feature prints stored as raw float32 data.
+func printDistance(_ a: Data, _ b: Data) -> Double? {
+    guard a.count == b.count, a.count % 4 == 0 else { return nil }
+    return a.withUnsafeBytes { pa in b.withUnsafeBytes { pb in
+        let x = pa.bindMemory(to: Float.self), y = pb.bindMemory(to: Float.self)
+        var s: Float = 0
+        for i in 0..<x.count { let d = x[i] - y[i]; s += d * d }
+        return Double(s.squareRoot())
+    } }
 }
 
 enum CullAnalyzer {
@@ -105,6 +120,7 @@ enum CullAnalyzer {
                 d.faces[i].blink = e.blink
                 d.faces[i].squint = e.squint
                 d.faces[i].lookDown = e.lookDown
+                d.faces[i].smile = e.smile
             }
         }
 
@@ -125,6 +141,22 @@ enum CullAnalyzer {
             d.subjectSharpness = ImageStore.shared.sharpness(img)
         }
 
+        // Tags: only labels the classifier is confident in (90% precision).
+        if let cls = try? await ClassifyImageRequest().perform(on: img) {
+            d.tags = Array(cls.filter { $0.hasMinimumRecall(0.01, forPrecision: 0.9) }
+                .sorted { $0.confidence > $1.confidence }.prefix(10).map(\.identifier))
+        }
+        // Feature prints: of the whole photo (bursts) and of each sizeable face (people).
+        if let fp = try? await GenerateImageFeaturePrintRequest().perform(on: img) { d.print = fp.data }
+        for i in d.faces.indices.prefix(6) where (d.faces[i].px ?? 0) >= 80 {
+            let f = d.faces[i].rect
+            let r = CGRect(x: (f.midX - f.width * 0.7) * CGFloat(img.width), y: (f.midY - f.height * 0.7) * CGFloat(img.height),
+                           width: f.width * 1.4 * CGFloat(img.width), height: f.height * 1.4 * CGFloat(img.height))
+                .intersection(CGRect(x: 0, y: 0, width: img.width, height: img.height)).integral
+            if let crop = img.cropping(to: r), let fp = try? await GenerateImageFeaturePrintRequest().perform(on: crop) {
+                d.faces[i].print = fp.data
+            }
+        }
         var humans = DetectHumanRectanglesRequest()
         humans.upperBodyOnly = false
         if let hs = try? await humans.perform(on: img) {

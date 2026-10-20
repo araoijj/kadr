@@ -63,6 +63,9 @@ struct KadrApp: App {
                 Button(tr("Горячие клавиши")) { library.showShortcuts = true }.keyboardShortcut("/", modifiers: .command)
             }
             CommandMenu(tr("Обработка")) {
+                Button(tr("Выровнять экспозицию и баланс по текущему")) { library.matchToCurrent() }
+                    .keyboardShortcut("m", modifiers: [.command, .option])
+                Divider()
                 Button(tr("Копировать обработку")) { library.copyAdjustments() }
                     .keyboardShortcut("c", modifiers: [.command, .shift])
                 Button(tr("Вставить обработку")) { library.pasteAdjustments() }
