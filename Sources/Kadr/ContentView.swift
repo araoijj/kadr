@@ -80,6 +80,23 @@ struct ContentView: View {
                             .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                     }
                 }
+                Menu {
+                    Picker("Сортировать", selection: $lib.sortKey) {
+                        ForEach(SortKey.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.inline)
+                    Toggle("По убыванию", isOn: $lib.sortDescending)
+                    Divider()
+                    Picker("Группировать", selection: $lib.groupKey) {
+                        ForEach(GroupKey.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.inline)
+                    Divider()
+                    Toggle("С вложенными папками", isOn: $lib.includeSubfolders)
+                } label: {
+                    Label("Сортировка", systemImage: "arrow.up.arrow.down")
+                }
+                .help("Сортировка и группировка: \(lib.sortKey.title.lowercased())\(lib.groupKey == .none ? "" : ", " + lib.groupKey.title.lowercased())")
                 if !lib.loupe {
                     Slider(value: $lib.thumbSize, in: 120...420)
                         .frame(width: 110)

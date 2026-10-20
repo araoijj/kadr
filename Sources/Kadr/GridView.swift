@@ -12,12 +12,18 @@ struct GridView: View {
     @State private var marqueeBase: Set<URL> = []
 
     var body: some View {
-        let list = lib.visible
+        let sections = lib.sections
+        let list = sections.flatMap(\.photos)
+        VStack(spacing: 0) {
+        FilterChips()
         GeometryReader { geo in
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: lib.thumbSize), spacing: spacing)], spacing: spacing) {
-                        ForEach(list) { p in
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: lib.thumbSize), spacing: spacing)], spacing: spacing,
+                              pinnedViews: [.sectionHeaders]) {
+                        ForEach(sections, id: \.title) { section in
+                        Section {
+                        ForEach(section.photos) { p in
                             Thumbnail(photo: p, selected: lib.isSelected(p), focused: p.id == lib.currentID && lib.multiSelected)
                                 .id(p.id)
                                 .onTapGesture(count: 2) { lib.select(p); lib.loupe = true }
@@ -25,6 +31,10 @@ struct GridView: View {
                                 .photoContextMenu(p)
                                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("grid")) } action: { frames[p.id] = $0 }
                                 .onDisappear { frames[p.id] = nil }
+                        }
+                        } header: {
+                            if !section.title.isEmpty { SectionHeader(title: section.title, count: section.photos.count) }
+                        }
                         }
                     }
                     .padding(pad)
@@ -52,6 +62,7 @@ struct GridView: View {
             }
             .onChange(of: geo.size.width, initial: true) { _, w in updateColumns(w) }
             .onChange(of: lib.thumbSize) { _, _ in updateColumns(geo.size.width) }
+        }
         }
         .overlay {
             if list.isEmpty && !lib.photos.isEmpty {
@@ -199,4 +210,58 @@ struct Stars: View {
 struct ThumbKey: Hashable {
     let url: URL
     let adj: Adjustments
+}
+
+struct SectionHeader: View {
+    let title: String
+    let count: Int
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(title).font(.headline)
+            Text("\(count)").font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 8)
+        .background(Theme.canvas.opacity(0.94))
+    }
+}
+
+/// Плашки активных доп. фильтров над сеткой — видно, почему показаны не все кадры.
+struct FilterChips: View {
+    @Environment(Library.self) private var lib
+
+    var body: some View {
+        if lib.lensFilter != nil || lib.dayFilter != nil {
+            HStack(spacing: 8) {
+                if let l = lib.lensFilter {
+                    chip(l, icon: "camera.aperture") { lib.lensFilter = nil }
+                }
+                if let d = lib.dayFilter {
+                    chip(d.formatted(.dateTime.day().month(.wide).year()), icon: "calendar") { lib.dayFilter = nil }
+                }
+                Spacer()
+                Text("Показано \(lib.visible.count) из \(lib.photos.count)")
+                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+        }
+    }
+
+    private func chip(_ text: String, icon: String, clear: @escaping () -> Void) -> some View {
+        Button(action: clear) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                Text(text).lineLimit(1)
+                Image(systemName: "xmark").font(.caption2.weight(.bold))
+            }
+            .font(.callout)
+            .padding(.horizontal, 10).padding(.vertical, 4)
+            .background(Color.accentColor.opacity(0.18), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .help("Снять фильтр")
+    }
 }

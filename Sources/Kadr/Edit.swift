@@ -67,6 +67,8 @@ enum EditStore {
 
     static func save(_ edits: [String: Adjustments], in folder: URL) {
         let f = file(in: folder)
+        // Не заводим .kadr в папках, где ничего не обрабатывали.
+        if edits.values.allSatisfy(\.isIdentity) && !FileManager.default.fileExists(atPath: f.path) { return }
         try? FileManager.default.createDirectory(at: f.deletingLastPathComponent(), withIntermediateDirectories: true)
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]

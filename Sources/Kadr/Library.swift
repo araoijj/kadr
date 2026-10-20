@@ -138,19 +138,134 @@ final class Library {
 
     private func scheduleEditsSave() {
         saveEditsTask?.cancel()
-        guard let folder else { return }
-        let edits = Dictionary(photos.map { ($0.name, $0.adj) }, uniquingKeysWith: { a, _ in a })
+        guard folder != nil else { return }
+        var byFolder: [URL: [String: Adjustments]] = [:]
+        for p in photos { byFolder[p.url.deletingLastPathComponent(), default: [:]][p.name] = p.adj }
         saveEditsTask = Task {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
-            await Task.detached { EditStore.save(edits, in: folder) }.value
+            await Task.detached { for (dir, e) in byFolder { EditStore.save(e, in: dir) } }.value
         }
     }
     private var analysisTask: Task<Void, Never>?
 
     // MARK: - Выборка
 
-    var visible: [Photo] { photos.filter { Self.matches($0, filter) } }
+    var visible: [Photo] {
+        photos.filter { p in
+            Self.matches(p, filter)
+                && (lensFilter == nil || p.lensName == lensFilter)
+                && (dayFilter == nil || p.day == dayFilter)
+        }
+        .sorted(by: inOrder)
+    }
+
+    // MARK: - Сортировка, группировка, доп. фильтры
+
+    let browser = FolderBrowser()
+
+    var sortKey: SortKey = SortKey(rawValue: UserDefaults.standard.string(forKey: "sortKey") ?? "") ?? .date {
+        didSet { UserDefaults.standard.set(sortKey.rawValue, forKey: "sortKey") }
+    }
+    var sortDescending = UserDefaults.standard.bool(forKey: "sortDescending") {
+        didSet { UserDefaults.standard.set(sortDescending, forKey: "sortDescending") }
+    }
+    var groupKey: GroupKey = GroupKey(rawValue: UserDefaults.standard.string(forKey: "groupKey") ?? "") ?? .none {
+        didSet { UserDefaults.standard.set(groupKey.rawValue, forKey: "groupKey") }
+    }
+    var includeSubfolders = UserDefaults.standard.bool(forKey: "includeSubfolders") {
+        didSet {
+            UserDefaults.standard.set(includeSubfolders, forKey: "includeSubfolders")
+            reload()
+        }
+    }
+    var lensFilter: String?
+    var dayFilter: Date?
+
+    /// Объективы и дни съёмки с количеством кадров — для боковой панели.
+    var lenses: [(name: String, count: Int)] {
+        Dictionary(grouping: photos, by: \.lensName).map { ($0.key, $0.value.count) }.sorted { $0.name < $1.name }
+    }
+
+    var days: [(day: Date, count: Int)] {
+        Dictionary(grouping: photos.filter { $0.day != nil }, by: { $0.day! }).map { ($0.key, $0.value.count) }.sorted { $0.day > $1.day }
+    }
+
+    /// Разделы сетки: подряд идущие кадры с одним ключом группы.
+    var sections: [(title: String, photos: [Photo])] {
+        let list = visible
+        guard groupKey != .none else { return [("", list)] }
+        var out: [(String, [Photo])] = []
+        for p in list {
+            let t = groupTitle(p)
+            if out.last?.0 == t { out[out.count - 1].1.append(p) } else { out.append((t, [p])) }
+        }
+        return out
+    }
+
+    func groupTitle(_ p: Photo) -> String {
+        switch groupKey {
+        case .none: return ""
+        case .day:
+            guard let d = p.day else { return "Без даты" }
+            let t = d.formatted(.dateTime.weekday(.wide).day().month(.wide).year())
+            return t.prefix(1).uppercased() + t.dropFirst()
+        case .folder: return relativeFolder(p)
+        case .lens: return p.lensName
+        case .rating: return p.rejected ? "Отклонённые" : p.rating == 0 ? "Без оценки" : String(repeating: "★", count: p.rating)
+        }
+    }
+
+    func relativeFolder(_ p: Photo) -> String {
+        guard let root = folder?.standardizedFileURL.path else { return "" }
+        let dir = p.url.deletingLastPathComponent().standardizedFileURL.path
+        if dir == root { return folder?.lastPathComponent ?? "" }
+        return dir.hasPrefix(root + "/") ? String(dir.dropFirst(root.count + 1)) : dir
+    }
+
+    /// Корневая папка — первой, вложенные — по алфавиту пути.
+    private func folderSortKey(_ p: Photo) -> String {
+        p.url.deletingLastPathComponent().standardizedFileURL == folder?.standardizedFileURL ? "" : relativeFolder(p)
+    }
+
+    private func inOrder(_ a: Photo, _ b: Photo) -> Bool {
+        if groupKey != .none {
+            let g = compareGroup(a, b)
+            if g != .orderedSame { return g == .orderedAscending }
+        }
+        var r = compareSort(a, b)
+        if sortDescending { r = r == .orderedAscending ? .orderedDescending : r == .orderedDescending ? .orderedAscending : r }
+        if r != .orderedSame { return r == .orderedAscending }
+        return a.url.path.localizedStandardCompare(b.url.path) == .orderedAscending
+    }
+
+    private func compareGroup(_ a: Photo, _ b: Photo) -> ComparisonResult {
+        switch groupKey {
+        case .none: return .orderedSame
+        case .day:
+            let r = cmp(a.day ?? .distantPast, b.day ?? .distantPast)
+            return sortDescending ? flip(r) : r
+        case .folder: return folderSortKey(a).localizedStandardCompare(folderSortKey(b))
+        case .lens: return a.lensName.localizedStandardCompare(b.lensName)
+        case .rating: return cmp(b.rejected ? -1 : b.rating, a.rejected ? -1 : a.rating)   // высокие сверху
+        }
+    }
+
+    private func compareSort(_ a: Photo, _ b: Photo) -> ComparisonResult {
+        switch sortKey {
+        case .date:
+            if let da = a.exif.date, let db = b.exif.date, da != db { return cmp(da, db) }
+            return a.name.localizedStandardCompare(b.name)
+        case .name: return a.name.localizedStandardCompare(b.name)
+        case .rating: return cmp(b.rejected ? -1 : b.rating, a.rejected ? -1 : a.rating)
+        case .lens: return a.lensName.localizedStandardCompare(b.lensName)
+        case .folder: return folderSortKey(a).localizedStandardCompare(folderSortKey(b))
+        case .size: return cmp(b.fileSize, a.fileSize)
+        }
+    }
+
+    private func cmp<T: Comparable>(_ a: T, _ b: T) -> ComparisonResult { a < b ? .orderedAscending : a > b ? .orderedDescending : .orderedSame }
+    private func flip(_ r: ComparisonResult) -> ComparisonResult { r == .orderedAscending ? .orderedDescending : r == .orderedDescending ? .orderedAscending : r }
 
     func count(_ f: PhotoFilter) -> Int { photos.reduce(0) { $0 + (Self.matches($1, f) ? 1 : 0) } }
 
@@ -193,36 +308,61 @@ final class Library {
     func open(_ url: URL) {
         analysisTask?.cancel()
         folder = url
+        browser.addRecent(url)
         filter = .all
+        lensFilter = nil
+        dayFilter = nil
         loupe = false
         zoom100 = false
         loading = true
         analyzed = 0
         photos = []
-        let fm = FileManager.default
-        let files = ((try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles])) ?? [])
-            .filter { ImageStore.imageExtensions.contains($0.pathExtension.lowercased()) }
+        let files = Self.imageFiles(in: url, recursive: includeSubfolders)
 
         // Если рядом лежат RAW и JPEG с одним именем — показываем один RAW.
         let rawBases = Set(files.filter { ImageStore.rawExtensions.contains($0.pathExtension.lowercased()) }
-            .map { $0.deletingPathExtension().lastPathComponent })
+            .map { $0.deletingPathExtension().path })
         let chosen = files.filter {
-            ImageStore.rawExtensions.contains($0.pathExtension.lowercased()) || !rawBases.contains($0.deletingPathExtension().lastPathComponent)
+            ImageStore.rawExtensions.contains($0.pathExtension.lowercased()) || !rawBases.contains($0.deletingPathExtension().path)
         }
 
-        let edits = EditStore.load(url)
+        // Обработка хранится в каждой папке своя.
+        var edits: [URL: [String: Adjustments]] = [:]
+        for dir in Set(chosen.map { $0.deletingLastPathComponent() }) { edits[dir] = EditStore.load(dir) }
         photos = chosen.map { f in
             let size = (try? f.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
             let s = Sidecar.read(for: f)
             var p = Photo(id: f, fileSize: size, rating: s.rating, rejected: s.rejected, label: s.label)
-            p.adj = edits[f.lastPathComponent] ?? .none
+            p.adj = edits[f.deletingLastPathComponent()]?[f.lastPathComponent] ?? .none
             return p
         }
-        photos.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        photos.sort { $0.url.path.localizedStandardCompare($1.url.path) == .orderedAscending }
         reindex()
-        focus(photos.first?.id)
+        focus(visible.first?.id)
         loading = false
         startAnalysis()
+    }
+
+    func reload() { if let folder { open(folder) } }
+
+    /// Снимки папки; с recursive — и всех вложенных, кроме скрытых и «_Отклонённые».
+    nonisolated static func imageFiles(in url: URL, recursive: Bool) -> [URL] {
+        let fm = FileManager.default
+        let keys: [URLResourceKey] = [.fileSizeKey, .isDirectoryKey]
+        func isImage(_ u: URL) -> Bool { ImageStore.imageExtensions.contains(u.pathExtension.lowercased()) }
+        guard recursive else {
+            return ((try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles])) ?? []).filter(isImage)
+        }
+        var out: [URL] = []
+        let en = fm.enumerator(at: url, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles, .skipsPackageDescendants])
+        while let u = en?.nextObject() as? URL {
+            if (try? u.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                if u.lastPathComponent == "_Отклонённые" { en?.skipDescendants() }
+                continue
+            }
+            if isImage(u) { out.append(u) }
+        }
+        return out
     }
 
     private func reindex() {
@@ -473,7 +613,6 @@ final class Library {
 
     /// Переносит отклонённые в подпапку «_Отклонённые» (вместе с XMP и парным JPEG). Удаления нет.
     func moveRejected() {
-        guard let folder else { return }
         let rejected = photos.filter(\.rejected)
         guard !rejected.isEmpty else { flash("Нет отклонённых"); return }
         let alert = NSAlert()
@@ -483,11 +622,11 @@ final class Library {
         alert.addButton(withTitle: "Отмена")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
 
-        let dest = folder.appendingPathComponent("_Отклонённые", isDirectory: true)
         let fm = FileManager.default
-        try? fm.createDirectory(at: dest, withIntermediateDirectories: true)
         var moved = 0
         for p in rejected {
+            let dest = p.url.deletingLastPathComponent().appendingPathComponent("_Отклонённые", isDirectory: true)
+            try? fm.createDirectory(at: dest, withIntermediateDirectories: true)
             for f in Exporter.companions(of: p.url) where fm.fileExists(atPath: f.path) {
                 try? fm.moveItem(at: f, to: dest.appendingPathComponent(f.lastPathComponent))
             }

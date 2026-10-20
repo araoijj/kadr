@@ -77,4 +77,38 @@ struct Photo: Identifiable, Equatable {
     var seriesID: Int?           // номер серии похожих кадров
     var isBestInSeries = false
     var duplicateOf: URL?        // точная копия другого файла
+
+    var lensName: String { exif.lens?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? "Объектив не указан" }
+    var day: Date? { exif.date.map { Calendar.current.startOfDay(for: $0) } }
+}
+
+enum SortKey: String, CaseIterable {
+    case date, name, rating, lens, folder, size
+    var title: String {
+        switch self {
+        case .date: "Время съёмки"
+        case .name: "Имя файла"
+        case .rating: "Оценка"
+        case .lens: "Объектив"
+        case .folder: "Папка"
+        case .size: "Размер файла"
+        }
+    }
+}
+
+enum GroupKey: String, CaseIterable {
+    case none, day, folder, lens, rating
+    var title: String {
+        switch self {
+        case .none: "Без группировки"
+        case .day: "По дням"
+        case .folder: "По папкам"
+        case .lens: "По объективам"
+        case .rating: "По оценке"
+        }
+    }
+}
+
+extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }
