@@ -717,6 +717,7 @@ final class Library {
         flushEdits()
         analysisTask?.cancel()
         aiTask?.cancel(); aiRunning = false; aiCount = 0
+        saveFolderState()
         folder = url
         browser.addRecent(url)
         filter = .all
@@ -761,12 +762,13 @@ final class Library {
         photos.sort { $0.url.path.localizedStandardCompare($1.url.path) == .orderedAscending }
         reindex()
         focus(visible.first?.id)
+        restoreFolderState(url)
         (history, historyPos) = HistoryStore.load(url)
         loading = false
         startAnalysis()
     }
 
-    func reload() { if let folder { open(folder) } }
+    func reload() { if let folder { saveFolderState(); open(folder) } }
 
     /// Forget the index of the open folder (and its subfolders) and recompute it.
     func reanalyze() {
