@@ -27,10 +27,22 @@ struct CropFormat: Identifiable, Hashable {
 extension Library {
     /// Пропорции кадра в пикселях (после кадрирования камеры, до своего кадрирования).
     func imageAspect(_ p: Photo) -> Double {
-        if let prev = ImageStore.shared.cachedPreview(p.url) ?? ImageStore.shared.preview(p.url) {
-            return Double(prev.width) / Double(prev.height)
-        }
-        return 1.5
+        let s = pixelSize(p)
+        return Double(s.width / s.height)
+    }
+
+    /// Размер кадра в пикселях RAW: ориентация и кадрирование камеры — по превью, размеры — из EXIF.
+    /// Пропорции превью неточные (1616×1080 ≠ 3:2), поэтому берём только их «форму».
+    func pixelSize(_ p: Photo) -> CGSize {
+        let ex = p.exif.width != nil ? p.exif : ImageStore.shared.exif(p.url)
+        let prev = ImageStore.shared.cachedPreview(p.url) ?? ImageStore.shared.preview(p.url)
+        let pa = prev.map { CGFloat($0.width) / CGFloat($0.height) } ?? 1.5
+        let long = CGFloat(max(ex.width ?? 0, ex.height ?? 0)), short = CGFloat(min(ex.width ?? 0, ex.height ?? 0))
+        guard long > 0, short > 0 else { return CGSize(width: 1000 * pa, height: 1000) }
+        var w = pa >= 1 ? long : short, h = pa >= 1 ? short : long
+        // Камера кадрировала (например, 4:3) — пропорции превью заметно другие.
+        if abs(w / h - pa) / pa > 0.02 { if pa < w / h { w = h * pa } else { h = w / pa } }
+        return CGSize(width: w.rounded(), height: h.rounded())
     }
 
     /// Самая большая рамка нужного формата по центру кадра.

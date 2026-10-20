@@ -3,36 +3,78 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-/// Готовые размеры для соцсетей. Instagram сжимает всё шире 1080 px — отдаём ровно его размеры.
+/// Готовые размеры для соцсетей. Формат каждого кадра берётся из его кадрирования в «Кадре» —
+/// второй раз ничего настраивать не нужно; пресет только доводит размер до требований сети.
 enum ExportPreset: String, Codable, CaseIterable, Identifiable {
-    case custom, igPost, igSquare, igStory, igLandscape, web
+    case custom, instagram, story, web
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .custom: "Свои настройки"
-        case .igPost: "Instagram пост 4:5"
-        case .igSquare: "Instagram квадрат"
-        case .igStory: "Сторис / Reels 9:16"
-        case .igLandscape: "Instagram горизонтальный"
+        case .instagram: "Instagram лента"
+        case .story: "Сторис / Reels"
         case .web: "Сайт / Telegram"
         }
     }
 
-    /// Точный размер в пикселях; nil — по длинной стороне.
-    var size: (w: Int, h: Int)? {
+    var subtitle: String {
         switch self {
-        case .igPost: (1080, 1350)
-        case .igSquare: (1080, 1080)
-        case .igStory: (1080, 1920)
-        case .igLandscape: (1080, 566)
-        default: nil
+        case .custom: "формат, размер и качество — вручную"
+        case .instagram: "1080 по ширине, формат — из вашего кадрирования"
+        case .story: "1080 × 1920"
+        case .web: "2560 px по длинной стороне"
         }
     }
 
-    var subtitle: String {
-        if let s = size { return "\(s.w) × \(s.h)" }
-        return self == .web ? "2560 px, качество 85%" : "формат, размер и качество — вручную"
+    /// Старые пресеты «пост/квадрат/горизонтальный» теперь — одна «Instagram лента».
+    init(from d: Decoder) throws {
+        let raw = try d.singleValueContainer().decode(String.self)
+        switch raw {
+        case "igPost", "igSquare", "igLandscape": self = .instagram
+        case "igStory": self = .story
+        default: self = ExportPreset(rawValue: raw) ?? .custom
+        }
+    }
+}
+
+/// Что получится из кадра при выбранном пресете — одна и та же логика для сводки в окне и для экспорта.
+struct ExportPlan: Hashable {
+    let width: Int
+    let height: Int
+    let crop: Double?        // обрезать по центру до этой пропорции; nil — без обрезки
+    let note: String
+
+    static let igMin = 4.0 / 5, igMax = 1.91, story = 9.0 / 16
+
+    static func make(aspect a: Double, userCropped: Bool, _ s: ExportSettings) -> ExportPlan? {
+        switch s.preset {
+        case .custom: return nil
+        case .web:
+            let w = a >= 1 ? 2560 : Int((2560 * a).rounded()), h = a >= 1 ? Int((2560 / a).rounded()) : 2560
+            return ExportPlan(width: w, height: h, crop: nil, note: "без обрезки")
+        case .instagram:
+            // Свои 4:5, 1:1, 1.91:1 после округления пикселей бывают 0,802 — защёлкиваем на точный формат.
+            for (ratio, h) in [(igMin, 1350), (1.0, 1080), (igMax, 566)] where abs(a - ratio) / ratio < 0.015 {
+                return ExportPlan(width: 1080, height: h, crop: a == ratio ? nil : ratio,
+                                  note: userCropped ? "по вашему кадрированию" : "как снято, формат подходит Instagram")
+            }
+            if a < igMin * 0.995 {
+                return ExportPlan(width: 1080, height: 1350, crop: igMin, note: "выше 4:5 — обрезка по центру до 4:5 (Instagram больше не принимает)")
+            }
+            if a > igMax * 1.005 {
+                return ExportPlan(width: 1080, height: 566, crop: igMax, note: "шире 1.91:1 — обрезка по центру до 1.91:1")
+            }
+            let h = abs(a - igMax) / igMax < 0.01 ? 566 : Int((1080 / a).rounded())
+            return ExportPlan(width: 1080, height: h, crop: nil, note: userCropped ? "по вашему кадрированию" : "как снято, формат подходит Instagram")
+        case .story:
+            if abs(a - story) / story < 0.015 {
+                return ExportPlan(width: 1080, height: 1920, crop: a == story ? nil : story, note: userCropped ? "по вашему кадрированию 9:16" : "уже 9:16")
+            }
+            if s.presetCrop { return ExportPlan(width: 1080, height: 1920, crop: story, note: "обрезка по центру до 9:16") }
+            let w = a < story ? Int((1920 * a).rounded()) : 1080, h = a < story ? 1920 : Int((1080 / a).rounded())
+            return ExportPlan(width: w, height: h, crop: nil, note: "вписано в 9:16 без обрезки")
+        }
     }
 }
 
@@ -167,13 +209,16 @@ enum Exporter {
     private static func writeJPEG(_ item: ExportItem, to target: URL, _ s: ExportSettings) -> Bool {
         // Сколько пикселей нужно от RAW: с запасом на своё кадрирование.
         var maxSide: CGFloat? = s.longSide > 0 ? CGFloat(s.longSide) : nil
-        if let p = s.preset.size { maxSide = CGFloat(max(p.w, p.h)) / CGFloat(max(min(item.adj.cropW, item.adj.cropH), 0.2)) * 1.3 }
-        if s.preset == .web { maxSide = 2560 / CGFloat(max(item.adj.cropW, item.adj.cropH, 0.2)) * 1.1 }
+        if s.preset != .custom {
+            let need: CGFloat = s.preset == .web ? 2560 : 1920
+            maxSide = need / CGFloat(max(min(item.adj.cropW, item.adj.cropH), 0.2)) * 1.2
+        }
         guard var img = EditPipeline.source(item.url, maxSide: maxSide) else { return false }
         // Без обработки — всё равно с профилем «как в камере», чтобы цвета совпадали с превью.
         let adj = s.applyEdits ? item.adj : Adjustments()
-        img = EditPipeline.apply(adj, to: img, cameraCube: adj.profile == .camera ? CameraMatch.shared.cube(for: item.url) : nil)
-        img = fitToPreset(img, s)
+        img = EditPipeline.apply(adj, to: img, cameraCube: adj.profile == .camera ? CameraMatch.shared.cube(for: item.url) : nil,
+                                 asShotK: ImageStore.shared.asShotK(item.url))
+        img = fitToPreset(img, s, userCropped: adj.hasCrop)
         if s.watermarkOn {
             img = EditPipeline.watermark(img, text: s.watermarkText, sizePercent: s.watermarkSize,
                                          opacity: s.watermarkOpacity, position: s.watermarkPosition)
@@ -198,33 +243,25 @@ enum Exporter {
         return CGImageDestinationFinalize(dest)
     }
 
-    /// Под точный размер соцсети: кадрирование по центру до нужного формата (или вписывание) и масштаб.
-    static func fitToPreset(_ input: CIImage, _ s: ExportSettings) -> CIImage {
+    /// Под требования соцсети по плану: обрезка по центру (если нужна) и точный размер в пикселях.
+    static func fitToPreset(_ input: CIImage, _ s: ExportSettings, userCropped: Bool) -> CIImage {
         var img = input
-        if s.preset == .web {
-            let k = 2560 / max(img.extent.width, img.extent.height)
-            if k < 1 { img = img.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k]) }
-            return img
-        }
-        guard let size = s.preset.size else { return img }
-        let target = CGFloat(size.w) / CGFloat(size.h)
         let e = img.extent
-        // Кадрируем до точного формата всегда: даже своё 4:5 после округления пикселей бывает 0,802.
-        if s.presetCrop || abs(e.width / e.height - target) / target < 0.01 {
-            let r = e.width / e.height > target
+        guard let plan = ExportPlan.make(aspect: Double(e.width / e.height), userCropped: userCropped, s) else { return img }
+        if let t = plan.crop {
+            let target = CGFloat(t)
+            let r = (e.width / e.height > target
                 ? CGRect(x: e.midX - e.height * target / 2, y: e.minY, width: e.height * target, height: e.height)
-                : CGRect(x: e.minX, y: e.midY - e.width / target / 2, width: e.width, height: e.width / target)
-            img = img.cropped(to: r.integral).transformed(by: CGAffineTransform(translationX: -r.integral.minX, y: -r.integral.minY))
+                : CGRect(x: e.minX, y: e.midY - e.width / target / 2, width: e.width, height: e.width / target)).integral
+            img = img.cropped(to: r).transformed(by: CGAffineTransform(translationX: -r.minX, y: -r.minY))
         }
-        let k = min(CGFloat(size.w) / img.extent.width, CGFloat(size.h) / img.extent.height)
-        img = img.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k])
-        // Формат совпадает — доводим до точных пикселей (1080×1350, а не 1080×1349).
         let e2 = img.extent
-        if abs(e2.width / e2.height - target) / target < 0.01 {
-            img = img.transformed(by: CGAffineTransform(scaleX: CGFloat(size.w) / e2.width, y: CGFloat(size.h) / e2.height))
-            return img.cropped(to: CGRect(x: 0, y: 0, width: size.w, height: size.h))
-        }
-        return img.cropped(to: CGRect(x: 0, y: 0, width: e2.width.rounded(.down), height: e2.height.rounded(.down)))
+        let k = CGFloat(plan.width) / e2.width
+        img = img.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k])
+        // Доводим до точных пикселей плана (1080×1350, а не 1080×1349 из-за округления).
+        let e3 = img.extent
+        img = img.transformed(by: CGAffineTransform(scaleX: CGFloat(plan.width) / e3.width, y: CGFloat(plan.height) / e3.height))
+        return img.cropped(to: CGRect(x: 0, y: 0, width: plan.width, height: plan.height))
     }
 
     private static func uniqueURL(_ url: URL) -> URL {

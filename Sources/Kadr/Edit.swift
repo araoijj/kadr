@@ -12,8 +12,8 @@ struct Adjustments: Codable, Equatable, Hashable {
 
     var profile: Profile = .camera
     var exposure: Double = 0      // −3…+3 EV
-    var temperature: Double = 0   // холоднее ← → теплее
-    var tint: Double = 0          // зеленее ← → пурпурнее
+    var wbShift: Double = 0       // баланс белого: сдвиг от «как снято», кельвины (+ теплее)
+    var tint: Double = 0          // −150…+150 как в Lightroom: зеленее ← → пурпурнее
     var contrast: Double = 0
     var highlights: Double = 0
     var shadows: Double = 0
@@ -51,6 +51,8 @@ struct Adjustments: Codable, Equatable, Hashable {
 }
 
 extension Adjustments {
+    private enum LegacyKeys: String, CodingKey { case temperature }
+
     /// Сборка рецепта: Adjustments { $0.contrast = 20; $0.vibrance = 30 }
     init(_ build: (inout Adjustments) -> Void) {
         self.init()
@@ -63,7 +65,10 @@ extension Adjustments {
         self.init()
         func v(_ k: CodingKeys) -> Double? { try? c.decodeIfPresent(Double.self, forKey: k) }
         profile = (try? c.decodeIfPresent(Profile.self, forKey: .profile)) ?? .camera
-        exposure = v(.exposure) ?? 0; temperature = v(.temperature) ?? 0; tint = v(.tint) ?? 0
+        // Старые сохранения хранили «температуру» в условных −100…100 (1 ед. ≈ 30 K) — переводим в кельвины.
+        let legacy = try? d.container(keyedBy: LegacyKeys.self)
+        let oldTemp = (try? legacy?.decodeIfPresent(Double.self, forKey: .temperature)) ?? nil
+        exposure = v(.exposure) ?? 0; wbShift = v(.wbShift) ?? (oldTemp.map { $0 * 30 } ?? 0); tint = v(.tint) ?? 0
         contrast = v(.contrast) ?? 0; highlights = v(.highlights) ?? 0; shadows = v(.shadows) ?? 0
         fade = v(.fade) ?? 0; clarity = v(.clarity) ?? 0; vibrance = v(.vibrance) ?? 0; saturation = v(.saturation) ?? 0
         shadowHue = v(.shadowHue) ?? 0; shadowSat = v(.shadowSat) ?? 0
@@ -100,7 +105,7 @@ extension Adjustments {
             switch g {
             case .profile: profile = s.profile
             case .light: exposure = s.exposure; contrast = s.contrast; highlights = s.highlights; shadows = s.shadows; clarity = s.clarity; fade = s.fade
-            case .color: temperature = s.temperature; tint = s.tint; vibrance = s.vibrance; saturation = s.saturation
+            case .color: wbShift = s.wbShift; tint = s.tint; vibrance = s.vibrance; saturation = s.saturation
             case .toning: shadowHue = s.shadowHue; shadowSat = s.shadowSat; highlightHue = s.highlightHue; highlightSat = s.highlightSat
             case .effects: vignette = s.vignette; grain = s.grain
             case .lut: lut = s.lut; lutAmount = s.lutAmount
@@ -391,7 +396,8 @@ enum EditPipeline {
 
     /// Применяет настройки к линейному изображению (выход CIRAWFilter или превью).
     /// cameraCube — подобранный профиль «как в камере» (только для проявленного RAW).
-    static func apply(_ a: Adjustments, to input: CIImage, cameraCube: (size: Int, data: Data)? = nil) -> CIImage {
+    /// asShotK — баланс белого «как снято» (из RAW); от него считается сдвиг в кельвинах.
+    static func apply(_ a: Adjustments, to input: CIImage, cameraCube: (size: Int, data: Data)? = nil, asShotK: Double = 5500) -> CIImage {
         var img = a.hasGeometry ? geometry(input, a) : input
         let e = img.extent
         let longSide = max(e.width, e.height)
@@ -400,11 +406,13 @@ enum EditPipeline {
         if a.exposure != 0 {
             img = img.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: a.exposure])
         }
-        if a.temperature != 0 || a.tint != 0 {
-            // Знаки подобраны замером R/G/B: «+» температура — теплее, «+» оттенок — пурпурнее.
+        if a.wbShift != 0 || a.tint != 0 {
+            // Как в Lightroom: «свет был K» → картинка пересчитывается от «как снято». Больше K — теплее.
+            // Знаки проверены замером R/G/B: «+» оттенок — пурпурнее.
+            let k = min(max(asShotK + a.wbShift, 2000), 50000)
             img = img.applyingFilter("CITemperatureAndTint", parameters: [
-                "inputNeutral": CIVector(x: 6500, y: 0),
-                "inputTargetNeutral": CIVector(x: 6500 - a.temperature * 30, y: -a.tint),
+                "inputNeutral": CIVector(x: k, y: 0),
+                "inputTargetNeutral": CIVector(x: asShotK, y: -a.tint),
             ])
         }
         let hlAmount = a.highlights < 0 ? 1 + a.highlights / 100 : 1

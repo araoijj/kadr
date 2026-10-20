@@ -62,14 +62,8 @@ struct ZoomableLoupe: View {
 
     /// Размер кадра в пикселях после кадрирования камеры и поворота.
     private var pixelSize: CGSize {
-        let ex = photo.exif.width != nil ? photo.exif : ImageStore.shared.exif(photo.url)
-        let prev = ImageStore.shared.cachedPreview(photo.url)
-        let a = prev.map { CGFloat($0.width) / CGFloat($0.height) } ?? 1.5
-        let long = CGFloat(max(ex.width ?? 0, ex.height ?? 0)), short = CGFloat(min(ex.width ?? 0, ex.height ?? 0))
-        guard long > 0, short > 0 else { return CGSize(width: 1600 * a, height: 1600) }
-        var w = a >= 1 ? long : short, h = a >= 1 ? short : long
-        if abs(w / h - a) / a > 0.02 { if a < w / h { w = h * a } else { h = w / a } }
-        return CGSize(width: w * photo.adj.cropW, height: h * photo.adj.cropH)
+        let s = lib.pixelSize(photo)
+        return CGSize(width: s.width * photo.adj.cropW, height: s.height * photo.adj.cropH)
     }
 
     // MARK: - Увеличенный кадр

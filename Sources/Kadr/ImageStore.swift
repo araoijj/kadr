@@ -49,6 +49,20 @@ final class ImageStore: @unchecked Sendable {
         return cg
     }
 
+    private let wbLock = NSLock()
+    private var wbCache: [String: Double] = [:]
+
+    /// Баланс белого «как снято», кельвины (у не-RAW — 5500 K, дневной свет).
+    func asShotK(_ url: URL) -> Double {
+        guard ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) else { return 5500 }
+        wbLock.lock()
+        if let k = wbCache[url.path] { wbLock.unlock(); return k }
+        wbLock.unlock()
+        let k = CIRAWFilter(imageURL: url).map { Double($0.neutralTemperature) }.flatMap { $0 > 1000 ? $0 : nil } ?? 5500
+        wbLock.lock(); wbCache[url.path] = k; wbLock.unlock()
+        return k
+    }
+
     func exif(_ url: URL) -> ExifInfo {
         var info = ExifInfo()
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),

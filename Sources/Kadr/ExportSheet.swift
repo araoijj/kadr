@@ -57,11 +57,10 @@ struct ExportSheet: View {
                         .buttonStyle(.plain)
                     }
                 }
-                if lib.export.preset.size != nil {
-                    Toggle("Если формат кадра другой — кадрировать по центру (иначе вписать)", isOn: $lib.export.presetCrop)
-                    Text("Совет: точнее — заранее кадрировать в «Кадре» (R) нужным форматом, тогда центр не понадобится.")
-                        .font(.caption).foregroundStyle(.secondary)
+                if lib.export.preset == .story {
+                    Toggle("Кадры не 9:16 — обрезать по центру (иначе вписать без обрезки)", isOn: $lib.export.presetCrop)
                 }
+                if lib.export.preset != .custom { PlanSummary() }
             }
 
             if lib.export.preset == .custom {
@@ -212,5 +211,37 @@ struct ExportSheet: View {
             Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
             content()
         }
+    }
+}
+
+/// Сводка: во что превратится каждый кадр при выбранном пресете. Видно заранее — без двойной настройки.
+struct PlanSummary: View {
+    @Environment(Library.self) private var lib
+
+    var body: some View {
+        let list = lib.photos(for: lib.export.scope)
+        let plans = list.compactMap { p -> ExportPlan? in
+            let a = lib.imageAspect(p) * p.adj.cropW / p.adj.cropH
+            return ExportPlan.make(aspect: a, userCropped: p.adj.hasCrop, lib.export)
+        }
+        let groups = Dictionary(grouping: plans, by: { $0 }).map { ($0.key, $0.value.count) }
+            .sorted { $0.1 > $1.1 }
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Что получится (\(list.count) кадров)").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            ForEach(groups, id: \.0) { plan, n in
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Image(systemName: plan.crop == nil ? "checkmark.circle.fill" : "crop")
+                        .foregroundStyle(plan.crop == nil ? Color.green : Color.orange)
+                    Text("\(n) × " + String(plan.width) + "×" + String(plan.height)).font(.callout.monospacedDigit().weight(.medium))
+                    Text(plan.note).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if plans.contains(where: { $0.crop != nil }) {
+                Text("Чтобы выбрать, что останется в кадре, кадрируйте эти снимки сами (R) — пресет возьмёт вашу рамку.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.05)))
     }
 }

@@ -25,7 +25,7 @@ final class Renderer: @unchecked Sendable {
                 guard self.current(channel) == gen else { cont.resume(returning: nil); return }
                 guard let base = self.base(url, maxSide: maxSide) else { cont.resume(returning: nil); return }
                 let cube = adj.profile == .camera ? CameraMatch.shared.cube(for: url) : nil
-                let out = EditPipeline.apply(adj, to: base, cameraCube: cube)
+                let out = EditPipeline.apply(adj, to: base, cameraCube: cube, asShotK: ImageStore.shared.asShotK(url))
                 let cg = self.context.createCGImage(out, from: out.extent.integral, format: .RGBA8,
                                                     colorSpace: CGColorSpace(name: CGColorSpace.displayP3))
                 cont.resume(returning: cg)
@@ -44,7 +44,7 @@ final class Renderer: @unchecked Sendable {
                 if pixels.width / region.width > base.extent.width * adj.cropW * 1.05, let full = self.base(url, maxSide: nil) { base = full }
                 guard self.current(channel) == gen else { cont.resume(returning: nil); return }
                 let cube = adj.profile == .camera ? CameraMatch.shared.cube(for: url) : nil
-                let out = EditPipeline.apply(adj, to: base, cameraCube: cube)
+                let out = EditPipeline.apply(adj, to: base, cameraCube: cube, asShotK: ImageStore.shared.asShotK(url))
                 let e = out.extent   // уже после кадрирования
                 let r = CGRect(x: e.minX + region.minX * e.width, y: e.minY + (1 - region.maxY) * e.height,
                                width: region.width * e.width, height: region.height * e.height)
@@ -62,6 +62,7 @@ final class Renderer: @unchecked Sendable {
     /// Заранее проявляет RAW и подбирает профиль камеры — первая правка будет мгновенной.
     func prewarm(_ url: URL, maxSide: CGFloat) {
         queue.async {
+            _ = ImageStore.shared.asShotK(url)
             _ = self.base(url, maxSide: maxSide)
             _ = CameraMatch.shared.cube(for: url)
         }
@@ -75,7 +76,7 @@ final class Renderer: @unchecked Sendable {
         var img = CIImage(cgImage: prev)
         let k = size / max(img.extent.width, img.extent.height)
         if k < 1 { img = img.transformed(by: CGAffineTransform(scaleX: k, y: k)) }
-        let out = EditPipeline.apply(adj, to: img)
+        let out = EditPipeline.apply(adj, to: img, asShotK: ImageStore.shared.asShotK(url))
         guard let cg = context.createCGImage(out, from: out.extent.integral, format: .RGBA8,
                                              colorSpace: CGColorSpace(name: CGColorSpace.displayP3)) else { return nil }
         thumbs.setObject(cg, forKey: key)

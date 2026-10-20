@@ -112,7 +112,7 @@ struct EditPanel: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             section("Свет", .light, p) {
-                slider("Экспозиция", "sun.max", \.exposure, p, range: -3...3, step: 0.05) { String(format: "%+.2f EV", $0) }
+                slider("Экспозиция", "sun.max", \.exposure, p, range: -5...5, step: 0.05) { String(format: "%+.2f EV", $0) }
                 slider("Контраст", "circle.lefthalf.filled", \.contrast, p)
                 slider("Света", "sun.max.fill", \.highlights, p)
                 slider("Тени", "moon.fill", \.shadows, p)
@@ -120,8 +120,8 @@ struct EditPanel: View {
                 slider("Матовость", "cloud.fog", \.fade, p, range: 0...100)
             }
             section("Цвет", .color, p) {
-                slider("Температура", "thermometer.medium", \.temperature, p, gradient: [.blue, .gray, .orange])
-                slider("Оттенок", "drop", \.tint, p, gradient: [.green, .gray, .pink])
+                kelvinSlider(p)
+                slider("Оттенок", "drop", \.tint, p, range: -150...150, gradient: [.green, .gray, .pink])
                 slider("Красочность", "paintpalette", \.vibrance, p)
                 slider("Насыщенность", "drop.fill", \.saturation, p, gradient: [.gray, .red])
             }
@@ -326,8 +326,8 @@ struct EditPanel: View {
                 .disabled(p.adj.isIdentity)
                 .help("Сохранить как стиль")
             Spacer()
-            Button(role: .destructive) { lib.resetAdjustments() } label: { Image(systemName: "arrow.counterclockwise") }
-                .help("Сбросить всю обработку (⌥⌘R)")
+            Button(role: .destructive) { lib.resetAdjustments() } label: { Label("Исходник", systemImage: "arrow.counterclockwise") }
+                .help("Вернуть кадр как снято: сбросить всю обработку и кадрирование (⌥⌘R)")
                 .disabled(lib.targets.allSatisfy(\.adj.isIdentity))
         }
         .controlSize(.regular)
@@ -398,6 +398,46 @@ struct EditPanel: View {
                 }
                 Slider(value: binding, in: range)
                     .tint(gradient == nil ? .accentColor : .clear)
+            }
+        }
+    }
+
+    /// Баланс белого в кельвинах, как в Lightroom и Capture One. Исходная точка — «как снято» из RAW.
+    private func kelvinSlider(_ p: Photo) -> some View {
+        let asShot = ImageStore.shared.asShotK(p.url)
+        let k = asShot + p.adj.wbShift
+        let changed = p.adj.wbShift != 0
+        let isRaw = ImageStore.rawExtensions.contains(p.url.pathExtension.lowercased())
+        let range = min(2000, k)...max(12000, k)
+        let binding = Binding<Double>(get: { k }, set: { v in
+            var a = p.adj
+            a.wbShift = ((v - asShot) / 50).rounded() * 50   // шаг 50 K
+            lib.setAdjustments(a)
+        })
+        func fmt(_ v: Double) -> String { "\(Int(v.rounded()).formatted(.number.grouping(.never))) K" }
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: "thermometer.medium").frame(width: 18).foregroundStyle(changed ? Color.accentColor : .secondary)
+                Text("Температура").foregroundStyle(changed ? .primary : .secondary)
+                    .onTapGesture(count: 2) { binding.wrappedValue = asShot }
+                Spacer()
+                Text(fmt(k)).font(.callout.monospacedDigit().weight(changed ? .semibold : .regular))
+                    .foregroundStyle(changed ? .primary : .secondary)
+                Button { binding.wrappedValue = asShot } label: { Image(systemName: "arrow.uturn.backward.circle.fill") }
+                    .buttonStyle(.plain).foregroundStyle(.secondary).opacity(changed ? 1 : 0).disabled(!changed)
+                    .help("Как снято")
+            }
+            ZStack {
+                LinearGradient(colors: [.blue, .gray, .orange], startPoint: .leading, endPoint: .trailing)
+                    .frame(height: 4).clipShape(Capsule()).opacity(0.7).padding(.horizontal, 2)
+                Slider(value: binding, in: range).tint(.clear)
+            }
+            HStack {
+                Text(isRaw ? "Как снято: \(fmt(asShot))" : "Не RAW: сдвиг от 5500 K").font(.caption2).foregroundStyle(.secondary)
+                Spacer()
+                if changed {
+                    Text(String(format: "%+.0f K", p.adj.wbShift)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                }
             }
         }
     }

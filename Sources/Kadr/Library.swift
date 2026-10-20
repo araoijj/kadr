@@ -654,6 +654,7 @@ final class Library {
                 func add() -> Bool {
                     guard let u = it.next() else { return false }
                     group.addTask(priority: .utility) {
+                        _ = store.asShotK(u)
                         let exif = store.exif(u)
                         guard let img = store.preview(u) else { return (u, exif, nil, nil) }
                         return (u, exif, store.dHash(img), store.sharpness(img))
