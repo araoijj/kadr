@@ -1,121 +1,125 @@
-<p align="center"><img src="Resources/AppIcon-1024.png" width="160" alt="Кадр"></p>
+<p align="center"><img src="Resources/AppIcon-1024.png" width="160" alt="Kadr"></p>
 
-<h1 align="center">Кадр</h1>
+<h1 align="center">Kadr</h1>
 
-<p align="center">Быстрый отбор RAW-фотографий для macOS — просмотр, оценки, серии и дубли.<br>
-<i>Fast RAW photo culling for macOS — browse, rate, find bursts and duplicates.</i></p>
+<p align="center"><b>Fast, free RAW photo culling for macOS.</b><br>
+Browse hundreds of RAW files instantly, rate them, find blinks, blur, bursts and duplicates — and hand the keepers to Capture One or Lightroom.</p>
+
+<p align="center"><b>English</b> · <a href="README.ru.md">Русский</a> · <a href="https://github.com/araoijj/kadr/releases/latest"><b>Download</b></a></p>
 
 ---
 
-«Кадр» — лёгкое нативное приложение для первого этапа работы со съёмкой: быстро пролистать сотни RAW, отобрать лучшие и отдать их в обработку. Оценки сохраняются в стандартные XMP-файлы, поэтому их сразу видят Capture One, Lightroom и другие редакторы.
+Kadr (Russian for “frame”) is a lightweight native macOS app for the first stage of working with a shoot: skim through hundreds of RAW files, pick the best ones and send them on to editing. Ratings are written to standard XMP sidecars, so Capture One, Lightroom, Bridge and darktable see them right away.
 
-## Возможности
+It is built in SwiftUI with Core Image and Apple Vision — no Electron, no subscription, no cloud. Everything runs offline on your Mac.
 
-- **Мгновенный просмотр RAW.** Используется JPEG-превью, встроенное камерой в файл: ~20 мс на кадр даже для 50 Мп Sony A1. Полное проявление RAW — по зуму 100%.
-- **Режим «Отбор» (O):** прогресс просмотра, счётчики «оставлено / брак / без решения», очереди «Без решения», «Возможный брак», «Быстрый проход» (лидеры серий и одиночные кадры), лица в 100% сбоку, итог с действиями. «Подсказки» выключаются — тогда отбор полностью ручной. Можно открывать папки сразу в этом режиме.
-- **Турнир (T):** кадры серии или выделенные — парами, ← или → выбирает лучший, победитель остаётся; в конце — ★ победителю и, по желанию, брак остальным.
-- **Сцены:** съёмка сама делится по паузам (по умолчанию 10 минут) — группировка «По сценам» и раздел «Сцены» с прогрессом отбора.
-- **Поиск брака офлайн (встроенный анализ macOS):** нерезкий кадр (по лицу или главному объекту), закрытые глаза, пересвет, недосвет, служебные кадры, дубли, «слабее в серии»; завал горизонта — как поправимое, кнопка «Выровнять». Ползунок строгости, оценка кадра 0–100. Лучший в серии — по резкости лица, открытым глазам, качеству лица, эстетике и экспозиции. Массовые действия — с подтверждением и отменой через журнал.
-- **Отбор с клавиатуры.** Звёзды 1–5, отклонение, цветные метки, автопереход к следующему кадру.
-- **XMP-сайдкары.** Совместимы с Capture One / Lightroom / Bridge / darktable; посторонние поля в существующих XMP не затираются.
-- **Серии и дубли.** Похожие кадры подряд (серийная съёмка, брекетинг) группируются, в каждой серии отмечается самый резкий. Находятся точные копии файлов.
-- **Работа с набором.** ⌘/⇧-клик, ⇧-стрелки, ⌘A, выделение рамкой мышью; оценки и метки применяются ко всем выделенным.
-- **Сохранение в папку.** Оригиналы RAW+XMP (копия или перенос) или JPEG с выбором размера и качества; клавиша S отправляет кадр в папку сразу.
-- **Зум до 800%** с навигатором: при увеличении проявляется только видимый кусок RAW в полном разрешении — с текущей обработкой, ползунки работают прямо в 100%.
-- **Кадрирование и горизонт** (R): форматы 4:5 пост Instagram, 1:1, 9:16 сторис/Reels, 1.91:1, 3:2, 4:3, 16:9 и свободный; рамка с сеткой третей, выравнивание горизонта без пустых углов, одно кадрирование на всю выделенную серию.
-- **Пресеты экспорта для соцсетей без двойной настройки:** «Instagram лента» берёт формат из вашего кадрирования (4:5 → 1080×1350, 1:1 → 1080×1080, 1.91:1 → 1080×566; некадрированные — как есть, если формат подходит Instagram, иначе по центру до 4:5/1.91:1), «Сторис/Reels» 1080×1920, «Сайт/Telegram» 2560 px. Окно заранее показывает, во что превратится каждый кадр.
-- **Быстрая обработка в единицах Lightroom:** экспозиция ±5 EV, температура в кельвинах от «как снято» из RAW, оттенок ±150, остальное ±100; кнопка «Исходник» возвращает кадр как снято. Ползунки: экспозиция, контраст, света, тени, матовость, температура, оттенок, красочность, насыщенность — вживую на RAW (~25 мс на движение ползунка). Сравнение «до/после».
-- **Профиль «Как в камере».** Для каждого RAW «Кадр» подбирает цветовое соответствие с JPEG камеры (и её кадрированием, например 4:3), поэтому обработка начинается с привычных цветов, а открытие панели «Обработка» ничего не меняет. Стандартный профиль macOS — на выбор.
-- **Рецепты по коллекциям.** ~36 готовых стилей: «Базовые», «Портрет», «Пейзаж», «Кино», «Чёрно-белые», «Плёнка» (Portra, Ektar, Gold, Fuji 400H, Velvia, Kodachrome, Tri-X, HP5…), с превью на текущем кадре; свои стили — в «Мои стили». Инструменты: чёткость, тонирование теней и светов, виньетка, зерно.
-- **LUT.** `.cube` и HaldCLUT `.png` с регулировкой силы; бесплатная коллекция плёнки скачивается прямо из приложения. Стиль применяется сразу ко всем выделенным.
-- **Копировать / вставить обработку** с кадра на кадр или на весь набор.
-- **JPEG с обработкой**, водяным знаком и переименованием по шаблону (`{folder}_{date}_{n}`).
-- **Папки и диски.** Боковая панель: избранное, недавние, подключённые диски и карты памяти (появляются сами), дерево вложенных папок со счётчиком снимков; режим «с вложенными папками».
-- **Сортировка и группировка.** По времени съёмки, имени, оценке, объективу, папке, размеру; группы по дням, папкам, объективам, оценке. Фильтры по объективу и дате сочетаются с фильтром по оценке.
-- **Импорт с карты памяти.** При подключении карты появляется предложение импортировать; раскладка по дням съёмки («2026-10-20 Свадьба»), пропуск уже импортированного, сверка размера каждой копии, извлечение карты после импорта.
-- **Сравнение 2–4 кадров** рядом с общим зумом и сдвигом: видно одно и то же место на всех кадрах; «оставить выбранный, остальные отклонить».
-- **Индекс анализа.** Резкость, серии, EXIF сохраняются в `~/Library/Application Support/Kadr/Index`; при повторном открытии папки пересчитываются только новые и изменённые файлы, фоном в 2 потока с низким приоритетом.
-- **Шторка «до / после»** (Y): линия на кадре, слева без цвета и тона, справа с обработкой; рамка и горизонт общие, работает и при увеличении.
-- **Журнал изменений и отмена:** ⌘Z / ⇧⌘Z и стрелки в панели; вкладка «Журнал» — каждый шаг (ползунки, стили, кадрирование, оценки, метки) с временем и кадрами, клик — перейти к состоянию; движения одного ползунка склеиваются в шаг; до 100 шагов на папку, журнал сохраняется между запусками.
-- **Языки:** русский, English, Español, Italiano — выбор в настройках (или как в системе).
-- **Настройки (⌘,):** язык; открывать последнюю папку; папка данных и что сколько занимает (индекс, журналы, LUT, стили) с очисткой; потоки анализа, кэши в памяти и текущее потребление памяти; размер журнала; импорт по умолчанию; стили и LUT; резервная копия .zip (стили, LUT, настройки, журналы) и восстановление.
-- **Без удаления.** Отклонённые переносятся в подпапку «_Отклонённые».
+## Features
 
-Поддерживаются RAW Sony, Canon, Nikon, Fujifilm, Olympus, Panasonic, Pentax, DNG, а также JPEG, HEIC, PNG, TIFF — всё, что читает macOS.
+### Culling
+- **Instant RAW browsing.** Kadr shows the JPEG preview embedded by the camera: ~20 ms per frame, even for 50 MP Sony A1 files. Full RAW decoding kicks in at 100% zoom.
+- **Culling mode (O):** viewing progress, kept / rejected / undecided counters, queues (“Undecided”, “Possible defects”, “Quick pass” — burst leaders and single frames), faces at 100% in a side column, and a summary with next steps. Turn **Hints** off for fully manual culling.
+- **Offline reject detection:** out-of-focus shots (judged by the face or main subject, compared within the same scene), **blinks** and closed eyes, blown highlights on the subject, underexposure, utility shots, duplicates, “weaker than the rest of the burst”; a tilted horizon is flagged as fixable, with a one-click **Straighten**. A strictness slider and a 0–100 frame score. Bulk actions ask for confirmation and can be undone.
+- **Blink detection with MediaPipe.** An optional face mesh model (Google MediaPipe Face Landmarker, converted to Core ML, ~12 ms per face on the Neural Engine) tells a real blink from squinting, laughing, looking aside or looking down. A frame counts as a blink when both eyes are closed and another frame of the same burst shows the same pose with eyes open. Install it in *Settings → Memory & speed*.
+- **Tournament (T):** compare a burst or a selection in pairs, ← or → picks the better one; the winner gets a ★, the rest can be rejected.
+- **Scenes:** the shoot is split automatically at pauses (10 minutes by default), with per-scene culling progress.
+- **Bursts and duplicates.** Similar consecutive frames (bursts, brackets) are grouped and the sharpest one is marked; exact file copies are detected.
+- **Compare 2–4 frames** side by side with shared zoom and pan.
+- **Keyboard-first.** P / X / U to keep / reject / clear, 1–5 stars, color labels, auto-advance.
+- **Works on selections.** ⌘/⇧-click, ⇧-arrows, ⌘A, rubber-band selection; ratings and labels apply to everything selected.
+- **Never deletes.** Rejects are moved to an `_Отклонённые` (“rejected”) subfolder, and only when you ask.
 
-## Горячие клавиши
+### Viewing and organizing
+- **XMP sidecars** compatible with Capture One / Lightroom / Bridge / darktable; unknown fields in existing XMP files are preserved.
+- **Zoom up to 800%** with a navigator: only the visible part of the RAW is decoded at full resolution.
+- **Folders and drives** in the sidebar: favorites, recents, attached drives and memory cards, a folder tree with photo counts, and an “include subfolders” mode.
+- **Sorting and grouping** by capture time, name, rating, lens, folder, size; groups by day, folder, lens, rating, scene.
+- **Memory card import:** files are sorted into per-day folders, already imported files are skipped, every copy is verified by size, and the card can be ejected afterwards.
+- **Analysis index.** Sharpness, bursts and EXIF are cached in `~/Library/Application Support/Kadr/Index`; reopening a folder only re-analyzes new or changed files, in the background, at low priority.
 
-| Клавиша | Действие |
+### Quick edits and export
+- **Lightroom-style controls:** exposure ±5 EV, white balance in Kelvin from the RAW “as shot” value, tint, contrast, highlights, shadows, clarity, vibrance, saturation, toning, vignette, grain — live on the RAW (~25 ms per slider move). A **Camera matching** profile starts from the camera’s own JPEG colors.
+- **Styles and LUTs:** ~36 built-in recipes (portrait, landscape, cinema, black & white, film looks), your own presets, `.cube` and HaldCLUT LUTs with adjustable strength; a free film LUT pack downloads from within the app.
+- **Crop and straighten (R)** with Instagram formats (4:5, 1:1, 9:16, 1.91:1) and classic ratios.
+- **Before / after split (Y)** and an undo history journal (⌘Z / ⇧⌘Z, up to 100 steps per folder, kept between launches).
+- **Save to folder:** original RAW+XMP (copy or move) or JPEG with size, quality (with a file-size estimate), watermark and file-name template; export presets for Instagram feed, Stories/Reels and web.
+- Edits are stored in a hidden `.kadr/edits.json` inside the shoot folder — originals and XMP files are never modified by edits.
+
+### Languages
+English, Русский, Español, Italiano — chosen in Settings or taken from the system.
+
+Supports RAW files from Sony, Canon, Nikon, Fujifilm, Olympus, Panasonic, Pentax, DNG, plus JPEG, HEIC, PNG and TIFF — anything macOS can read.
+
+## Install
+
+Download the latest build from **[Releases](https://github.com/araoijj/kadr/releases/latest)**.
+
+- Requires a Mac with **Apple Silicon** and **macOS 14 Sonoma** or later; reject detection needs **macOS 15 Sequoia** or later.
+- Unzip and move **Kadr** to *Applications*.
+- The app is not notarized by Apple. On first launch, right-click it → **Open** → **Open**, or run `xattr -dr com.apple.quarantine /Applications/Kadr.app`.
+- Optional: in *Settings → Memory & speed → MediaPipe face mesh*, click **Download** (~3 MB) for accurate blink detection.
+
+## Keyboard shortcuts
+
+| Key | Action |
 |---|---|
-| ← → ↑ ↓ | листать (с ⇧ — расширять выделение) |
-| P / X / U | оставить (★, если нет оценки) / брак / снять решение |
-| O | режим «Отбор» |
-| T | турнир: ← / → — какой кадр лучше |
-| 1–5 / 0 | поставить / снять оценку |
-| X или Delete | отклонить / вернуть |
-| 6–9 | цветная метка: красный, жёлтый, зелёный, синий |
-| Пробел / Enter | сетка ↔ полный кадр |
-| Z / двойной клик | 100% в точку клика / вписать |
-| ⌘+ / ⌘− / ⌘0 / ⌘1 | увеличить / уменьшить / вписать / 100% |
-| щипок, ⌘ + колёсико | плавный масштаб; прокрутка и перетаскивание — сдвиг |
-| I | панель информации |
-| S | скопировать выделенные в папку сохранения |
-| ⌘S | окно «Сохранить в папку» |
-| ⌘A / ⇧⌘A | выделить всё / выделить серию |
-| ⌘⌫ | перенести отклонённые в «_Отклонённые» |
-| E | панель «Обработка» |
-| \\ | до / после обработки |
-| ⇧⌘C / ⇧⌘V | копировать / вставить обработку |
-| ⌥⌘R | сбросить обработку |
-| ⇧⌘O | открыть в Capture One |
-| ⌘I | импорт с карты памяти |
-| ⌘Z / ⇧⌘Z / ⌘Y | отменить / вернуть / журнал изменений |
-| Y | шторка «до / после» (тянуть линию); \\ — «до» целиком |
-| R | кадрирование; Enter — готово, Esc — отмена |
-| C | сравнить выделенные (или кадры серии); в сравнении ← → — фокус, Z — 100% |
-| правый клик | меню действий над кадром или выделением |
-| Esc | снять выделение / выйти из просмотра |
+| ← → ↑ ↓ | browse (with ⇧ — extend selection) |
+| P / X / U | keep (★ if unrated) / reject / clear decision |
+| O | Culling mode |
+| T | tournament: ← / → picks the better frame |
+| 1–5 / 0 | set / clear rating |
+| 6–9 | color label: red, yellow, green, blue |
+| Space / Enter | grid ↔ single frame |
+| Z / double-click | 100% at the click point / fit |
+| ⌘+ / ⌘− / ⌘0 / ⌘1 | zoom in / out / fit / 100% |
+| I | info panel |
+| S | copy selection to the save folder |
+| ⌘S | “Save to folder” window |
+| ⌘A / ⇧⌘A | select all / select burst |
+| ⌘⌫ | move rejects to the `_Отклонённые` subfolder |
+| E | Edit panel |
+| \\ | show original |
+| Y | before / after split |
+| R | crop; Enter — done, Esc — cancel |
+| C | compare selected frames (or the burst) |
+| ⇧⌘C / ⇧⌘V | copy / paste edits |
+| ⇧⌘O | open in Capture One |
+| ⌘I | import from memory card |
+| ⌘Z / ⇧⌘Z / ⌘Y | undo / redo / history |
+| right-click | actions for the frame or selection |
 
-Обработка хранится в скрытой папке `.kadr/edits.json` внутри съёмки — оригиналы и XMP не меняются. Свои стили и LUT лежат в `~/Library/Application Support/Kadr/`.
+## Build from source
 
-## Перевод интерфейса
-
-Строки интерфейса проходят через `tr()` (Sources/Kadr/I18n.swift): точное совпадение или шаблон с `{}` на месте подстановок. Переводы — `tools/i18n/all.json` (русский → en, es, it). Новая строка: `python3 tools/i18n.py wrap && python3 tools/i18n.py extract`, добавить перевод в all.json, `python3 tools/i18n.py build`.
-
-## Сборка
-
-Нужны macOS 14+ и Command Line Tools (Xcode не требуется):
+You need macOS 14+ and the Command Line Tools — Xcode is not required:
 
 ```sh
-xcode-select --install   # если ещё не установлены
-./build.sh               # → build/Kadr.app
-cp -R build/Kadr.app ~/Applications/
+xcode-select --install   # if not installed yet
+./build.sh               # → build/Kadr.app and ~/Applications/Kadr.app
 ```
 
-Иконка рисуется кодом: `swift tools/make-icon.swift Resources/AppIcon-1024.png`.
+The icon is drawn in code: `swift tools/make-icon.swift Resources/AppIcon-1024.png`.
 
-## Устройство
+UI strings go through `tr()` (`Sources/Kadr/I18n.swift`); translations live in `tools/i18n/all.json` (Russian → en, es, it). To add a string: `python3 tools/i18n.py wrap && python3 tools/i18n.py extract`, add the translation to `all.json`, then `python3 tools/i18n.py build`.
 
-| Файл | Что внутри |
+| File | What’s inside |
 |---|---|
-| `ImageStore.swift` | чтение превью и EXIF (ImageIO), проявление RAW (CIRAWFilter), dHash и оценка резкости |
-| `Library.swift` | модель: папка, фильтры, выделение, оценки, серии, файловые операции |
-| `Sidecar.swift` | чтение и запись XMP |
-| `Edit.swift` | настройки обработки, стили, LUT, конвейер фильтров Core Image |
-| `Renderer.swift` | отрисовка с кэшем проявленного RAW |
-| `Exporter.swift` | сохранение в папку: оригиналы или JPEG, водяной знак, шаблон имени |
-| `*View.swift`, `Sidebar.swift`, `InfoPanel.swift` | интерфейс на SwiftUI |
+| `ImageStore.swift` | previews and EXIF (ImageIO), RAW decoding (CIRAWFilter), dHash and sharpness |
+| `Library.swift` | the model: folder, filters, selection, ratings, bursts, file operations |
+| `CullAnalysis.swift`, `Cull.swift`, `FaceMesh.swift` | reject detection: Apple Vision, MediaPipe face mesh, verdicts and thresholds |
+| `Sidecar.swift` | XMP read / write |
+| `Edit.swift`, `Renderer.swift` | edit settings, styles, LUTs, the Core Image pipeline and render cache |
+| `Exporter.swift` | saving originals or JPEG, watermark, file-name template |
+| `*View.swift`, `Sidebar.swift`, `InfoPanel.swift` | SwiftUI interface |
 
-## Благодарности
+## Acknowledgements
 
-Эмуляции плёнки — [t3mujinpack](https://github.com/t3mujin/t3mujinpack) © João Almeida, лицензия MIT. Файлы не входят в репозиторий: «Кадр» скачивает их с GitHub по кнопке и кладёт рядом лицензию автора.
+Thanks to everyone whose work Kadr builds on:
 
-Сетка лица для поиска моргания — [MediaPipe Face Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker) © Google, лицензия Apache 2.0. Модели перегнаны в Core ML (~7 МБ, ~12 мс на лицо на нейроядре) и тоже не входят в репозиторий: ставятся в «Настройки → Память и скорость», архив содержит лицензию и NOTICE с описанием конвертации.
+- Film emulation LUTs — [t3mujinpack](https://github.com/t3mujin/t3mujinpack) © João Almeida, MIT license. Not bundled: Kadr downloads them from GitHub on request and keeps the author’s license next to them.
+- Face mesh for blink detection — [MediaPipe Face Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker) © Google, Apache 2.0 license. Converted to Core ML and published separately in the [`models-1` release](https://github.com/araoijj/kadr/releases/tag/models-1) with the license and a NOTICE describing the conversion.
+- Apple Vision, Core Image and ImageIO, which do the heavy lifting on device.
 
-## Лицензия
+## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE) © 2026 Aleksandr Kozlov
 
-Код открыт: его можно свободно скачивать, изучать, изменять и делиться своими версиями — **в некоммерческих целях**: для себя, хобби, учёбы, исследований, а также в некоммерческих и образовательных организациях. Коммерческое использование (продажа, встраивание в платный продукт или сервис, использование в работе компании) — только с письменного разрешения автора.
-
-*Source code is available under the PolyForm Noncommercial License 1.0.0: free to use, modify and share for any noncommercial purpose. Commercial use requires permission from the author.*
+The source code is open: you are free to download, study, modify and share your own versions **for any noncommercial purpose** — personal use, hobby, study, research, and use by nonprofit and educational organizations. Commercial use (selling it, building it into a paid product or service, or using it in a company’s work) requires written permission from the author.
