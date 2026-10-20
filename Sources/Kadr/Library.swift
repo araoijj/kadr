@@ -189,6 +189,7 @@ final class Library {
     var styles: [Style] = Style.builtIns + StyleStore.load()
     var luts: [String] = LUTStore.shared.list()
     var copiedAdj: Adjustments?
+    private var copiedAsShotK: Double?   // as-shot white balance of the photo the settings were copied from
     let collections = CollectionDownloader()
 
     func downloadCollection(_ c: LUTCollection) {
@@ -357,13 +358,31 @@ final class Library {
     func copyAdjustments() {
         guard let p = current else { return }
         copiedAdj = p.adj
+        copiedAsShotK = ImageStore.shared.asShotK(p.url)
         flash(tr("Обработка скопирована"))
     }
 
     func pasteAdjustments() {
         guard let a = copiedAdj else { flash(tr("Сначала скопируйте обработку (⌘⇧C)")); return }
-        setAdjustmentsForTargets(tr("Вставка обработки")) { $0 = a }
+        let srcK = copiedAsShotK
+        let before = snapshot(targets.map(\.id))
+        for t in targets {
+            guard let i = index[t.id] else { continue }
+            photos[i].adj = Self.withAbsoluteWB(a, fromAsShot: srcK, to: t.url)
+        }
+        scheduleEditsSave()
+        record(tr("Вставка обработки") + countSuffix, before: before)
         flash(tr("Обработка вставлена") + countSuffix)
+    }
+
+    /// White balance is stored as a shift from "as shot". Copied to a photo with a different as-shot value,
+    /// the same shift gives a different temperature — so, like Lightroom, carry over the absolute kelvin.
+    nonisolated static func withAbsoluteWB(_ a: Adjustments, fromAsShot src: Double?, to url: URL) -> Adjustments {
+        guard a.wbShift != 0, let src else { return a }
+        let dst = ImageStore.shared.asShotK(url)
+        var b = a
+        b.wbShift = ((src + a.wbShift - dst) / 10).rounded() * 10
+        return b
     }
 
     func resetAdjustments() {
@@ -409,11 +428,23 @@ final class Library {
         guard folder != nil else { return }
         var byFolder: [URL: [String: Adjustments]] = [:]
         for p in photos { byFolder[p.url.deletingLastPathComponent(), default: [:]][p.name] = p.adj }
+        pendingEdits = byFolder
         saveEditsTask = Task {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
+            pendingEdits = nil
             await Task.detached { for (dir, e) in byFolder { EditStore.save(e, in: dir) } }.value
         }
+    }
+    private var pendingEdits: [URL: [String: Adjustments]]?
+
+    /// Writes edits that are still waiting for the debounce — before opening another folder and on quit,
+    /// otherwise a paste right before switching folders or quitting would be lost.
+    func flushEdits() {
+        guard let p = pendingEdits else { return }
+        saveEditsTask?.cancel()
+        pendingEdits = nil
+        for (dir, e) in p { EditStore.save(e, in: dir) }
     }
     private var analysisTask: Task<Void, Never>?
 
@@ -669,6 +700,7 @@ final class Library {
     }
 
     func open(_ url: URL) {
+        flushEdits()
         analysisTask?.cancel()
         aiTask?.cancel(); aiRunning = false; aiCount = 0
         folder = url

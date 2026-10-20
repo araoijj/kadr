@@ -8,6 +8,11 @@ struct KadrApp: App {
     init() {
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate(ignoringOtherApps: true)
+        // Unsaved edits (debounced) are written on quit.
+        let lib = library
+        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { lib.flushEdits() }
+        }
         // Bundled face mesh: loaded in the background right at launch.
         Task.detached(priority: .utility) { FaceMesh.shared.installBundledIfNeeded() }
     }
