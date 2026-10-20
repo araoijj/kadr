@@ -3,12 +3,13 @@ import Foundation
 
 /// Причина, по которой кадр похож на брак. Это подсказка — решает фотограф.
 enum CullReason: String, CaseIterable, Identifiable, Hashable {
-    case blur, eyesClosed, overexposed, underexposed, tilted, utility, duplicate, weakerInSeries
+    case blur, blink, eyesClosed, overexposed, underexposed, tilted, utility, duplicate, weakerInSeries
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .blur: tr("Нерезкий")
+        case .blink: tr("Моргнул в серии")
         case .eyesClosed: tr("Закрыты глаза")
         case .overexposed: tr("Пересвет")
         case .underexposed: tr("Недосвет")
@@ -22,6 +23,7 @@ enum CullReason: String, CaseIterable, Identifiable, Hashable {
     var icon: String {
         switch self {
         case .blur: "drop.halffull"
+        case .blink: "eye.trianglebadge.exclamationmark"
         case .eyesClosed: "eye.slash"
         case .overexposed: "sun.max.trianglebadge.exclamationmark"
         case .underexposed: "moon.haze"
@@ -32,20 +34,27 @@ enum CullReason: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    /// Брак или поправимое. Горизонт — поправимое: детектор путает его с линиями в кадре,
-    /// и завал не повод выбрасывать кадр — его выравнивают.
-    var isDefect: Bool { self != .tilted }
+    /// Брак или подсказка. Откалибровано на съёмке 2032 кадра (27.07.2026):
+    /// горизонт детектор путает с линиями; закрытые глаза на одиночном кадре — часто поза;
+    /// тёмный вечерний кадр вытягивается из RAW; «слабее в серии» — другая поза, а не брак.
+    var isDefect: Bool {
+        switch self {
+        case .blur, .blink, .overexposed, .utility, .duplicate: true
+        case .eyesClosed, .underexposed, .tilted, .weakerInSeries: false
+        }
+    }
 
     /// Насколько сильно причина снижает оценку кадра.
     var penalty: Int {
         switch self {
         case .blur: 45
-        case .eyesClosed: 35
+        case .blink: 35
+        case .eyesClosed: 10
         case .utility: 50
         case .duplicate: 40
-        case .weakerInSeries: 25
-        case .overexposed: 20
-        case .underexposed: 15
+        case .weakerInSeries: 10
+        case .overexposed: 25
+        case .underexposed: 10
         case .tilted: 10
         }
     }
@@ -58,6 +67,9 @@ struct CullVerdict {
 }
 
 extension Library {
+    /// Лицо с открытыми глазами в серии: наклон головы и размер — чтобы сравнивать кадры в одной позе.
+    struct OpenPose: Sendable { var id: URL; var pitch: Double; var px: Double }
+
     // MARK: - Вердикт
 
     /// Пороги зависят от строгости: 0 — мягко (ловим только явный брак), 1 — строго.
@@ -67,7 +79,11 @@ extension Library {
         if p.duplicateOf != nil { v.reasons.append(.duplicate) }
         if let c = p.cull {
             // Резкость лиц и резкость кадра в разном масштабе — сравниваем со своей медианой.
-            let median = c.faces.isEmpty ? cullMedianSharpness : cullMedianFaceSharpness
+            // Резкость надёжного лица и резкость объекта/кадра — в разном масштабе: у каждой своя медиана.
+            // Сравниваем внутри сцены: вечерний кадр (темно, шумодав) — с вечерними, дневной — с дневными.
+            let byFace = c.faces.contains(where: \.reliable)
+            let local = p.sceneID.flatMap { sceneMedians[$0] }
+            let median = (byFace ? local?.face : local?.other) ?? (byFace ? cullMedianFaceSharpness : cullMedianSharpness)
             // Недосвет: тёмный кадр без светлых мест. Ночная сцена или low-key со светлыми акцентами — не брак.
             let dark = (c.meanLuma ?? 0.5) < 0.06 + 0.06 * st
                 || ((c.meanLuma ?? 0.5) < 0.16 && (c.brightLuma ?? 1) < 0.30 + 0.08 * st)
@@ -75,12 +91,32 @@ extension Library {
             if !dark, let s = c.subjectSharpness, median > 0, s / median < 0.18 + 0.27 * st {
                 v.reasons.append(.blur)
             }
-            // Глаза — только у заметных лиц, которые macOS уверенно распознал.
-            if c.faces.contains(where: { $0.w >= 0.04 && ($0.quality ?? 1) >= 0.25 && ($0.eyes ?? 1) < 0.20 + 0.05 * st }) {
-                v.reasons.append(.eyesClosed)
+            // Глаза — только у крупных лиц к камере. Моргание — когда в той же серии глаза открыты.
+            let rel = c.faces.filter(\.reliable)
+            let mesh = c.faces.filter(\.meshUsable)
+            if !mesh.isEmpty {
+                // Сетка MediaPipe. Моргание — если в серии есть кадр с открытыми глазами в той же позе
+                // (наклон головы ±8°, тот же размер лица). Голова опущена ≥ 15° — это взгляд вниз, не брак;
+                // одиночный кадр с закрытыми глазами — только подсказка (может быть задумано).
+                if let f = mesh.filter({ $0.eyesShut(st) }).max(by: { ($0.px ?? 0) < ($1.px ?? 0) }) {
+                    let pitch = f.pitch ?? 0, px = f.px ?? 1
+                    let samePose = p.seriesID.flatMap { seriesOpenPoses[$0] }?.contains {
+                        $0.id != p.id && abs($0.pitch - pitch) < 8 && abs($0.px - px) / px < 0.3
+                    } ?? false
+                    if samePose && pitch < 15 { v.reasons.append(.blink) }
+                    else if pitch < 12 { v.reasons.append(.eyesClosed) }
+                }
+            } else if let eyes = rel.compactMap(\.eyes).min() {
+                // Контур от macOS (моделей нет): брак — только если глаза закрыты и сами по себе, и относительно лучшего кадра серии.
+                if let sid = p.seriesID, let open = seriesOpenEyes[sid], open >= 0.26, eyes < min(0.16 + 0.03 * st, open * (0.5 + 0.1 * st)) {
+                    v.reasons.append(.blink)
+                } else if eyes < 0.12 + 0.04 * st {
+                    v.reasons.append(.eyesClosed)
+                }
             }
-            // Яркое окно или небо — норма; брак — когда выбита заметная часть кадра.
-            if c.clipHigh > 0.10 - 0.06 * st { v.reasons.append(.overexposed) }
+            // Пересвет — на лице/объекте; весь кадр — только если выбита большая часть (белое небо за спиной — норма).
+            // Калибровка: светлое лицо на пасмурном небе даёт 14–25% «выбитых» пикселей — это норма.
+            if (c.subjectClip ?? 0) > 0.40 - 0.15 * st || c.clipHigh > 0.45 - 0.15 * st { v.reasons.append(.overexposed) }
             if c.clipLow > 0.30 - 0.12 * st || dark { v.reasons.append(.underexposed) }
             if let h = c.horizon, abs(h) >= 2.5 - 1.0 * st, abs(h) <= 15 { v.reasons.append(.tilted) }
             if c.utility { v.reasons.append(.utility) }
@@ -103,28 +139,63 @@ extension Library {
         var r = (c.subjectSharpness ?? p.sharpness ?? 0) / max(maxSharp, 1) * 40
         let big = c.faces.filter { $0.w >= 0.04 }
         if !big.isEmpty {
-            if big.allSatisfy({ ($0.eyes ?? 0.3) >= 0.22 }) { r += 25 }
+            if big.allSatisfy(\.eyesOpen) { r += 25 }
             r += big.compactMap(\.quality).reduce(0, +) / Double(big.count) * 15
         }
         if let a = c.aesthetics { r += (a + 1) / 2 * 15 }
         // Пересвет «добавляет резкости» (жёсткие перепады) — без штрафа лучшим стал бы выбитый кадр.
         if c.clipHigh > 0.05 { r -= 30 }
         if (c.meanLuma ?? 0.5) < 0.08 { r -= 30 }
-        if big.contains(where: { ($0.eyes ?? 0.3) < 0.2 }) { r -= 20 }
+        if (c.subjectClip ?? 0) > 0.15 { r -= 20 }
+        if big.contains(where: { ($0.reliable || $0.meshUsable) && $0.eyesShut() }) { r -= 20 }
         return r
     }
 
     /// После анализа: медиана резкости папки и лучший в каждой серии.
     func updateCullStats() {
         func median(_ a: [Double]) -> Double { let s = a.sorted(); return s.isEmpty ? 0 : s[s.count / 2] }
-        cullMedianSharpness = median(photos.filter { $0.cull?.faces.isEmpty ?? true }.compactMap { $0.cull?.subjectSharpness ?? $0.sharpness })
-        cullMedianFaceSharpness = median(photos.filter { !($0.cull?.faces.isEmpty ?? true) }.compactMap { $0.cull?.subjectSharpness })
+        let byFace = { (p: Photo) in p.cull?.faces.contains(where: \.reliable) ?? false }
+        cullMedianSharpness = median(photos.filter { !byFace($0) }.compactMap { $0.cull?.subjectSharpness ?? $0.sharpness })
+        cullMedianFaceSharpness = median(photos.filter(byFace).compactMap { $0.cull?.subjectSharpness })
+        // Медианы по сценам (если в сцене хотя бы 8 кадров нужного вида — иначе по всей папке).
+        var sm: [Int: (face: Double?, other: Double?)] = [:]
+        for (sid, list) in Dictionary(grouping: photos.filter { $0.sceneID != nil }, by: { $0.sceneID! }) {
+            let f = list.filter(byFace).compactMap { $0.cull?.subjectSharpness }
+            let o = list.filter { !byFace($0) }.compactMap { $0.cull?.subjectSharpness ?? $0.sharpness }
+            sm[sid] = (f.count >= 8 ? median(f) : nil, o.count >= 8 ? median(o) : nil)
+        }
+        sceneMedians = sm
         var best: [Int: Double] = [:]
         for p in photos {
             guard let sid = p.seriesID, let s = p.cull?.subjectSharpness ?? p.sharpness else { continue }
             best[sid] = max(best[sid] ?? 0, s)
         }
         seriesBestSharpness = best
+        // Насколько открыты глаза в серии (по лучшему кадру) — для поиска моргания.
+        var open: [Int: Double] = [:]
+        for p in photos {
+            guard let sid = p.seriesID, let e = p.cull?.faces.filter(\.reliable).compactMap(\.eyes).min() else { continue }
+            open[sid] = max(open[sid] ?? 0, e)
+        }
+        seriesOpenEyes = open
+        // По MediaPipe: позы с открытыми глазами в каждой серии — с ними сравниваем закрытые.
+        var poses: [Int: [OpenPose]] = [:]
+        for p in photos {
+            guard let sid = p.seriesID else { continue }
+            for f in p.cull?.faces ?? [] where f.meshUsable && f.eyesOpen {
+                poses[sid, default: []].append(OpenPose(id: p.id, pitch: f.pitch ?? 0, px: f.px ?? 0))
+            }
+        }
+        seriesOpenPoses = poses
+    }
+
+    /// Осветлить тёмный кадр: экспозиция так, чтобы средняя яркость стала ~0,35 (до +3 EV).
+    func brightenDark() {
+        guard let p = current, let l = p.cull?.meanLuma, l > 0.005 else { return }
+        var a = p.adj
+        a.exposure = min(3, max(0, (log2(0.35 / l) * 0.85 * 20).rounded() / 20))
+        setAdjustments(a)
+        flash(tr("Экспозиция \(String(format: "%+.2f EV", a.exposure))"))
     }
 
     /// Выровнять горизонт по найденному углу (до ±15°) — одним шагом журнала.

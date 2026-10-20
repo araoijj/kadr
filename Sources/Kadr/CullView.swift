@@ -120,6 +120,10 @@ struct CullOverlay: View {
                 if lib.cullHints {
                     ForEach(v.reasons) { r in tag(r.title, r.icon, r.isDefect ? .orange : .yellow) }
                     if photo.isBestInSeries { tag(tr("Лучший в серии"), "sparkles", Theme.star) }
+                    if v.reasons.contains(.underexposed) {
+                        Button { lib.brightenDark() } label: { tag(tr("Осветлить"), "sun.max", .accentColor) }
+                            .buttonStyle(.plain)
+                    }
                     if v.reasons.contains(.tilted) {
                         Button { lib.straightenByHorizon() } label: { tag(tr("Выровнять"), "level", .accentColor) }
                             .buttonStyle(.plain).allowsHitTesting(true)
@@ -184,9 +188,14 @@ struct FaceCrop: View {
             .frame(width: 190, height: 190)
             .clipShape(RoundedRectangle(cornerRadius: 6))
             HStack(spacing: 6) {
-                let e = face.eyes ?? 0.3
-                Image(systemName: e < 0.2 ? "eye.slash.fill" : "eye.fill").foregroundStyle(e < 0.2 ? .orange : .green)
-                Text(e < 0.2 ? tr("глаза закрыты?") : tr("глаза открыты")).font(.caption)
+                let shut = face.eyesShut(lib.cullStrictness)
+                let squint = !shut && (face.squint ?? 0) >= 0.45
+                Image(systemName: shut ? "eye.slash.fill" : squint ? "eye.trianglebadge.exclamationmark" : "eye.fill")
+                    .foregroundStyle(shut ? .orange : squint ? .yellow : .green)
+                Text(shut ? (face.blink != nil ? tr("глаза закрыты") : tr("глаза закрыты?")) : squint ? tr("прищур") : tr("глаза открыты"))
+                    .font(.caption)
+                    .help(face.blink.map { b in tr("Моргание \(String(format: "%.2f", b)) · прищур \(String(format: "%.2f", face.squint ?? 0)) (MediaPipe)") }
+                        ?? tr("По контуру глаз от macOS. Точнее — с сеткой лица MediaPipe (Настройки → Память и скорость)."))
                 Spacer()
                 if let q = face.quality { Text("\(Int(q * 100))%").font(.caption.monospacedDigit()).foregroundStyle(.secondary).help(tr("Качество лица по оценке macOS")) }
             }

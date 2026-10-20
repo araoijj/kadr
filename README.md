@@ -110,6 +110,8 @@ cp -R build/Kadr.app ~/Applications/
 
 Эмуляции плёнки — [t3mujinpack](https://github.com/t3mujin/t3mujinpack) © João Almeida, лицензия MIT. Файлы не входят в репозиторий: «Кадр» скачивает их с GitHub по кнопке и кладёт рядом лицензию автора.
 
+Сетка лица для поиска моргания — [MediaPipe Face Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker) © Google, лицензия Apache 2.0. Модели перегнаны в Core ML (~7 МБ, ~12 мс на лицо на нейроядре) и тоже не входят в репозиторий: ставятся в «Настройки → Память и скорость», архив содержит лицензию и NOTICE с описанием конвертации.
+
 ## Лицензия
 
 [PolyForm Noncommercial 1.0.0](LICENSE) © 2026 Aleksandr Kozlov

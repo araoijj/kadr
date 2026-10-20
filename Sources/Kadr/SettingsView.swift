@@ -178,6 +178,7 @@ struct PerformanceSettings: View {
                 }
                 Toggle(tr("Хранить индекс анализа (повторное открытие папки — мгновенно)"), isOn: $indexEnabled)
             }
+            FaceMeshSection()
             Section(tr("Память")) {
                 Picker(tr("Превью в памяти"), selection: $thumbCache) {
                     Text(tr("1000 — экономно")).tag(1000)
@@ -448,5 +449,66 @@ enum AppControl {
             $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count) }
         }
         return r == KERN_SUCCESS ? Int64(info.resident_size) : 0
+    }
+}
+
+/// Модели сетки лица MediaPipe: точнее различают моргание, прищур и взгляд вниз.
+struct FaceMeshSection: View {
+    @Environment(Library.self) private var lib
+    @State private var installed = FaceMesh.shared.installed
+    @State private var busy = false
+    @State private var error: String?
+
+    var body: some View {
+        Section(tr("Сетка лица MediaPipe")) {
+            LabeledContent(tr("Модели (~7 МБ)")) {
+                if busy { ProgressView().controlSize(.small) }
+                else { Text(installed ? tr("установлены") : tr("не установлены")).foregroundStyle(installed ? .green : .secondary) }
+            }
+            HStack {
+                if !installed {
+                    Button(tr("Скачать")) { download() }.disabled(busy)
+                    Button(tr("Установить из файла…")) { pick() }.disabled(busy)
+                } else {
+                    Button(tr("Удалить модели")) { FaceMesh.shared.uninstall(); installed = false }
+                }
+            }
+            if let error { Text(error).font(.caption).foregroundStyle(.red) }
+            Text(tr("В «Отборе» отличает моргание от прищура и взгляда вниз (~12 мс на лицо, на нейроядре). Без моделей глаза меряются по контуру от macOS — грубее. После установки кадры с лицами в открытых папках пересчитаются. Модели — Google MediaPipe Face Landmarker, лицензия Apache 2.0."))
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private func finish(_ url: URL?, _ err: Error?) {
+        if let url {
+            do { try FaceMesh.shared.install(from: url); installed = true; error = nil; lib.reload() }
+            catch { self.error = tr("Не удалось установить: \(error.localizedDescription)") }
+        } else if let err {
+            error = tr("Не удалось скачать: \(err.localizedDescription)")
+        }
+        busy = false
+    }
+
+    private func download() {
+        busy = true; error = nil
+        Task {
+            do {
+                let (tmp, resp) = try await URLSession.shared.download(from: FaceMesh.downloadURL)
+                guard (resp as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+                let zip = tmp.deletingLastPathComponent().appendingPathComponent("kadr-facemesh.zip")
+                try? FileManager.default.removeItem(at: zip)
+                try FileManager.default.moveItem(at: tmp, to: zip)
+                finish(zip, nil)
+                try? FileManager.default.removeItem(at: zip)
+            } catch { finish(nil, error) }
+        }
+    }
+
+    private func pick() {
+        let p = NSOpenPanel()
+        p.canChooseDirectories = true
+        p.allowedContentTypes = [.zip, .package, .folder]
+        p.message = tr("Архив .zip или папка с face_landmarks_detector и face_blendshapes (.mlpackage)")
+        if p.runModal() == .OK, let u = p.url { busy = true; finish(u, nil) }
     }
 }

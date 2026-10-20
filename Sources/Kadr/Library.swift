@@ -140,6 +140,9 @@ final class Library {
     var cullMedianSharpness = 0.0
     var cullMedianFaceSharpness = 0.0
     var seriesBestSharpness: [Int: Double] = [:]
+    var seriesOpenEyes: [Int: Double] = [:]
+    var seriesOpenPoses: [Int: [OpenPose]] = [:]
+    var sceneMedians: [Int: (face: Double?, other: Double?)] = [:]
 
     // Журнал изменений (History.swift).
     var history: [HistoryEntry] = []
@@ -671,6 +674,7 @@ final class Library {
         // Обработка хранится в каждой папке своя.
         var edits: [URL: [String: Adjustments]] = [:]
         var indexes: [URL: [String: IndexEntry]] = [:]
+        let meshReady = FaceMesh.shared.installed
         for dir in Set(chosen.map { $0.deletingLastPathComponent() }) {
             edits[dir] = EditStore.load(dir)
             indexes[dir] = AnalysisIndex.load(dir)
@@ -683,7 +687,9 @@ final class Library {
             p.mtime = v?.contentModificationDate?.timeIntervalSince1970 ?? 0
             p.adj = edits[f.deletingLastPathComponent()]?[f.lastPathComponent] ?? .none
             // Уже анализировали и файл не менялся — берём из индекса, не пересчитываем.
-            if let c = indexes[f.deletingLastPathComponent()]?[f.lastPathComponent], c.size == size, c.mtime == p.mtime {
+            // Модели сетки лица поставили после анализа — кадры с лицами пересчитываем, чтобы глаза мерились точнее.
+            if let c = indexes[f.deletingLastPathComponent()]?[f.lastPathComponent], c.size == size, c.mtime == p.mtime,
+               !(meshReady && c.cull?.mesh != true && !(c.cull?.faces.isEmpty ?? true)) {
                 p.exif = c.exif; p.hash = c.hash; p.sharpness = c.sharpness; p.cull = c.cull; p.indexed = true
             }
             return p
@@ -801,8 +807,8 @@ final class Library {
         reindex()
         groupSeries()
         findDuplicates()
+        computeScenes()       // сцены — до статистики: резкость сравнивается внутри сцены
         updateCullStats()
-        computeScenes()
     }
 
     /// Серия = подряд идущие кадры с похожей картинкой (расстояние Хэмминга ≤ 12)

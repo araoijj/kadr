@@ -8,6 +8,27 @@ struct FaceInfo: Codable, Sendable, Hashable {
     var quality: Double?        // встроенная оценка macOS 0…1: резкость, поворот, свет лица
     var eyes: Double?           // открытость глаз: высота/ширина контура (открытые ~0,3–0,45)
     var sharpness: Double?      // резкость в области лица
+    var px: Double?             // ширина лица в пикселях превью: мелкие лица для глаз и резкости ненадёжны
+    var blink: Double?          // моргание обоих глаз по сетке лица MediaPipe 0…1 (закрыты ≥ ~0,42), если модели установлены
+    var squint: Double?         // прищур по MediaPipe: улыбка и солнце — не моргание
+    var lookDown: Double?       // взгляд вниз по MediaPipe
+    var pitch: Double?          // наклон головы от macOS, градусы (> 0 — голова опущена)
+
+    /// Лицо годится для оценки глаз и резкости: крупное и повёрнуто к камере.
+    /// Калибровка на 2032 кадрах: у лиц мельче ~180 px открытость глаз и резкость меряются заметно хуже.
+    var reliable: Bool { (px ?? 0) >= 180 && (quality ?? 0) >= 0.35 }
+
+    /// Глаза измерены сеткой MediaPipe. Фильтр «качества лица» macOS тут не нужен: при закрытых глазах
+    /// macOS сама занижает качество (~0,3), а профиль и затылок сетка отсекает сама.
+    var meshUsable: Bool { blink != nil && (px ?? 0) >= 120 }
+    /// Глаза открыты: по MediaPipe, если замер есть, иначе по контуру от macOS.
+    var eyesOpen: Bool { blink.map { $0 < 0.3 } ?? ((eyes ?? 0.3) >= 0.22) }
+    /// Глаза закрыты (порог — от строгости, 0…1). Калибровка на 2032 кадрах: у морганий оба глаза ≥ 0,42
+    /// и «взгляд вниз» ≥ 0,5; «взгляд вниз» ~0 при «закрытых» — тёмные очки.
+    func eyesShut(_ st: Double = 0.5) -> Bool {
+        guard let blink else { return (eyes ?? 0.3) < 0.12 + 0.04 * st }
+        return blink >= 0.45 - 0.1 * st && (lookDown ?? 1) >= 0.35
+    }
 
     var rect: CGRect { CGRect(x: x, y: y, width: w, height: h) }
 }
@@ -21,9 +42,11 @@ struct CullData: Codable, Sendable, Hashable {
     var clipLow = 0.0               // доля «в ноль» в тенях
     var meanLuma: Double?           // средняя яркость 0…1 (для недосвета)
     var brightLuma: Double?         // яркость 95-го процентиля: есть ли в кадре светлые места
+    var subjectClip: Double?        // пересвет на лице или главном объекте (белое небо за спиной — не брак)
     var horizon: Double?            // наклон горизонта, градусы
     var aesthetics: Double?         // эстетика кадра по оценке macOS (−1…1)
     var utility = false             // служебный кадр: экран, документ, случайный снимок
+    var mesh: Bool?                 // глаза мерили сеткой лица MediaPipe (после установки моделей кадры с лицами пересчитываются)
 }
 
 struct CGRectCodable: Codable, Sendable, Hashable {
@@ -65,20 +88,35 @@ enum CullAnalyzer {
             }
             var face = FaceInfo(x: r.minX, y: r.minY, w: r.width, h: r.height, quality: q,
                                 eyes: eyes.isEmpty ? nil : eyes.reduce(0, +) / Double(eyes.count))
+            face.px = Double(r.width) * Double(img.width)
+            face.pitch = f.pitch.converted(to: .degrees).value
             face.sharpness = ImageStore.shared.sharpness(img, region: r)
             d.faces.append(face)
         }
         d.faces.sort { $0.w * $0.h > $1.w * $1.h }   // крупные лица — первыми
+        // Глаза — сеткой лица MediaPipe (~12 мс на лицо): отличает моргание от прищура и взгляда вниз.
+        let mesh = FaceMesh.shared
+        if !d.faces.isEmpty, mesh.available {
+            d.mesh = true
+            for i in d.faces.indices.prefix(6) where (d.faces[i].px ?? 0) >= 40 {
+                // Сетка не нашла лицо — почти всегда профиль: глаза по нему не судим (контур от macOS тут тоже врёт).
+                guard let e = mesh.eyes(img, face: d.faces[i].rect) else { d.faces[i].eyes = nil; continue }
+                d.faces[i].blink = e.blink
+                d.faces[i].squint = e.squint
+                d.faces[i].lookDown = e.lookDown
+            }
+        }
 
-        if d.faces.isEmpty, let sal = try? await GenerateAttentionBasedSaliencyImageRequest().perform(on: img),
+        if !d.faces.contains(where: \.reliable), let sal = try? await GenerateAttentionBasedSaliencyImageRequest().perform(on: img),
            let o = sal.salientObjects.first {
             let xs = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.x)
             let ys = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.y)
             let r = topDown(CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!))
             d.subject = CGRectCodable(x: r.minX, y: r.minY, w: r.width, h: r.height)
         }
-        // Резкость «главного»: лучшее из крупных лиц, иначе объект внимания, иначе центр кадра.
-        if let best = d.faces.prefix(3).compactMap(\.sharpness).max() {
+        // Резкость «главного»: лучшее из крупных лиц к камере, иначе объект внимания, иначе центр кадра.
+        // Мелкое лицо при замере растягивается и всегда выглядит «размытым»; затылок — тоже не лицо.
+        if let best = d.faces.filter(\.reliable).compactMap(\.sharpness).max() {
             d.subjectSharpness = best
         } else if let s = d.subject {
             d.subjectSharpness = ImageStore.shared.sharpness(img, region: s.rect)
@@ -94,7 +132,17 @@ enum CullAnalyzer {
             d.utility = a.isUtility
         }
         (d.clipHigh, d.clipLow, d.meanLuma, d.brightLuma) = clipping(img)
+        if let f = d.faces.first(where: \.reliable) { d.subjectClip = clipping(img, region: f.rect) }
+        else if let s = d.subject { d.subjectClip = clipping(img, region: s.rect) }
         return d
+    }
+
+    /// Доля пересвета внутри области кадра.
+    static func clipping(_ img: CGImage, region r: CGRect) -> Double? {
+        let px = CGRect(x: r.minX * CGFloat(img.width), y: r.minY * CGFloat(img.height),
+                        width: r.width * CGFloat(img.width), height: r.height * CGFloat(img.height)).integral
+        guard px.width >= 8, px.height >= 8, let crop = img.cropping(to: px) else { return nil }
+        return clipping(crop).0
     }
 
     private static func dist(_ a: CGRect, _ b: CGRect) -> CGFloat { hypot(a.midX - b.midX, a.midY - b.midY) }

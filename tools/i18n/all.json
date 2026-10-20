@@ -3208,5 +3208,85 @@
   "Decided (kept or rejected) out of all photos in the scene",
   "Decididas (conservadas o rechazadas) de todas las fotos de la escena",
   "Decise (tenute o scartate) su tutte le foto della scena"
+ ],
+ "Моргнул в серии": [
+  "Blinked in series",
+  "Parpadeó en la serie",
+  "Occhi chiusi nella serie"
+ ],
+ "Экспозиция {}": [
+  "Exposure {}",
+  "Exposición {}",
+  "Esposizione {}"
+ ],
+ "Осветлить": [
+  "Brighten",
+  "Aclarar",
+  "Schiarisci"
+ ],
+ "глаза закрыты": [
+  "eyes closed",
+  "ojos cerrados",
+  "occhi chiusi"
+ ],
+ "прищур": [
+  "squinting",
+  "ojos entrecerrados",
+  "occhi socchiusi"
+ ],
+ "Моргание {} · прищур {} (MediaPipe)": [
+  "Blink {} · squint {} (MediaPipe)",
+  "Parpadeo {} · entrecerrado {} (MediaPipe)",
+  "Ammiccamento {} · strizzamento {} (MediaPipe)"
+ ],
+ "По контуру глаз от macOS. Точнее — с сеткой лица MediaPipe (Настройки → Память и скорость).": [
+  "From the macOS eye outline. More accurate with the MediaPipe face mesh (Settings → Memory & speed).",
+  "Según el contorno de ojos de macOS. Más preciso con la malla facial MediaPipe (Ajustes → Memoria y velocidad).",
+  "Dal contorno degli occhi di macOS. Più preciso con la mesh del volto MediaPipe (Impostazioni → Memoria e velocità)."
+ ],
+ "Сетка лица MediaPipe": [
+  "MediaPipe face mesh",
+  "Malla facial MediaPipe",
+  "Mesh del volto MediaPipe"
+ ],
+ "Модели (~7 МБ)": [
+  "Models (~7 MB)",
+  "Modelos (~7 MB)",
+  "Modelli (~7 MB)"
+ ],
+ "установлены": [
+  "installed",
+  "instalados",
+  "installati"
+ ],
+ "не установлены": [
+  "not installed",
+  "no instalados",
+  "non installati"
+ ],
+ "Установить из файла…": [
+  "Install from File…",
+  "Instalar desde archivo…",
+  "Installa da file…"
+ ],
+ "Удалить модели": [
+  "Remove Models",
+  "Eliminar modelos",
+  "Rimuovi modelli"
+ ],
+ "В «Отборе» отличает моргание от прищура и взгляда вниз (~12 мс на лицо, на нейроядре). Без моделей глаза меряются по контуру от macOS — грубее. После установки кадры с лицами в открытых папках пересчитаются. Модели — Google MediaPipe Face Landmarker, лицензия Apache 2.0.": [
+  "In Culling, tells a blink from squinting or looking down (~12 ms per face, on the Neural Engine). Without the models, eyes are measured from the macOS outline — less precise. After installing, frames with faces in open folders are re-analyzed. Models: Google MediaPipe Face Landmarker, Apache 2.0 license.",
+  "En Selección distingue un parpadeo de los ojos entrecerrados o la mirada hacia abajo (~12 ms por cara, en el Neural Engine). Sin los modelos, los ojos se miden por el contorno de macOS, con menos precisión. Tras instalarlos, se reanalizan las fotos con caras de las carpetas abiertas. Modelos: Google MediaPipe Face Landmarker, licencia Apache 2.0.",
+  "In Selezione distingue un battito di ciglia dagli occhi socchiusi o dallo sguardo in basso (~12 ms per volto, sul Neural Engine). Senza i modelli, gli occhi si misurano dal contorno di macOS, con meno precisione. Dopo l’installazione, le foto con volti nelle cartelle aperte vengono rianalizzate. Modelli: Google MediaPipe Face Landmarker, licenza Apache 2.0."
+ ],
+ "Не удалось установить: {}": [
+  "Couldn’t install: {}",
+  "No se pudo instalar: {}",
+  "Impossibile installare: {}"
+ ],
+ "Архив .zip или папка с face_landmarks_detector и face_blendshapes (.mlpackage)": [
+  "A .zip archive or a folder with face_landmarks_detector and face_blendshapes (.mlpackage)",
+  "Un archivo .zip o una carpeta con face_landmarks_detector y face_blendshapes (.mlpackage)",
+  "Un archivio .zip o una cartella con face_landmarks_detector e face_blendshapes (.mlpackage)"
  ]
 }
