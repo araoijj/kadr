@@ -24,6 +24,7 @@ struct GeneralSettings: View {
     @AppStorage("pref.reopenLast") private var reopenLast = true
     @AppStorage("pref.cardBanner") private var cardBanner = true
     @AppStorage("pref.cullDefault") private var cullDefault = false
+    @AppStorage("pref.aiAuto") private var aiAuto = false
     @AppStorage("pref.sceneGap") private var sceneGap = 10
     @State private var startLanguage = Prefs.language
 
@@ -48,6 +49,8 @@ struct GeneralSettings: View {
             Section(tr("Работа")) {
                 Toggle(tr("Открывать последнюю папку при запуске"), isOn: $reopenLast)
                 Toggle(tr("Открывать папку сразу в режиме «Отбор»"), isOn: $cullDefault)
+                Toggle(tr("Запускать AI-анализ автоматически после индексации"), isOn: $aiAuto)
+                    .help(tr("Лица, глаза, смаз, пересвет. Нагружает Mac: ~1 минута на 1000 кадров. Выключено — запуск кнопкой «Запустить AI-анализ» в режиме «Отбор» (⌥⌘A)."))
                 Picker(tr("Новая сцена после паузы"), selection: $sceneGap) {
                     ForEach([5, 10, 20, 30, 60], id: \.self) { Text(tr("\($0) мин")).tag($0) }
                 }

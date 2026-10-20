@@ -12,7 +12,8 @@ enum Prefs {
     static var reopenLastFolder: Bool { bool("pref.reopenLast", true) }
     static var autoAdvance: Bool { bool("pref.autoAdvance", true) }
     static var cardBanner: Bool { bool("pref.cardBanner", true) }
-    static var cullByDefault: Bool { bool("pref.cullDefault", false) }   // открывать папку в режиме «Отбор»
+    static var cullByDefault: Bool { bool("pref.cullDefault", false) }
+    static var aiAuto: Bool { bool("pref.aiAuto", false) }               // AI-анализ сам после индексации (иначе — по кнопке)   // открывать папку в режиме «Отбор»
     static var sceneGapMinutes: Int { int("pref.sceneGap", 10) }         // новая сцена после паузы, минуты
 
     // Хранилище

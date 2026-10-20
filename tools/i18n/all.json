@@ -3288,5 +3288,115 @@
   "A .zip archive or a folder with face_landmarks_detector and face_blendshapes (.mlpackage)",
   "Un archivo .zip o una carpeta con face_landmarks_detector y face_blendshapes (.mlpackage)",
   "Un archivio .zip o una cartella con face_landmarks_detector e face_blendshapes (.mlpackage)"
+ ],
+ "Индексация {}/{}": [
+  "Indexing {}/{}",
+  "Indexando {}/{}",
+  "Indicizzazione {}/{}"
+ ],
+ "AI-анализ {}/{}": [
+  "AI analysis {}/{}",
+  "Análisis IA {}/{}",
+  "Analisi IA {}/{}"
+ ],
+ "Остановить AI-анализ": [
+  "Stop AI Analysis",
+  "Detener análisis IA",
+  "Interrompi analisi IA"
+ ],
+ "доступен после индексации папки": [
+  "available after the folder is indexed",
+  "disponible tras indexar la carpeta",
+  "disponibile dopo l’indicizzazione della cartella"
+ ],
+ "Стоп": [
+  "Stop",
+  "Detener",
+  "Stop"
+ ],
+ "Запустить AI-анализ": [
+  "Run AI Analysis",
+  "Ejecutar análisis IA",
+  "Avvia analisi IA"
+ ],
+ "Найдёт смаз, моргание, пересвет и лучшие кадры в сериях. Нагружает Mac: ~1 минута на 1000 кадров (⌥⌘A).": [
+  "Finds blur, blinks, blown highlights and the best frames in bursts. Heavy on the Mac: ~1 minute per 1,000 photos (⌥⌘A).",
+  "Detecta desenfoque, parpadeos, luces quemadas y las mejores fotos de cada ráfaga. Exige al Mac: ~1 minuto por cada 1000 fotos (⌥⌘A).",
+  "Trova sfocature, occhi chiusi, alte luci bruciate e i migliori scatti delle raffiche. Impegna il Mac: ~1 minuto ogni 1000 foto (⌥⌘A)."
+ ],
+ "смаз · моргание · пересвет · лучшие в сериях": [
+  "blur · blinks · highlights · best in burst",
+  "desenfoque · parpadeos · luces · lo mejor de la ráfaga",
+  "sfocatura · occhi chiusi · alte luci · migliori della raffica"
+ ],
+ "Показывать находки AI-анализа: значки брака, AI-очереди и лица": [
+  "Show AI findings: defect badges, AI queues and faces",
+  "Mostrar hallazgos de la IA: marcas de defectos, colas IA y caras",
+  "Mostra i risultati dell’IA: segni dei difetti, code IA e volti"
+ ],
+ "Досчитать ({})": [
+  "Finish ({})",
+  "Completar ({})",
+  "Completa ({})"
+ ],
+ "Новые кадры или кадры, посчитанные до установки сетки лица": [
+  "New photos, or photos analyzed before the face mesh was installed",
+  "Fotos nuevas o analizadas antes de instalar la malla facial",
+  "Foto nuove o analizzate prima dell’installazione della mesh del volto"
+ ],
+ "AI-действия": [
+  "AI Actions",
+  "Acciones IA",
+  "Azioni IA"
+ ],
+ "Турнир": [
+  "Tournament",
+  "Torneo",
+  "Torneo"
+ ],
+ "Запускать AI-анализ автоматически после индексации": [
+  "Run AI analysis automatically after indexing",
+  "Ejecutar el análisis IA automáticamente tras indexar",
+  "Avvia l’analisi IA automaticamente dopo l’indicizzazione"
+ ],
+ "Лица, глаза, смаз, пересвет. Нагружает Mac: ~1 минута на 1000 кадров. Выключено — запуск кнопкой «Запустить AI-анализ» в режиме «Отбор» (⌥⌘A).": [
+  "Faces, eyes, blur, highlights. Heavy on the Mac: ~1 minute per 1,000 photos. When off, start it with “Run AI Analysis” in Culling mode (⌥⌘A).",
+  "Caras, ojos, desenfoque, luces. Exige al Mac: ~1 minuto por cada 1000 fotos. Desactivado: se inicia con «Ejecutar análisis IA» en el modo Selección (⌥⌘A).",
+  "Volti, occhi, sfocatura, alte luci. Impegna il Mac: ~1 minuto ogni 1000 foto. Se disattivato, avviala con «Avvia analisi IA» in modalità Selezione (⌥⌘A)."
+ ],
+ "Фильтры": [
+  "Filters",
+  "Filtros",
+  "Filtri"
+ ],
+ "Открыта": [
+  "Open",
+  "Abierta",
+  "Aperta"
+ ],
+ "Места": [
+  "Locations",
+  "Ubicaciones",
+  "Posizioni"
+ ],
+ "Откройте папку на вкладке «Папки»": [
+  "Open a folder on the Folders tab",
+  "Abre una carpeta en la pestaña Carpetas",
+  "Apri una cartella nella scheda Cartelle"
+ ],
+ "Подсказки выключены": [
+  "Hints are off",
+  "Sugerencias desactivadas",
+  "Suggerimenti disattivati"
+ ],
+ "AI-отбор": [
+  "AI Culling",
+  "Selección IA",
+  "Selezione IA"
+ ],
+ "Серии и дубли": [
+  "Bursts & Duplicates",
+  "Ráfagas y duplicados",
+  "Raffiche e duplicati"
  ]
 }

@@ -132,6 +132,17 @@ final class Library {
     }
     var viewed: Set<URL> = []
     var showCullSummary = false
+
+    // AI-анализ (поиск брака): запускается кнопкой — при открытии папки идёт только лёгкая индексация.
+    var aiRunning = false
+    var aiDone = 0
+    var aiTotal = 0
+    var aiCount = 0               // кадров с готовым AI-анализом
+    var aiReady: Bool { aiCount > 0 }
+    /// Находки AI видны: анализ готов и подсказки включены (во время анализа — нет: медианы ещё не посчитаны,
+    /// а пересчёт очередей на каждый кадр тормозит интерфейс).
+    var aiOn: Bool { aiReady && cullHints && !aiRunning }
+    private var aiTask: Task<Void, Never>?
     var scenes: [SceneInfo] = []
     var tournamentAll: [URL] = []
     var tournamentQueue: [URL] = []
@@ -650,6 +661,7 @@ final class Library {
 
     func open(_ url: URL) {
         analysisTask?.cancel()
+        aiTask?.cancel(); aiRunning = false; aiCount = 0
         folder = url
         browser.addRecent(url)
         filter = .all
@@ -674,7 +686,6 @@ final class Library {
         // Обработка хранится в каждой папке своя.
         var edits: [URL: [String: Adjustments]] = [:]
         var indexes: [URL: [String: IndexEntry]] = [:]
-        let meshReady = FaceMesh.shared.installed
         for dir in Set(chosen.map { $0.deletingLastPathComponent() }) {
             edits[dir] = EditStore.load(dir)
             indexes[dir] = AnalysisIndex.load(dir)
@@ -687,9 +698,7 @@ final class Library {
             p.mtime = v?.contentModificationDate?.timeIntervalSince1970 ?? 0
             p.adj = edits[f.deletingLastPathComponent()]?[f.lastPathComponent] ?? .none
             // Уже анализировали и файл не менялся — берём из индекса, не пересчитываем.
-            // Модели сетки лица поставили после анализа — кадры с лицами пересчитываем, чтобы глаза мерились точнее.
-            if let c = indexes[f.deletingLastPathComponent()]?[f.lastPathComponent], c.size == size, c.mtime == p.mtime,
-               !(meshReady && c.cull?.mesh != true && !(c.cull?.faces.isEmpty ?? true)) {
+            if let c = indexes[f.deletingLastPathComponent()]?[f.lastPathComponent], c.size == size, c.mtime == p.mtime {
                 p.exif = c.exif; p.hash = c.hash; p.sharpness = c.sharpness; p.cull = c.cull; p.indexed = true
             }
             return p
@@ -752,39 +761,124 @@ final class Library {
                 func add() -> Bool {
                     guard let u = it.next() else { return false }
                     group.addTask(priority: .utility) {
-                        _ = store.asShotK(u)
+                        // Баланс белого «как снято» (~40 мс, CIRAWFilter) — не здесь: он нужен только обработке и считается по требованию.
                         let exif = store.exif(u)
                         guard let img = store.preview(u) else { return (u, exif, nil, nil, nil) }
-                        let cull = await CullAnalyzer.analyze(img)
-                        return (u, exif, store.dHash(img), store.sharpness(img), cull)
+                        // Только лёгкая индексация (~5 мс): EXIF, хэш для серий и дублей, общая резкость.
+                        // Лица, глаза и прочий AI-анализ — по кнопке (startAI), он нагружает Mac.
+                        return (u, exif, store.dHash(img), store.sharpness(img), nil)
                     }
                     return true
                 }
                 for _ in 0..<workers { _ = add() }
-                while let (u, exif, h, s, cull) = await group.next() {
-                    if Task.isCancelled { group.cancelAll(); break }
-                    sinceSave += 1
+                // Результаты — в интерфейс пачками: каждая правка photos перерисовывает счётчики по всей папке.
+                var batch: [(URL, ExifInfo, UInt64?, Double?)] = []
+                func flush() async {
+                    let b = batch; batch = []
+                    sinceSave += b.count
                     let save = sinceSave >= 50
                     if save { sinceSave = 0 }
                     await MainActor.run {
-                        guard let self, let i = self.index[u] else { return }
-                        self.photos[i].exif = exif
-                        self.photos[i].hash = h
-                        self.photos[i].sharpness = s
-                        self.photos[i].cull = cull
-                        self.photos[i].indexed = true
-                        self.analyzed += 1
+                        guard let self else { return }
+                        for (u, exif, h, s) in b {
+                            guard let i = self.index[u] else { continue }
+                            self.photos[i].exif = exif
+                            self.photos[i].hash = h
+                            self.photos[i].sharpness = s
+                            self.photos[i].indexed = true
+                        }
+                        self.analyzed += b.count
                         if save { self.saveIndex() }
                     }
+                }
+                while let (u, exif, h, s, _) = await group.next() {
+                    if Task.isCancelled { group.cancelAll(); break }
+                    batch.append((u, exif, h, s))
+                    if batch.count >= 16 { await flush() }
                     _ = add()
                 }
+                if !batch.isEmpty, !Task.isCancelled { await flush() }
             }
             await MainActor.run {
                 self?.saveIndex()
-                if !Task.isCancelled { self?.finishAnalysis() }
+                if !Task.isCancelled {
+                    self?.finishAnalysis()
+                    if Prefs.aiAuto { self?.startAI() }
+                }
             }
         }
     }
+
+    /// Кадру нужен AI-анализ: его ещё не было, или после установки сетки лица MediaPipe глаза у лиц мерились по-старому.
+    func needsAI(_ p: Photo, mesh: Bool = FaceMesh.shared.installed) -> Bool {
+        guard let c = p.cull else { return true }
+        return mesh && c.mesh != true && !c.faces.isEmpty
+    }
+
+    var aiPending: Int {
+        if aiRunning { return 0 }
+        let mesh = FaceMesh.shared.installed
+        return photos.reduce(0) { $0 + (needsAI($1, mesh: mesh) ? 1 : 0) }
+    }
+
+    /// AI-анализ открытой папки: лица и глаза (Apple Vision, MediaPipe), смаз по лицу или объекту,
+    /// пересвет на лице, горизонт, эстетика. Фоном, с прогрессом; уже посчитанное берётся из индекса.
+    func startAI() {
+        guard !aiRunning, analyzed >= photos.count else { return }
+        let mesh = FaceMesh.shared.installed
+        let urls = photos.filter { needsAI($0, mesh: mesh) }.map(\.id)
+        guard !urls.isEmpty else { return }
+        aiRunning = true; aiDone = 0; aiTotal = urls.count
+        aiTask = Task { [weak self] in
+            let store = ImageStore.shared
+            let workers = min(max(1, Prefs.analysisThreads), 4)
+            var sinceSave = 0
+            await withTaskGroup(of: (URL, CullData?).self) { group in
+                var it = urls.makeIterator()
+                func add() -> Bool {
+                    guard let u = it.next() else { return false }
+                    group.addTask(priority: .utility) {
+                        guard let img = store.preview(u) else { return (u, nil) }
+                        return (u, await CullAnalyzer.analyze(img))
+                    }
+                    return true
+                }
+                for _ in 0..<workers { _ = add() }
+                var batch: [(URL, CullData?)] = []
+                func flush() async {
+                    let b = batch; batch = []
+                    sinceSave += b.count
+                    let save = sinceSave >= 50
+                    if save { sinceSave = 0 }
+                    await MainActor.run {
+                        guard let self else { return }
+                        for (u, cull) in b {
+                            guard let i = self.index[u], let cull else { continue }
+                            if self.photos[i].cull == nil { self.aiCount += 1 }
+                            self.photos[i].cull = cull
+                        }
+                        self.aiDone += b.count
+                        if save { self.saveIndex() }
+                    }
+                }
+                while let r = await group.next() {
+                    if Task.isCancelled { group.cancelAll(); break }
+                    batch.append(r)
+                    if batch.count >= 16 { await flush() }
+                    _ = add()
+                }
+                if !batch.isEmpty, !Task.isCancelled { await flush() }
+            }
+            await MainActor.run {
+                guard let self else { return }
+                self.saveIndex()
+                self.aiRunning = false
+                self.finishAnalysis()   // лучший в серии и медианы — уже с учётом лиц и глаз
+            }
+        }
+    }
+
+    func stopAI() { aiTask?.cancel() }
 
     /// Индекс по папкам: только проанализированные файлы, удалённые выпадают сами.
     private func saveIndex() {
@@ -805,6 +899,7 @@ final class Library {
             }
         }
         reindex()
+        aiCount = photos.filter { $0.cull != nil }.count
         groupSeries()
         findDuplicates()
         computeScenes()       // сцены — до статистики: резкость сравнивается внутри сцены

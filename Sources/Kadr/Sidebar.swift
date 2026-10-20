@@ -11,11 +11,35 @@ struct Sidebar: View {
     @AppStorage("sb.analysis") private var showAnalysis = true
     @AppStorage("sb.cull") private var showCull = true
     @AppStorage("sb.scenes") private var showScenes = true
+    @AppStorage("sb.tab") private var tab = 0      // 0 — папки, 1 — фильтры
 
     var body: some View {
+        // Две вкладки, чтобы не было «всё навалено»: папки (как в Finder) и фильтры съёмки.
+        VStack(spacing: 0) {
+            Picker("", selection: $tab) {
+                Text(tr("Папки")).tag(0)
+                Text(tr("Фильтры")).tag(1)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            if tab == 0 { folders } else { filters }
+        }
+    }
+
+    private var folders: some View {
         @Bindable var lib = lib
-        List(selection: Binding(get: { lib.filter }, set: { if let f = $0 { lib.filter = f; lib.move(0) } })) {
-            Section(tr("Папки"), isExpanded: $showFolders) {
+        return List {
+            // Открытая папка — сверху, с подпапками: сразу видно, где лежат снимки.
+            if let f = lib.folder {
+                Section(tr("Открыта")) {
+                    FolderRow(url: f, icon: "folder.fill")
+                    Text(f.deletingLastPathComponent().path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(2).truncationMode(.head)
+                        .selectionDisabled()
+                }
+            }
+            Section(tr("Места")) {
                 if !lib.browser.recent.isEmpty {
                     DisclosureGroup {
                         ForEach(lib.browser.recent, id: \.self) { FolderRow(url: $0, icon: "clock") }
@@ -42,10 +66,18 @@ struct Sidebar: View {
                     .font(.callout)
                     .help(tr("Показывать снимки из всех подпапок открытой папки"))
             }
+        }
+        .listStyle(.sidebar)
+    }
 
-            if lib.folder != nil {
+    private var filters: some View {
+        List(selection: Binding(get: { lib.filter }, set: { if let f = $0 { lib.filter = f; lib.move(0) } })) {
+            if lib.folder == nil {
+                Text(tr("Откройте папку на вкладке «Папки»")).font(.callout).foregroundStyle(.secondary).selectionDisabled()
+            } else {
                 Section(tr("Съёмка"), isExpanded: $showShoot) {
                     row(.all)
+                    row(.undecided)
                     row(.unrated)
                     row(.picked)
                     row(.rejected, tint: Theme.reject)
@@ -90,17 +122,28 @@ struct Sidebar: View {
                         }
                     }
                 }
-                if lib.cullHints {
-                    Section(tr("Отбор"), isExpanded: $showCull) {
+                Section(isExpanded: $showCull) {
+                    if lib.aiOn {
                         row(.suspects, tint: .orange)
-                        row(.undecided)
                         row(.leaders, tint: .green)
                         ForEach(CullReason.allCases.filter { lib.count(.reason($0)) > 0 }) { r in
                             row(.reason(r), tint: r.isDefect ? .orange : .yellow)
                         }
+                    } else if lib.aiRunning {
+                        Label(tr("AI-анализ \(lib.aiDone)/\(lib.aiTotal)"), systemImage: "hourglass")
+                            .font(.callout).foregroundStyle(.secondary).selectionDisabled()
+                    } else if lib.aiReady {
+                        Text(tr("Подсказки выключены")).font(.callout).foregroundStyle(.secondary).selectionDisabled()
+                    } else {
+                        Button { lib.startAI() } label: { Label(tr("Запустить AI-анализ"), systemImage: "sparkles") }
+                            .buttonStyle(.plain).foregroundStyle(Color.accentColor)
+                            .disabled(lib.analyzed < lib.photos.count)
+                            .selectionDisabled()
                     }
+                } header: {
+                    Label(tr("AI-отбор"), systemImage: "sparkles")
                 }
-                Section(tr("Анализ"), isExpanded: $showAnalysis) {
+                Section(tr("Серии и дубли"), isExpanded: $showAnalysis) {
                     row(.best, tint: Theme.star)
                     row(.duplicates)
                     if lib.seriesCount > 0 {

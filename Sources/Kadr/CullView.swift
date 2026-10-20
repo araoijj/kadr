@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Режим «Отбор»: большой кадр, прогресс, очередь, причины брака и лица в 100%.
-/// «Подсказки» выключаются — тогда это чистый ручной отбор: кадр, лента, P / X / U и звёзды.
+/// Режим «Отбор»: большой кадр, прогресс, решения, очередь и турнир — ручной отбор.
+/// AI-отбор (причины брака, AI-очереди, лица в 100%) — после запуска AI-анализа и при включённых подсказках.
 struct CullView: View {
     @Environment(Library.self) private var lib
     @State private var barHeight: CGFloat = 84
@@ -32,7 +32,7 @@ struct CullView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // Лица — только если кадру остаётся место (узкое окно: лица смотрятся зумом).
-                if lib.cullHints, g.size.width >= 640, let p = lib.current, !(p.cull?.faces.isEmpty ?? true) {
+                if lib.aiOn, g.size.width >= 640, let p = lib.current, !(p.cull?.faces.isEmpty ?? true) {
                     Divider()
                     FacesColumn(photo: p).frame(width: 210)
                 }
@@ -50,10 +50,10 @@ struct CullTopBar: View {
     @Environment(Library.self) private var lib
 
     var body: some View {
-        // Широкое окно — две строки с сегментами очередей; узкое — компактно в три строки.
-        // Иначе панель распирает окно и боковые панели уезжают за край.
+        // Сверху — ручной отбор (прогресс, решения, очередь, турнир), ниже — отдельная полоса AI-отбора.
+        // Широкое окно — две строки, узкое — три: иначе панель распирает окно.
         ViewThatFits(in: .horizontal) {
-            VStack(spacing: 6) {
+            VStack(spacing: 8) {
                 HStack(spacing: 14) {
                     progress(width: 180)
                     counters
@@ -62,10 +62,11 @@ struct CullTopBar: View {
                         queuePicker.pickerStyle(.segmented).fixedSize()
                         queuePicker.pickerStyle(.menu).fixedSize()
                     }
+                    tournament
+                    summary
                 }
                 HStack(spacing: 12) {
-                    hints
-                    if lib.cullHints { strictness(labels: true); actions }
+                    aiStrip(compact: false)
                     Spacer(minLength: 8)
                     ViewThatFits(in: .horizontal) {
                         Text(tr("P — оставить · X — брак · U — снять · ← → — листать · 1–5 — звёзды"))
@@ -73,7 +74,6 @@ struct CullTopBar: View {
                         Text(tr("P · X · U · ← →")).font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
                         Color.clear.frame(width: 0, height: 0)
                     }
-                    summary
                 }
                 .controlSize(.small)
             }
@@ -84,16 +84,12 @@ struct CullTopBar: View {
                 }
                 HStack(spacing: 8) {
                     queuePicker.pickerStyle(.menu).fixedSize()
-                    if lib.cullHints { actions }
+                    tournament
                     Spacer(minLength: 0)
                     summary
                 }
                 .controlSize(.small)
-                HStack(spacing: 8) {
-                    hints
-                    if lib.cullHints { strictness(labels: false) }
-                }
-                .controlSize(.small)
+                aiStrip(compact: true).controlSize(.small)
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 8)
@@ -119,11 +115,46 @@ struct CullTopBar: View {
         .fixedSize()
     }
 
-    private var hints: some View {
+    /// AI-отбор: запуск по кнопке, прогресс, затем подсказки, строгость и AI-действия.
+    /// Пока не запущен — отбор полностью ручной, без значков брака.
+    @ViewBuilder private func aiStrip(compact: Bool) -> some View {
         @Bindable var lib = lib
-        return Toggle(tr("Подсказки"), isOn: $lib.cullHints)
-            .toggleStyle(.switch).fixedSize()
-            .help(tr("Выключите — и отбор полностью ручной: без значков, очередей и автоанализа на экране"))
+        HStack(spacing: 10) {
+            Label("AI", systemImage: "sparkles").font(.caption.weight(.bold)).foregroundStyle(Color.accentColor).fixedSize()
+            if lib.analyzed < lib.photos.count {
+                Text(tr("доступен после индексации папки")).font(.caption).foregroundStyle(.secondary).fixedSize()
+            } else if lib.aiRunning {
+                ProgressView(value: Double(lib.aiDone), total: Double(max(lib.aiTotal, 1))).frame(width: compact ? 90 : 140)
+                Text(tr("AI-анализ \(lib.aiDone)/\(lib.aiTotal)")).font(.caption.monospacedDigit()).foregroundStyle(.secondary).fixedSize()
+                Button(tr("Стоп")) { lib.stopAI() }.fixedSize()
+            } else if !lib.aiReady {
+                Button { lib.startAI() } label: { Label(tr("Запустить AI-анализ"), systemImage: "sparkles") }
+                    .fixedSize()
+                    .help(tr("Найдёт смаз, моргание, пересвет и лучшие кадры в сериях. Нагружает Mac: ~1 минута на 1000 кадров (⌥⌘A)."))
+                if !compact {
+                    Text(tr("смаз · моргание · пересвет · лучшие в сериях")).font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
+                }
+            } else {
+                Toggle(tr("Подсказки"), isOn: $lib.cullHints)
+                    .toggleStyle(.switch).fixedSize()
+                    .help(tr("Показывать находки AI-анализа: значки брака, AI-очереди и лица"))
+                if lib.cullHints {
+                    if compact {
+                        Slider(value: $lib.cullStrictness, in: 0...1).frame(width: 90)
+                            .help(tr("Строгость поиска брака: мягко — только явный, строго — всё сомнительное"))
+                    } else {
+                        strictness(labels: true)
+                    }
+                    actions
+                }
+                if lib.aiPending > 0 {
+                    Button(tr("Досчитать (\(lib.aiPending))")) { lib.startAI() }.fixedSize()
+                        .help(tr("Новые кадры или кадры, посчитанные до установки сетки лица"))
+                }
+            }
+        }
+        .padding(.horizontal, 8).padding(.vertical, 3)
+        .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
     }
 
     private func strictness(labels: Bool) -> some View {
@@ -137,13 +168,17 @@ struct CullTopBar: View {
     }
 
     private var actions: some View {
-        Menu(tr("Действия")) {
+        Menu(tr("AI-действия")) {
             Button(tr("Отклонить предложенный брак…")) { lib.acceptSuggestions() }
             Button(tr("Оставить лучшие в сериях, остальные в брак…")) { lib.keepBestInSeries() }
-            Divider()
-            Button(tr("Турнир по серии или выделенным (T)")) { lib.startTournament() }
         }
         .fixedSize()
+    }
+
+    private var tournament: some View {
+        Button { lib.startTournament() } label: { Label(tr("Турнир"), systemImage: "trophy") }
+            .fixedSize()
+            .help(tr("Турнир по серии или выделенным (T)"))
     }
 
     private var summary: some View {
@@ -155,7 +190,7 @@ struct CullTopBar: View {
         return Picker("", selection: Binding(get: { lib.filter }, set: { lib.filter = $0; lib.move(0) })) {
             Text(tr("Все") + " \(total)").tag(PhotoFilter.all)
             Text(tr("Без решения") + " \(lib.count(.undecided))").tag(PhotoFilter.undecided)
-            if lib.cullHints {
+            if lib.aiOn {
                 Text(tr("Возможный брак") + " \(lib.count(.suspects))").tag(PhotoFilter.suspects)
                 Text(tr("Быстрый проход") + " \(lib.count(.leaders))").tag(PhotoFilter.leaders)
             }
@@ -186,7 +221,7 @@ struct CullOverlay: View {
                 } else if photo.rating > 0 {
                     tag(tr("Оставлено") + " " + String(repeating: "★", count: photo.rating), "checkmark.circle.fill", .green)
                 }
-                if lib.cullHints {
+                if lib.aiOn {
                     ForEach(v.reasons) { r in tag(r.title, r.icon, r.isDefect ? .orange : .yellow) }
                     if photo.isBestInSeries { tag(tr("Лучший в серии"), "sparkles", Theme.star) }
                     if v.reasons.contains(.underexposed) {
@@ -199,7 +234,7 @@ struct CullOverlay: View {
                     }
                 }
                 Spacer()
-                if lib.cullHints, photo.cull != nil {
+                if lib.aiOn, photo.cull != nil {
                     Text(tr("Оценка \(v.score)"))
                         .font(.caption.weight(.semibold).monospacedDigit())
                         .padding(.horizontal, 8).padding(.vertical, 3)
@@ -301,7 +336,7 @@ struct CullSummary: View {
                 big(d.rejected, tr("в браке"), Theme.reject)
                 big(d.undecided, tr("без решения"), .secondary)
             }
-            if lib.cullHints && !reasons.isEmpty {
+            if lib.aiOn && !reasons.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(tr("Что нашёл анализ")).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     ForEach(reasons, id: \.0) { r, n in

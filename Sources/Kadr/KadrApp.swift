@@ -81,6 +81,13 @@ struct KadrApp: App {
                 Button(tr("Выделить серию")) { library.selectSeries() }
                     .keyboardShortcut("a", modifiers: [.command, .shift])
                 Divider()
+                if library.aiRunning {
+                    Button(tr("Остановить AI-анализ")) { library.stopAI() }
+                } else {
+                    Button(tr("Запустить AI-анализ")) { library.startAI() }
+                        .keyboardShortcut("a", modifiers: [.command, .option])
+                        .disabled(library.folder == nil || library.analyzed < library.photos.count || library.aiPending == 0)
+                }
                 Button(tr("Пересчитать анализ папки")) { library.reanalyze() }
                 Button(tr("Показать в Finder")) { library.revealCurrent() }
                     .keyboardShortcut("r", modifiers: [.command, .shift])

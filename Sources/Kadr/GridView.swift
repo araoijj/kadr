@@ -157,7 +157,7 @@ struct Thumbnail: View {
                 if photo.duplicateOf != nil {
                     Badge(text: tr("Дубль"), icon: "doc.on.doc", tint: .orange)
                 }
-                if lib.cullHints, lib.verdict(photo).suspect, !photo.rejected {
+                if lib.aiOn, lib.verdict(photo).suspect, !photo.rejected {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.orange)

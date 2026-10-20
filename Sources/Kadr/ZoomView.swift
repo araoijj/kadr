@@ -61,7 +61,7 @@ struct ZoomableLoupe: View {
         if lib.splitCompare && !photo.adj.isIdentity {
             SplitFit(photo: photo, aspect: pixelSize.width / pixelSize.height)
         } else if photo.adj.isIdentity || lib.showOriginal {
-            PreviewImage(photo: photo)
+            SharpPreview(photo: photo)
         } else {
             EditedImage(photo: photo, adj: photo.adj)
         }

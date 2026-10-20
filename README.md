@@ -16,8 +16,9 @@ It is built in SwiftUI with Core Image and Apple Vision — no Electron, no subs
 ## Features
 
 ### Culling
-- **Instant RAW browsing.** Kadr shows the JPEG preview embedded by the camera: ~20 ms per frame, even for 50 MP Sony A1 files. Full RAW decoding kicks in at 100% zoom.
+- **Instant, sharp RAW browsing.** Kadr shows the JPEG preview embedded by the camera right away (~20 ms per frame), then swaps in the RAW decoded at screen resolution with the camera’s colors (~0.6 s, the next frame is prepared in advance) — embedded previews are often only 1616 px and look soft on Retina screens.
 - **Culling mode (O):** viewing progress, kept / rejected / undecided counters, queues (“Undecided”, “Possible defects”, “Quick pass” — burst leaders and single frames), faces at 100% in a side column, and a summary with next steps. Turn **Hints** off for fully manual culling.
+- **AI culling — on demand.** Opening a folder only runs light indexing (EXIF, bursts, duplicates; ~15 ms per frame). The heavy AI analysis runs when you click **Run AI Analysis** (⌥⌘A) in Culling mode, with progress and a Stop button — or automatically, if you enable it in Settings.
 - **Offline reject detection:** out-of-focus shots (judged by the face or main subject, compared within the same scene), **blinks** and closed eyes, blown highlights on the subject, underexposure, utility shots, duplicates, “weaker than the rest of the burst”; a tilted horizon is flagged as fixable, with a one-click **Straighten**. A strictness slider and a 0–100 frame score. Bulk actions ask for confirmation and can be undone.
 - **Blink detection with MediaPipe.** An optional face mesh model (Google MediaPipe Face Landmarker, converted to Core ML, ~12 ms per face on the Neural Engine) tells a real blink from squinting, laughing, looking aside or looking down. A frame counts as a blink when both eyes are closed and another frame of the same burst shows the same pose with eyes open. Install it in *Settings → Memory & speed*.
 - **Tournament (T):** compare a burst or a selection in pairs, ← or → picks the better one; the winner gets a ★, the rest can be rejected.
@@ -31,7 +32,7 @@ It is built in SwiftUI with Core Image and Apple Vision — no Electron, no subs
 ### Viewing and organizing
 - **XMP sidecars** compatible with Capture One / Lightroom / Bridge / darktable; unknown fields in existing XMP files are preserved.
 - **Zoom up to 800%** with a navigator: only the visible part of the RAW is decoded at full resolution.
-- **Folders and drives** in the sidebar: favorites, recents, attached drives and memory cards, a folder tree with photo counts, and an “include subfolders” mode.
+- **Sidebar with two tabs:** *Folders* (the open folder, places, drives and memory cards) and *Filters* (ratings, colors, lenses, dates, scenes, AI culling, bursts). Folders: favorites, recents, attached drives and memory cards, a folder tree with photo counts, and an “include subfolders” mode.
 - **Sorting and grouping** by capture time, name, rating, lens, folder, size; groups by day, folder, lens, rating, scene.
 - **Memory card import:** files are sorted into per-day folders, already imported files are skipped, every copy is verified by size, and the card can be ejected afterwards.
 - **Analysis index.** Sharpness, bursts and EXIF are cached in `~/Library/Application Support/Kadr/Index`; reopening a folder only re-analyzes new or changed files, in the background, at low priority.

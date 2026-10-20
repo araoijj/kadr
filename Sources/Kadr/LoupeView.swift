@@ -83,6 +83,51 @@ struct PreviewImage: View {
     }
 }
 
+/// Кадр без правок: сразу превью камеры, через мгновение — резкое проявление RAW под размер экрана.
+/// Встроенное превью у многих камер 1616 px — на Retina оно растянуто и выглядит мутным.
+/// Профиль «Как в камере» сохраняет цвета JPEG камеры. Следующий кадр проявляется заранее.
+struct SharpPreview: View {
+    let photo: Photo
+    @Environment(Library.self) private var lib
+    @State private var sharp: CGImage?
+    @State private var sharpFor: URL?
+
+    var body: some View {
+        Group {
+            if let sharp, sharpFor == photo.url {
+                Image(decorative: sharp, scale: 1)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .opacity(photo.rejected ? 0.45 : 1)
+            } else {
+                PreviewImage(photo: photo)
+            }
+        }
+        .task(id: photo.id) {
+            let url = photo.url
+            guard ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) else { return }   // JPEG и так в полный размер
+            try? await Task.sleep(for: .milliseconds(120))   // быстро листают — не проявляем каждый кадр
+            guard !Task.isCancelled else { return }
+            let side = Self.screenSide
+            if let img = await Renderer.shared.render(url, .none, maxSide: side, channel: "sharp"), !Task.isCancelled {
+                sharp = img; sharpFor = url
+            }
+            guard !Task.isCancelled else { return }
+            // Следующий кадр очереди — заранее, чтобы при листании вперёд он сразу был резким.
+            let vis = lib.visible
+            if let i = vis.firstIndex(where: { $0.id == photo.id }), i + 1 < vis.count, vis[i + 1].adj.isIdentity,
+               ImageStore.rawExtensions.contains(vis[i + 1].url.pathExtension.lowercased()) {
+                Renderer.shared.prewarm(vis[i + 1].url, maxSide: side)
+            }
+        }
+    }
+
+    static var screenSide: CGFloat {
+        min(NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560, 3200)
+    }
+}
+
 /// Полное проявление RAW, 1 пиксель снимка = 1 пиксель экрана. Тянуть мышью / скроллить.
 /// Кадр, проявленный из RAW с обработкой. Пока считается первый раз — показываем превью.
 struct EditedImage: View {

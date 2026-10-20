@@ -91,8 +91,16 @@ struct ContentView: View {
                 if lib.analyzed < lib.photos.count {
                     HStack(spacing: 6) {
                         ProgressView().controlSize(.small)
-                        Text(tr("Анализ \(lib.analyzed)/\(lib.photos.count)"))
+                        Text(tr("Индексация \(lib.analyzed)/\(lib.photos.count)"))
                             .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                    }
+                } else if lib.aiRunning {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles").foregroundStyle(Color.accentColor)
+                        Text(tr("AI-анализ \(lib.aiDone)/\(lib.aiTotal)"))
+                            .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                        Button { lib.stopAI() } label: { Image(systemName: "stop.circle") }
+                            .buttonStyle(.borderless).help(tr("Остановить AI-анализ"))
                     }
                 }
                 Menu {

@@ -42,10 +42,16 @@ final class FaceMesh: @unchecked Sendable {
     /// Модели установлены и загружаются.
     var available: Bool { lock.withLock { load(); return landmarks != nil && blend != nil } }
 
-    /// Модели на диске (без загрузки) — для настроек.
+    /// Модели на диске (без загрузки). Запоминается: спрашивают на каждый кадр и при каждой перерисовке.
     var installed: Bool {
-        Self.modelNames.allSatisfy { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0 + ".mlmodelc").path) }
+        lock.withLock {
+            if let installedCache { return installedCache }
+            let v = Self.modelNames.allSatisfy { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0 + ".mlmodelc").path) }
+            installedCache = v
+            return v
+        }
     }
+    private var installedCache: Bool?
 
     /// Поставить модели из папки, архива .zip или одного .mlpackage: компилируем в .mlmodelc и кладём в Models.
     func install(from src: URL) throws {
@@ -80,11 +86,11 @@ final class FaceMesh: @unchecked Sendable {
             found += 1
         }
         guard found > 0 else { throw CocoaError(.fileNoSuchFile) }
-        lock.withLock { tried = false; landmarks = nil; blend = nil }
+        lock.withLock { tried = false; landmarks = nil; blend = nil; installedCache = nil }
     }
 
     func uninstall() {
-        lock.withLock { tried = false; landmarks = nil; blend = nil }
+        lock.withLock { tried = false; landmarks = nil; blend = nil; installedCache = nil }
         for n in Self.modelNames { try? FileManager.default.removeItem(at: folder.appendingPathComponent(n + ".mlmodelc")) }
     }
 
