@@ -34,3 +34,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 codesign --force --deep -s - "$APP" >/dev/null 2>&1 || true
 echo "Готово: $PWD/$APP"
+# Установка: та копия, что запускается из Launchpad/Spotlight. Запущенное приложение сперва закрыть.
+if pgrep -x Kadr >/dev/null; then
+  echo "«Кадр» запущен — закройте его и повторите, иначе в ~/Applications останется старая версия"
+else
+  mkdir -p ~/Applications && rm -rf ~/Applications/Kadr.app && ditto "$APP" ~/Applications/Kadr.app
+  echo "Установлено: ~/Applications/Kadr.app"
+fi
