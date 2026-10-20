@@ -3493,5 +3493,295 @@
   "Suggest Crop (A)",
   "Sugerir recorte (A)",
   "Suggerisci ritaglio (A)"
+ ],
+ "Точная копия другого файла (тот же размер, время и картинка)": [
+  "An exact copy of another file (same size, time and picture)",
+  "Copia exacta de otro archivo (mismo tamaño, hora e imagen)",
+  "Copia esatta di un altro file (stesse dimensioni, ora e immagine)"
+ ],
+ "Резкость {}: {}% от обычной для сцены; брак ниже {}%": [
+  "Sharpness of the {}: {}% of the scene's usual; a reject below {}%",
+  "Nitidez de {}: {}% de lo habitual en la escena; defecto por debajo de {}%",
+  "Nitidezza di {}: {}% del solito per la scena; difetto sotto il {}%"
+ ],
+ "лица": [
+  "face",
+  "la cara",
+  "volto"
+ ],
+ "объекта": [
+  "subject",
+  "el sujeto",
+  "soggetto"
+ ],
+ "Оба глаза закрыты (моргание {}, порог {}); в серии есть кадр в той же позе с открытыми глазами": [
+  "Both eyes closed (blink {}, threshold {}); the burst has a frame in the same pose with eyes open",
+  "Ambos ojos cerrados (parpadeo {}, umbral {}); la ráfaga tiene una foto en la misma pose con los ojos abiertos",
+  "Entrambi gli occhi chiusi (ammiccamento {}, soglia {}); nella raffica c’è uno scatto nella stessa posa con gli occhi aperti"
+ ],
+ "Оба глаза закрыты (моргание {}) — кадр без пары с открытыми глазами, может быть задумано": [
+  "Both eyes closed (blink {}) — no matching frame with eyes open, may be intentional",
+  "Ambos ojos cerrados (parpadeo {}): sin foto equivalente con ojos abiertos, puede ser intencionado",
+  "Entrambi gli occhi chiusi (ammiccamento {}): nessuno scatto equivalente a occhi aperti, potrebbe essere voluto"
+ ],
+ "Пересвет: на лице или объекте {}% (порог {}%), во всём кадре {}% (порог {}%)": [
+  "Blown highlights: {}% on the face or subject (threshold {}%), {}% in the whole frame (threshold {}%)",
+  "Luces quemadas: {}% en la cara o el sujeto (umbral {}%), {}% en toda la foto (umbral {}%)",
+  "Alte luci bruciate: {}% su volto o soggetto (soglia {}%), {}% nell’intera foto (soglia {}%)"
+ ],
+ "Средняя яркость {}%, светлые места {}%, провалы в чёрное {}%": [
+  "Average brightness {}%, highlights {}%, crushed blacks {}%",
+  "Brillo medio {}%, luces {}%, negros empastados {}%",
+  "Luminosità media {}%, alte luci {}%, neri chiusi {}%"
+ ],
+ "Горизонт завален на {}": [
+  "Horizon tilted by {}",
+  "Horizonte inclinado {}",
+  "Orizzonte inclinato di {}"
+ ],
+ "Похоже на служебный снимок: экран, документ, случайный кадр": [
+  "Looks like a utility shot: a screen, a document, an accidental frame",
+  "Parece una foto de servicio: pantalla, documento, disparo accidental",
+  "Sembra uno scatto di servizio: schermo, documento, scatto casuale"
+ ],
+ "Резкость {}% от лучшего кадра серии": [
+  "Sharpness {}% of the best frame in the burst",
+  "Nitidez {}% de la mejor foto de la ráfaga",
+  "Nitidezza {}% del miglior scatto della raffica"
+ ],
+ "Моргание (MediaPipe): закрыты ≥ 0.4": [
+  "Blink (MediaPipe): closed ≥ 0.4",
+  "Parpadeo (MediaPipe): cerrados ≥ 0.4",
+  "Ammiccamento (MediaPipe): chiusi ≥ 0.4"
+ ],
+ "Улыбка (MediaPipe): явная ≥ 0.5": [
+  "Smile (MediaPipe): clear ≥ 0.5",
+  "Sonrisa (MediaPipe): clara ≥ 0.5",
+  "Sorriso (MediaPipe): netto ≥ 0.5"
+ ],
+ "Резкость лица относительно обычной для сцены": [
+  "Face sharpness relative to the scene's usual",
+  "Nitidez de la cara respecto a lo habitual en la escena",
+  "Nitidezza del volto rispetto al solito per la scena"
+ ],
+ "Применять ко всем выделенным ({})": [
+  "Apply to all selected ({})",
+  "Aplicar a todas las seleccionadas ({})",
+  "Applica a tutte le selezionate ({})"
+ ],
+ "Ползунки, стиль и LUT меняют все выделенные кадры — только то, что вы двигаете. Кадрирование — у каждого своё.": [
+  "Sliders, style and LUT change all selected photos — only what you move. Each photo keeps its own crop.",
+  "Los controles, el estilo y la LUT cambian todas las fotos seleccionadas, solo lo que mueves. Cada foto conserva su recorte.",
+  "Cursori, stile e LUT cambiano tutte le foto selezionate, solo ciò che muovi. Ogni foto mantiene il proprio ritaglio."
+ ],
+ "Выровнять экспозицию и баланс выделенных (или серии) по этому кадру (⌥⌘M)": [
+  "Match exposure and white balance of the selection (or burst) to this photo (⌥⌘M)",
+  "Igualar exposición y balance de la selección (o ráfaga) a esta foto (⌥⌘M)",
+  "Allinea esposizione e bilanciamento della selezione (o raffica) a questa foto (⌥⌘M)"
+ ],
+ "Горячие клавиши": [
+  "Keyboard Shortcuts",
+  "Atajos de teclado",
+  "Scorciatoie da tastiera"
+ ],
+ "Выровнять экспозицию и баланс по текущему": [
+  "Match Exposure and White Balance to Current",
+  "Igualar exposición y balance a la actual",
+  "Allinea esposizione e bilanciamento all’attuale"
+ ],
+ "Улыбаются": [
+  "Smiling",
+  "Sonrisas",
+  "Sorridenti"
+ ],
+ "Выделите кадры или откройте кадр из серии — их выровняю по текущему": [
+  "Select photos or open one from a burst — they'll be matched to the current one",
+  "Selecciona fotos o abre una de una ráfaga: se igualarán a la actual",
+  "Seleziona foto o aprine una di una raffica: verranno allineate all’attuale"
+ ],
+ "Выравнивание по эталону: {}": [
+  "Matched to reference: {}",
+  "Igualado a la referencia: {}",
+  "Allineate al riferimento: {}"
+ ],
+ "Экспозиция и баланс выровнены по текущему кадру: {}": [
+  "Exposure and white balance matched to the current photo: {}",
+  "Exposición y balance igualados a la foto actual: {}",
+  "Esposizione e bilanciamento allineati alla foto attuale: {}"
+ ],
+ "Выровнять экспозицию и баланс по этому кадру": [
+  "Match Exposure and White Balance to This Photo",
+  "Igualar exposición y balance a esta foto",
+  "Allinea esposizione e bilanciamento a questa foto"
+ ],
+ "Память под превью": [
+  "Preview memory",
+  "Memoria para vistas previas",
+  "Memoria per le anteprime"
+ ],
+ "Авто — 18% ({})": [
+  "Auto — 18% ({})",
+  "Auto: 18% ({})",
+  "Auto: 18% ({})"
+ ],
+ "Доля памяти Mac под превью: каждое ~7–11 МБ (1 ГБ — ~100–150 кадров мгновенно), проявленный кадр ~60–80 МБ. Больше — быстрее листать назад, меньше — свободнее остальным программам. Память под превью меняется сразу, число проявленных — после перезапуска.": [
+  "Share of the Mac's memory for previews: each is ~7–11 MB (1 GB ≈ 100–150 photos instantly), a developed photo ~60–80 MB. More — faster browsing back, less — more room for other apps. Preview memory applies at once, developed photos after a restart.",
+  "Parte de la memoria del Mac para vistas previas: cada una ~7–11 MB (1 GB ≈ 100–150 fotos al instante), una foto revelada ~60–80 MB. Más: volver atrás más rápido; menos: más espacio para otras apps. La memoria de vistas previas se aplica al momento; la de fotos reveladas, tras reiniciar.",
+  "Quota di memoria del Mac per le anteprime: ognuna ~7–11 MB (1 GB ≈ 100–150 foto all’istante), una foto sviluppata ~60–80 MB. Di più: tornare indietro più veloce; di meno: più spazio alle altre app. La memoria per le anteprime si applica subito, quella per le foto sviluppate dopo il riavvio."
+ ],
+ "оставить / брак / снять решение": [
+  "keep / reject / clear decision",
+  "conservar / descartar / quitar decisión",
+  "tieni / scarta / annulla decisione"
+ ],
+ "звёзды / снять оценку": [
+  "stars / clear rating",
+  "estrellas / quitar valoración",
+  "stelle / togli valutazione"
+ ],
+ "цветная метка": [
+  "color label",
+  "etiqueta de color",
+  "etichetta colore"
+ ],
+ "режим «Отбор»": [
+  "Culling mode",
+  "modo Selección",
+  "modalità Selezione"
+ ],
+ "турнир: ← / → — лучший кадр": [
+  "tournament: ← / → — the better photo",
+  "torneo: ← / →, la mejor foto",
+  "torneo: ← / →, la foto migliore"
+ ],
+ "сравнить выделенные": [
+  "compare selected",
+  "comparar seleccionadas",
+  "confronta selezionate"
+ ],
+ "запустить AI-анализ": [
+  "run AI analysis",
+  "ejecutar análisis IA",
+  "avvia analisi IA"
+ ],
+ "перенести брак в «_Отклонённые»": [
+  "move rejects to “_Отклонённые”",
+  "mover descartes a «_Отклонённые»",
+  "sposta gli scarti in «_Отклонённые»"
+ ],
+ "Просмотр": [
+  "Viewing",
+  "Visualización",
+  "Visualizzazione"
+ ],
+ "листать; с ⇧ — расширить выделение": [
+  "browse; with ⇧ — extend selection",
+  "navegar; con ⇧, ampliar selección",
+  "sfoglia; con ⇧, estendi la selezione"
+ ],
+ "Пробел / Enter": [
+  "Space / Enter",
+  "Espacio / Enter",
+  "Spazio / Invio"
+ ],
+ "сетка ↔ кадр": [
+  "grid ↔ photo",
+  "cuadrícula ↔ foto",
+  "griglia ↔ foto"
+ ],
+ "100% / вписать": [
+  "100% / fit",
+  "100% / ajustar",
+  "100% / adatta"
+ ],
+ "увеличить / уменьшить / вписать": [
+  "zoom in / out / fit",
+  "acercar / alejar / ajustar",
+  "ingrandisci / riduci / adatta"
+ ],
+ "панель «Инфо»": [
+  "Info panel",
+  "panel Info",
+  "pannello Info"
+ ],
+ "выделить всё / серию": [
+  "select all / burst",
+  "seleccionar todo / ráfaga",
+  "seleziona tutto / raffica"
+ ],
+ "панель «Обработка»": [
+  "Edit panel",
+  "panel Edición",
+  "pannello Modifica"
+ ],
+ "кадрирование; Enter — готово, Esc — отмена": [
+  "crop; Enter — done, Esc — cancel",
+  "recorte; Enter: listo, Esc: cancelar",
+  "ritaglio; Invio: fatto, Esc: annulla"
+ ],
+ "в кадрировании — AI-предложение рамки": [
+  "in crop — AI frame suggestion",
+  "en el recorte: sugerencia de marco por IA",
+  "nel ritaglio: cornice suggerita dall’IA"
+ ],
+ "шторка «до / после»": [
+  "before / after split",
+  "cortina antes / después",
+  "tendina prima / dopo"
+ ],
+ "показать исходник": [
+  "show original",
+  "mostrar original",
+  "mostra originale"
+ ],
+ "копировать / вставить обработку": [
+  "copy / paste edits",
+  "copiar / pegar ajustes",
+  "copia / incolla modifiche"
+ ],
+ "отменить / вернуть / журнал": [
+  "undo / redo / history",
+  "deshacer / rehacer / historial",
+  "annulla / ripeti / cronologia"
+ ],
+ "Файлы": [
+  "Files",
+  "Archivos",
+  "File"
+ ],
+ "отправить в папку сохранения": [
+  "send to the save folder",
+  "enviar a la carpeta de guardado",
+  "invia alla cartella di salvataggio"
+ ],
+ "сохранить в папку…": [
+  "save to folder…",
+  "guardar en carpeta…",
+  "salva in cartella…"
+ ],
+ "импорт с карты памяти": [
+  "import from memory card",
+  "importar desde tarjeta",
+  "importa da scheda"
+ ],
+ "открыть в Capture One": [
+  "open in Capture One",
+  "abrir en Capture One",
+  "apri in Capture One"
+ ],
+ "эта шпаргалка": [
+  "this cheat sheet",
+  "esta chuleta",
+  "questo promemoria"
+ ],
+ "Русская раскладка тоже работает: З / Ч / Г вместо P / X / U.": [
+  "The Russian keyboard layout works too: З / Ч / Г instead of P / X / U.",
+  "También funciona con la distribución rusa: З / Ч / Г en lugar de P / X / U.",
+  "Funziona anche il layout russo: З / Ч / Г al posto di P / X / U."
+ ],
+ "Что на снимках": [
+  "What's in the photos",
+  "Qué hay en las fotos",
+  "Cosa c’è nelle foto"
  ]
 }

@@ -471,6 +471,7 @@ final class Library {
             matches(p, filter)
                 && (lensFilter == nil || p.lensName == lensFilter)
                 && (dayFilter == nil || p.day == dayFilter)
+                && (tagFilter == nil || (p.cull?.tags?.contains(tagFilter!) ?? false))
         }
         .sorted(by: inOrder)
     }
@@ -584,6 +585,7 @@ final class Library {
     }
     var lensFilter: String?
     var dayFilter: Date?
+    var tagFilter: String?          // Vision tag after AI analysis
 
     /// Lenses and shooting days with photo counts, for the sidebar.
     var lenses: [(name: String, count: Int)] {
@@ -725,6 +727,7 @@ final class Library {
         browser.addRecent(url)
         filter = .all
         lensFilter = nil
+        tagFilter = nil
         dayFilter = nil
         loupe = false
         loupeZoom = nil
@@ -990,8 +993,14 @@ final class Library {
         guard photos.count > 1 else { return }
         for i in 1..<photos.count {
             let a = photos[i - 1], b = photos[i]
+            // Similar: the quick picture hash, or (after AI analysis) Vision feature prints — they also catch
+            // the same moment with a slightly moved camera. Calibrated on 2032 frames: prints under 0.45
+            // within 30 s are the same burst; the hash still helps where prints disagree (dark frames).
+            var looksSame = false
+            if let ha = a.hash, let hb = b.hash, (ha ^ hb).nonzeroBitCount <= 12 { looksSame = true }
+            if !looksSame, let pa = a.cull?.print, let pb = b.cull?.print, let d = printDistance(pa, pb), d < 0.45 { looksSame = true }
             var similar = false
-            if let ha = a.hash, let hb = b.hash, (ha ^ hb).nonzeroBitCount <= 12 {
+            if looksSame {
                 if let da = a.exif.date, let db = b.exif.date { similar = abs(db.timeIntervalSince(da)) <= 30 } else { similar = true }
             }
             if !similar {

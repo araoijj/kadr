@@ -11,6 +11,7 @@ struct Sidebar: View {
     @AppStorage("sb.analysis") private var showAnalysis = true
     @AppStorage("sb.cull") private var showCull = true
     @AppStorage("sb.scenes") private var showScenes = true
+    @AppStorage("sb.tags") private var showTags = false
     @AppStorage("sb.tab") private var tab = 0      // 0 = folders, 1 = filters
 
     var body: some View {
@@ -104,6 +105,17 @@ struct Sidebar: View {
                             toggleRow(d.day.formatted(.dateTime.day().month(.abbreviated).year().locale(I18n.locale)), icon: "calendar",
                                       count: d.count, on: lib.dayFilter == d.day) {
                                 lib.dayFilter = lib.dayFilter == d.day ? nil : d.day
+                                lib.move(0)
+                            }
+                        }
+                    }
+                }
+                let tags = lib.aiReady ? Array(lib.tags.prefix(25)) : []
+                if !tags.isEmpty {
+                    Section(tr("Что на снимках"), isExpanded: $showTags) {
+                        ForEach(tags, id: \.id) { t in
+                            toggleRow(TagNames.title(t.id), icon: "tag", count: t.count, on: lib.tagFilter == t.id) {
+                                lib.tagFilter = lib.tagFilter == t.id ? nil : t.id
                                 lib.move(0)
                             }
                         }
