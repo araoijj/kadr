@@ -23,14 +23,54 @@ final class ImageStore: @unchecked Sendable {
     func preview(_ url: URL) -> CGImage? {
         if let c = thumbs.object(forKey: url as NSURL) { return c }
         guard let src = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
-        let opts: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
-            kCGImageSourceThumbnailMaxPixelSize: 2048,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-        ]
-        guard let img = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
+        // У RAW — превью, встроенное камерой (быстро). У JPEG встроенная миниатюра EXIF всего 160×120
+        // (у вертикальных ещё и с чёрными полями) — поэтому JPEG и прочие читаем из самой картинки.
+        // Если и у RAW превью крошечное — тоже из самого снимка.
+        let raw = Self.rawExtensions.contains(url.pathExtension.lowercased())
+        func make(_ always: Bool) -> CGImage? {
+            var opts: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
+                kCGImageSourceThumbnailMaxPixelSize: 2048,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+            ]
+            if always { opts[kCGImageSourceCreateThumbnailFromImageAlways] = true }
+            return CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary)
+        }
+        var img: CGImage
+        if !raw, let fast = subsampled(src) {
+            img = fast
+        } else {
+            guard let m = make(!raw) else { return nil }
+            img = m
+        }
+        if raw, max(img.width, img.height) < 1000, let big = make(true) { img = big }
         thumbs.setObject(img, forKey: url as NSURL)
         return img
+    }
+
+    /// JPEG с уменьшением при чтении (DCT в 4 раза: 6000 px → 1500 px) — вдвое быстрее полного декодирования.
+    /// Поворот по EXIF — вручную: этот путь его не применяет.
+    private func subsampled(_ src: CGImageSource) -> CGImage? {
+        let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any]
+        let w = props?[kCGImagePropertyPixelWidth] as? Int ?? 0, h = props?[kCGImagePropertyPixelHeight] as? Int ?? 0
+        guard max(w, h) >= 4800,   // меньше — уменьшение в 4 раза даст мелкую картинку, пусть читает обычным путём
+              let img = CGImageSourceCreateImageAtIndex(src, 0, [kCGImageSourceSubsampleFactor: 4, kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+        else { return nil }
+        let o = (props?[kCGImagePropertyOrientation] as? UInt32) ?? 1
+        guard o != 1 else { return img }
+        let ci = CIImage(cgImage: img).oriented(forExifOrientation: Int32(o))
+        return ciContext.createCGImage(ci, from: ci.extent)
+    }
+
+    /// Снимок, уменьшенный до maxSide, — для резкого просмотра JPEG/HEIC под размер экрана.
+    func decoded(_ url: URL, maxSide: CGFloat) -> CGImage? {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
+        let opts: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxSide,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary)
     }
 
     func cachedPreview(_ url: URL) -> CGImage? { thumbs.object(forKey: url as NSURL) }

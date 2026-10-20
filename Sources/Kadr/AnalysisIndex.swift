@@ -15,7 +15,7 @@ struct IndexEntry: Codable, Sendable {
 }
 
 enum AnalysisIndex {
-    static let version = 6   // 2 — отбор; 3 — яркость; 4 — размер лиц, пересвет на лице; 5 — порог надёжного лица 180 px; 6 — сетка лица, наклон головы
+    static let version = 7   // 2 — отбор; 3 — яркость; 4 — размер лиц, пересвет на лице; 5 — порог надёжного лица 180 px; 6 — сетка лица, наклон головы; 7 — JPEG по самой картинке, а не по миниатюре EXIF 160 px
 
     private struct File: Codable {
         var version: Int

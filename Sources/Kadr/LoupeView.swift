@@ -106,10 +106,15 @@ struct SharpPreview: View {
         }
         .task(id: photo.id) {
             let url = photo.url
-            guard ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) else { return }   // JPEG и так в полный размер
             try? await Task.sleep(for: .milliseconds(120))   // быстро листают — не проявляем каждый кадр
             guard !Task.isCancelled else { return }
             let side = Self.screenSide
+            // JPEG и прочие — просто читаем под размер экрана (~50 мс).
+            guard ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) else {
+                if let img = await Task.detached(priority: .userInitiated, operation: { ImageStore.shared.decoded(url, maxSide: side) }).value,
+                   !Task.isCancelled { sharp = img; sharpFor = url }
+                return
+            }
             if let img = await Renderer.shared.render(url, .none, maxSide: side, channel: "sharp"), !Task.isCancelled {
                 sharp = img; sharpFor = url
             }
