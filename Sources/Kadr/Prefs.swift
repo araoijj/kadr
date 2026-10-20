@@ -21,7 +21,12 @@ enum Prefs {
 
     // Performance and memory
     static var analysisThreads: Int { int("pref.threads", 2) }          // 1…4
-    static var thumbCache: Int { int("pref.thumbCache", 4000) }          // previews in memory
+    /// Memory for decoded previews, MB; 0 — automatic (⅛ of RAM, 512 MB–4 GB).
+    static var previewMB: Int { int("pref.previewMB", 0) }
+    static var previewBytes: Int {
+        previewMB > 0 ? previewMB * 1_048_576 : previewBytesAuto
+    }
+    static var previewBytesAuto: Int { min(4096, max(512, Int(ProcessInfo.processInfo.physicalMemory / 8 / 1_048_576))) * 1_048_576 }
     static var renderCache: Int { int("pref.renderCache", 4) }           // developed photos in memory
 
     // History
