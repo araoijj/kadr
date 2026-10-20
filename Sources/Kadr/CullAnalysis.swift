@@ -12,7 +12,7 @@ struct FaceInfo: Codable, Sendable, Hashable {
     var blink: Double?          // blink of both eyes from the MediaPipe face mesh 0…1 (closed ≥ ~0.42), if the models are installed
     var squint: Double?         // squint from MediaPipe: smiles and sun, not a blink
     var smile: Double?          // smile per MediaPipe (mouthSmile), 0…1
-    var print: Data?            // face feature print (Vision, float32) — to group faces into people
+    var identity: Data?         // who it is: SFace identity vector (float32 ×128) — to group faces into people
     var lookDown: Double?       // downward gaze from MediaPipe
     var pitch: Double?          // head pitch from macOS, degrees (> 0 means the head is lowered)
 
@@ -70,7 +70,7 @@ extension CullData {
 
 /// Parts of the AI analysis; each can be turned off in Settings → AI so it isn't computed.
 enum AIModule: String, CaseIterable, Codable, Identifiable, Sendable {
-    case faces, subject, exposure, horizon, aesthetics, tags, similarity, people
+    case faces, subject, exposure, horizon, aesthetics, tags, similarity, people, identity
     var id: String { rawValue }
 
     var title: String {
@@ -83,6 +83,7 @@ enum AIModule: String, CaseIterable, Codable, Identifiable, Sendable {
         case .tags: tr("Что на снимках (теги)")
         case .similarity: tr("Похожие кадры и повторы")
         case .people: tr("Фигуры людей")
+        case .identity: tr("Кто на снимке (люди)")
         }
     }
 
@@ -95,6 +96,7 @@ enum AIModule: String, CaseIterable, Codable, Identifiable, Sendable {
         case .horizon: 6
         case .tags: 7
         case .similarity, .people: 4
+        case .identity: 8
         }
     }
 
@@ -108,6 +110,7 @@ enum AIModule: String, CaseIterable, Codable, Identifiable, Sendable {
         case .tags: tr("Фильтр «Что на снимках»: люди, природа, собака…")
         case .similarity: tr("Серии по смыслу и «Повтор лучшего»")
         case .people: tr("Автокадрирование не режет фигуры")
+        case .identity: tr("Фильтр по людям: лица группируются по человеку (модель SFace, 18 МБ)")
         }
     }
 }
@@ -141,6 +144,7 @@ enum CullAnalyzer {
         var d = base ?? CullData()
         if base == nil { d.modules = [] }   // a fresh record has nothing computed yet (not the legacy "everything")
         var m = modules
+        if m.contains(.identity) { m.insert(.faces) }   // recognition aligns by the face mesh points
         // Subject sharpness and clipping on the face/subject depend on the faces: recompute them along.
         if m.contains(.faces) || m.contains(.subject) { m.formUnion(d.computed.intersection([.subject, .exposure])) }
         if #available(macOS 15.0, *) {
@@ -195,6 +199,9 @@ enum CullAnalyzer {
                     d.faces[i].squint = e.squint
                     d.faces[i].lookDown = e.lookDown
                     d.faces[i].smile = e.smile
+                    if m.contains(.identity), (d.faces[i].px ?? 0) >= 60 {
+                        d.faces[i].identity = FaceID.shared.embedding(img, align: e.align)
+                    }
                 }
             }
         }

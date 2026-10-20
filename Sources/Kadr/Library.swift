@@ -479,6 +479,7 @@ final class Library {
                 && (lensFilter == nil || p.lensName == lensFilter)
                 && (dayFilter == nil || p.day == dayFilter)
                 && (tagFilter == nil || !aiEnabled.contains(.tags) || (p.cull?.tags?.contains(tagFilter!) ?? false))
+                && (personFilter == nil || (person(personFilter!)?.photos.contains(p.id) ?? true))
         }
         .sorted(by: inOrder)
     }
@@ -593,6 +594,8 @@ final class Library {
     var lensFilter: String?
     var dayFilter: Date?
     var tagFilter: String?          // Vision tag after AI analysis
+    var personFilter: Int?          // person after AI analysis (People.swift)
+    var people: [Person] = []
 
     /// Lenses and shooting days with photo counts, for the sidebar.
     var lenses: [(name: String, count: Int)] {
@@ -736,6 +739,8 @@ final class Library {
         filter = .all
         lensFilter = nil
         tagFilter = nil
+        personFilter = nil
+        people = []
         dayFilter = nil
         loupe = false
         loupeZoom = nil
@@ -990,6 +995,7 @@ final class Library {
         findDuplicates()
         computeScenes()       // scenes before statistics: sharpness is compared within a scene
         updateCullStats()
+        computePeople()
     }
 
     /// Series = consecutive photos with similar images (Hamming distance ≤ 12)

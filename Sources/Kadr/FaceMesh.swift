@@ -14,6 +14,7 @@ final class FaceMesh: @unchecked Sendable {
         var squint: Double     // squint (laughing, sun)
         var smile: Double      // mouthSmile, mean of both sides: ≥ 0.6 — a clear smile, 0.35–0.6 a slight one (checked on 1491 faces)
         var lookDown: Double   // downward gaze; the model also gives ≥ ~0.5 for closed lids, ~0 for dark glasses
+        var align: [CGPoint] = []   // five alignment points for face recognition (pixels of the analyzed image)
     }
 
     /// Model archive in the Kadr repository releases.
@@ -120,17 +121,21 @@ final class FaceMesh: @unchecked Sendable {
 
     /// Blink and squint for a face. `face` is the macOS box in frame fractions (y from top to bottom).
     func eyes(_ img: CGImage, face r: CGRect) -> Eyes? {
-        guard let b = blendshapes(img, face: r) else { return nil }
+        guard let (b, align) = analyze(img, face: r) else { return nil }
         // 9/10 — eyeBlinkLeft/Right, 11/12 — eyeLookDownLeft/Right, 19/20 — eyeSquintLeft/Right, 44/45 — mouthSmileLeft/Right.
         // Blink uses the less closed eye: in a real blink both are closed, whereas when laughing,
         // looking sideways or in half-profile one eye stays open (calibrated on 2032 frames).
-        return Eyes(blink: min(b[9], b[10]), squint: max(b[19], b[20]), smile: (b[44] + b[45]) / 2, lookDown: (b[11] + b[12]) / 2)
+        return Eyes(blink: min(b[9], b[10]), squint: max(b[19], b[20]), smile: (b[44] + b[45]) / 2, lookDown: (b[11] + b[12]) / 2, align: align)
     }
 
     /// 52 MediaPipe blendshape scores (order as in face_blendshapes_graph.cc: 0 _neutral, 9/10 eyeBlink, 11/12 eyeLookDown…).
     /// Two passes, like MediaPipe in tracking mode: a rough crop from the box, then a precise one from the found landmarks
     /// (rotated along the eye line, square ×1.5). ~12 ms per face.
-    func blendshapes(_ img: CGImage, face r: CGRect) -> [Double]? {
+    func blendshapes(_ img: CGImage, face r: CGRect) -> [Double]? { analyze(img, face: r)?.blend }
+
+    /// Blendshapes plus the five points face recognition aligns by (eye centers, nose tip, mouth corners),
+    /// in pixels of `img`, image-left first — the ArcFace order.
+    func analyze(_ img: CGImage, face r: CGRect) -> (blend: [Double], align: [CGPoint])? {
         lock.withLock {
             load()
             guard let landmarks, let blend else { return nil }
@@ -146,7 +151,8 @@ final class FaceMesh: @unchecked Sendable {
             }
             guard let out = try? blend.prediction(from: MLDictionaryFeatureProvider(dictionary: ["input": x])),
                   let b = out.featureValue(for: "blendshapes")?.multiArrayValue, b.count >= 52 else { return nil }
-            return (0..<52).map { b[$0].doubleValue }
+            // 468 / 473 — iris centers, 1 — nose tip, 61 / 291 — mouth corners.
+            return ((0..<52).map { b[$0].doubleValue }, [468, 473, 1, 61, 291].map { p2[$0] })
         }
     }
 

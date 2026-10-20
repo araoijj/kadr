@@ -12,6 +12,9 @@ struct Sidebar: View {
     @AppStorage("sb.cull") private var showCull = true
     @AppStorage("sb.scenes") private var showScenes = true
     @AppStorage("sb.tags") private var showTags = false
+    @AppStorage("sb.people") private var showPeople = true
+    @State private var naming: Int?
+    @State private var nameText = ""
     @AppStorage("sb.tab") private var tab = 0      // 0 = folders, 1 = filters
 
     var body: some View {
@@ -25,6 +28,13 @@ struct Sidebar: View {
             .labelsHidden()
             .padding(.horizontal, 10).padding(.vertical, 6)
             if tab == 0 { folders } else { filters }
+        }
+        .alert(tr("Как зовут?"), isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
+            TextField(tr("Имя"), text: $nameText)
+            Button(tr("Сохранить")) { if let id = naming { lib.namePerson(id, nameText) }; naming = nil }
+            Button(tr("Отмена"), role: .cancel) { naming = nil }
+        } message: {
+            Text(tr("Имя запомнится: этот человек будет узнаваться и в других съёмках. Дайте то же имя второй группе (например, профилю) — они объединятся."))
         }
     }
 
@@ -107,6 +117,32 @@ struct Sidebar: View {
                                 lib.dayFilter = lib.dayFilter == d.day ? nil : d.day
                                 lib.move(0)
                             }
+                        }
+                    }
+                }
+                if !lib.people.isEmpty {
+                    Section(tr("Люди"), isExpanded: $showPeople) {
+                        ForEach(lib.people.prefix(20)) { p in
+                            Button {
+                                lib.personFilter = lib.personFilter == p.id ? nil : p.id
+                                lib.move(0)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    PersonFace(person: p)
+                                    Text(p.title).lineLimit(1).fontWeight(lib.personFilter == p.id ? .semibold : .regular)
+                                        .foregroundStyle(p.name == nil ? .secondary : .primary)
+                                    Spacer(minLength: 4)
+                                    if lib.personFilter == p.id { Image(systemName: "checkmark").foregroundStyle(Color.accentColor) }
+                                    Text("\(p.photos.count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .selectionDisabled()
+                            .contextMenu {
+                                Button(tr("Назвать…")) { naming = p.id; nameText = p.name ?? "" }
+                            }
+                            .help(tr("Клик — показать кадры с этим человеком; правый клик — назвать (одинаковые имена объединяют группы)"))
                         }
                     }
                 }
