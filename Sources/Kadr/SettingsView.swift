@@ -156,8 +156,9 @@ struct StorageStats: Sendable {
 // MARK: - Memory and performance
 
 struct PerformanceSettings: View {
+    private func mem(_ p: Int) -> String { ByteCountFormatter.string(fromByteCount: Int64(Prefs.previewBytes(percent: p)), countStyle: .memory) }
     @AppStorage("pref.threads") private var threads = 2
-    @AppStorage("pref.previewMB") private var previewMB = 0
+    @AppStorage("pref.previewPct") private var previewPct = 0
     @AppStorage("pref.renderCache") private var renderCache = 4
     @AppStorage("pref.historyLimit") private var historyLimit = 100
     @AppStorage("pref.historyKeep") private var historyKeep = true
@@ -183,20 +184,17 @@ struct PerformanceSettings: View {
             }
             FaceMeshSection()
             Section(tr("Память")) {
-                Picker(tr("Память под превью"), selection: $previewMB) {
-                    Text(tr("Авто — \(ByteCountFormatter.string(fromByteCount: Int64(Prefs.previewBytesAuto), countStyle: .memory))")).tag(0)
-                    Text(tr("512 МБ — экономно")).tag(512)
-                    Text(tr("1 ГБ")).tag(1024)
-                    Text(tr("2 ГБ")).tag(2048)
-                    Text(tr("4 ГБ — большие съёмки")).tag(4096)
+                Picker(tr("Память под превью"), selection: $previewPct) {
+                    Text(tr("Авто — 18% (\(mem(18)))")).tag(0)
+                    ForEach([10, 20, 30, 40, 50, 60], id: \.self) { p in Text(tr("\(p)% — \(mem(p))")).tag(p) }
                 }
-                .onChange(of: previewMB) { _, _ in ImageStore.shared.applyMemoryLimit() }
+                .onChange(of: previewPct) { _, _ in ImageStore.shared.applyMemoryLimit() }
                 Picker(tr("Проявленных кадров в памяти"), selection: $renderCache) {
                     Text(tr("2 — экономно")).tag(2)
                     Text(tr("4 — по умолчанию")).tag(4)
                     Text(tr("6 — быстрее листать")).tag(6)
                 }
-                Text(tr("Превью в памяти ~7–11 МБ каждое (1 ГБ — ~100–150 кадров мгновенно), проявленный кадр ~60–80 МБ. Больше — быстрее листать назад, меньше — свободнее остальным программам. Память под превью меняется сразу, число проявленных — после перезапуска."))
+                Text(tr("Доля памяти Mac под превью: каждое ~7–11 МБ (1 ГБ — ~100–150 кадров мгновенно), проявленный кадр ~60–80 МБ. Больше — быстрее листать назад, меньше — свободнее остальным программам. Память под превью меняется сразу, число проявленных — после перезапуска."))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section(tr("Журнал изменений")) {

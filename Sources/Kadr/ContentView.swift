@@ -36,6 +36,7 @@ struct ContentView: View {
         .toolbar { toolbar }
         .sheet(isPresented: $lib.showExport) { ExportSheet().environment(lib) }
         .sheet(isPresented: $lib.showImport) { ImportSheet().environment(lib) }
+        .sheet(isPresented: $lib.showShortcuts) { ShortcutsView() }
         .navigationTitle(lib.folder?.lastPathComponent ?? I18n.appName)
         .dropDestination(for: URL.self) { urls, _ in
             guard let u = urls.first else { return false }

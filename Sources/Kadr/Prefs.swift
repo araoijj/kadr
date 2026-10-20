@@ -21,12 +21,11 @@ enum Prefs {
 
     // Performance and memory
     static var analysisThreads: Int { int("pref.threads", 2) }          // 1…4
-    /// Memory for decoded previews, MB; 0 — automatic (⅛ of RAM, 512 MB–4 GB).
-    static var previewMB: Int { int("pref.previewMB", 0) }
-    static var previewBytes: Int {
-        previewMB > 0 ? previewMB * 1_048_576 : previewBytesAuto
-    }
-    static var previewBytesAuto: Int { min(4096, max(512, Int(ProcessInfo.processInfo.physicalMemory / 8 / 1_048_576))) * 1_048_576 }
+    /// Memory for decoded previews, % of RAM; 0 — automatic (18%). Manually 10–60%.
+    static var previewPercent: Int { int("pref.previewPct", 0) }
+    static var ramBytes: Int { Int(ProcessInfo.processInfo.physicalMemory) }
+    static func previewBytes(percent p: Int) -> Int { ramBytes / 100 * p }
+    static var previewBytes: Int { previewBytes(percent: previewPercent > 0 ? min(60, previewPercent) : 18) }
     static var renderCache: Int { int("pref.renderCache", 4) }           // developed photos in memory
 
     // History

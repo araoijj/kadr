@@ -132,6 +132,7 @@ final class Library {
     }
     var viewed: Set<URL> = []
     var showCullSummary = false
+    var showShortcuts = false
 
     // AI analysis (defect detection): started by a button; opening a folder only runs lightweight indexing.
     var aiRunning = false
