@@ -308,7 +308,7 @@ struct FaceCrop: View {
             // The numbers behind the verdict, like Lightroom's Culling Info.
             HStack(spacing: 8) {
                 if let b = face.blink { stat("eye", String(format: "%.2f", b), tr("Моргание (MediaPipe): закрыты ≥ 0.4")) }
-                if let sm = face.smile { stat("face.smiling", String(format: "%.2f", sm), tr("Улыбка (MediaPipe): явная ≥ 0.5")) }
+                if let sm = face.smile { stat("face.smiling", String(format: "%.2f", sm), tr("Улыбка (MediaPipe): явная ≥ 0.6")) }
                 if let s = face.sharpness, let m = lib.medianFaceSharpness(photo), m > 0 {
                     stat("scope", "\(Int((s / m * 100).rounded()))%", tr("Резкость лица относительно обычной для сцены"))
                 }

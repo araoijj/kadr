@@ -691,7 +691,7 @@ final class Library {
         case .leaders: !p.rejected && (p.seriesID == nil || p.isBestInSeries) && p.duplicateOf == nil
         case .reason(let r): verdict(p).reasons.contains(r)
         case .scene(let id): p.sceneID == id
-        case .smiling: !p.rejected && (p.cull?.faces.contains { $0.meshUsable && ($0.smile ?? 0) >= 0.5 } ?? false)
+        case .smiling: !p.rejected && (p.cull?.faces.contains { $0.meshUsable && ($0.smile ?? 0) >= 0.6 } ?? false)
         }
     }
 

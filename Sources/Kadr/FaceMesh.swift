@@ -12,7 +12,7 @@ final class FaceMesh: @unchecked Sendable {
     struct Eyes: Codable, Sendable, Hashable {
         var blink: Double      // blink of the less closed eye 0…1: both closed ≥ ~0.42, open ≤ ~0.3
         var squint: Double     // squint (laughing, sun)
-        var smile: Double      // mouthSmile, mean of both sides: ≥ ~0.5 — a clear smile
+        var smile: Double      // mouthSmile, mean of both sides: ≥ 0.6 — a clear smile, 0.35–0.6 a slight one (checked on 1491 faces)
         var lookDown: Double   // downward gaze; the model also gives ≥ ~0.5 for closed lids, ~0 for dark glasses
     }
 
