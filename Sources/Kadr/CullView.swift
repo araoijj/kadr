@@ -193,6 +193,7 @@ struct CullTopBar: View {
             Text(tr("Все") + " \(total)").tag(PhotoFilter.all)
             Text(tr("Без решения") + " \(lib.count(.undecided))").tag(PhotoFilter.undecided)
             if lib.aiOn {
+                Text(tr("Лучшие") + " \(lib.count(.recommended))").tag(PhotoFilter.recommended)
                 Text(tr("Возможный брак") + " \(lib.count(.suspects))").tag(PhotoFilter.suspects)
                 Text(tr("Быстрый проход") + " \(lib.count(.leaders))").tag(PhotoFilter.leaders)
             }

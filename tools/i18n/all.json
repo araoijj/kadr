@@ -2925,9 +2925,9 @@
   "Viste {} di {}"
  ],
  "Брак": [
-  "Rejected",
-  "Descartadas",
-  "Scartate"
+  "Reject",
+  "Descartar",
+  "Scarta"
  ],
  "Без решения": [
   "Undecided",
@@ -3788,5 +3788,50 @@
   "Smile (MediaPipe): clear ≥ 0.6",
   "Sonrisa (MediaPipe): clara ≥ 0.6",
   "Sorriso (MediaPipe): netto ≥ 0.6"
+ ],
+ "Повтор лучшего": [
+  "Repeat of the best",
+  "Repetición de la mejor",
+  "Ripetizione della migliore"
+ ],
+ "Почти копия лучшего кадра серии — оставьте лучший, этот можно в брак": [
+  "Nearly a copy of the burst's best frame — keep the best, this one can go",
+  "Casi una copia de la mejor foto de la ráfaga: conserva la mejor, esta puede descartarse",
+  "Quasi una copia della migliore della raffica: tieni la migliore, questa si può scartare"
+ ],
+ "Лучшие кадры": [
+  "Best Photos",
+  "Mejores fotos",
+  "Foto migliori"
+ ],
+ "Лучшие": [
+  "Best",
+  "Mejores",
+  "Migliori"
+ ],
+ "Оставить": [
+  "Keep",
+  "Conservar",
+  "Tieni"
+ ],
+ "Оставить (P) — ★, если оценки ещё нет": [
+  "Keep (P) — ★ if not rated yet",
+  "Conservar (P): ★ si aún no tiene valoración",
+  "Tieni (P): ★ se non ha ancora valutazione"
+ ],
+ "В брак / вернуть (X или Delete)": [
+  "Reject / restore (X or Delete)",
+  "Descartar / recuperar (X o Supr)",
+  "Scarta / ripristina (X o Canc)"
+ ],
+ "Клавиши": [
+  "Keys",
+  "Teclas",
+  "Tasti"
+ ],
+ "Шпаргалка по клавишам и интерфейсу (?)": [
+  "Keyboard and interface cheat sheet (?)",
+  "Chuleta de teclas e interfaz (?)",
+  "Promemoria di tasti e interfaccia (?)"
  ]
 }

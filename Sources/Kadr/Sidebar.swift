@@ -136,6 +136,7 @@ struct Sidebar: View {
                 }
                 Section(isExpanded: $showCull) {
                     if lib.aiOn {
+                        row(.recommended, tint: .green)
                         row(.suspects, tint: .orange)
                         row(.leaders, tint: .green)
                         if lib.count(.smiling) > 0 { row(.smiling, tint: .yellow) }
