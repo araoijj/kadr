@@ -89,6 +89,19 @@ final class FaceMesh: @unchecked Sendable {
         lock.withLock { tried = false; landmarks = nil; blend = nil; installedCache = nil }
     }
 
+    /// Модели, встроенные в приложение (Contents/Resources/FaceMesh) — ставятся сами при первом запуске.
+    static var bundled: URL? {
+        guard let u = Bundle.main.resourceURL?.appendingPathComponent("FaceMesh", isDirectory: true),
+              FileManager.default.fileExists(atPath: u.appendingPathComponent(modelNames[0] + ".mlpackage").path) else { return nil }
+        return u
+    }
+
+    /// Поставить встроенные модели, если их ещё нет (компиляция ~0,3 с). Пользователю ничего нажимать не нужно.
+    func installBundledIfNeeded() {
+        guard !installed, let b = Self.bundled else { return }
+        try? install(from: b)
+    }
+
     func uninstall() {
         lock.withLock { tried = false; landmarks = nil; blend = nil; installedCache = nil }
         for n in Self.modelNames { try? FileManager.default.removeItem(at: folder.appendingPathComponent(n + ".mlmodelc")) }

@@ -115,7 +115,7 @@ xcode-select --install   # если ещё не установлены
 
 Эмуляции плёнки — [t3mujinpack](https://github.com/t3mujin/t3mujinpack) © João Almeida, лицензия MIT. Файлы не входят в репозиторий: «Кадр» скачивает их с GitHub по кнопке и кладёт рядом лицензию автора.
 
-Сетка лица для поиска моргания — [MediaPipe Face Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker) © Google, лицензия Apache 2.0. Модели перегнаны в Core ML (~7 МБ, ~12 мс на лицо на нейроядре) и тоже не входят в репозиторий: ставятся в «Настройки → Память и скорость», архив содержит лицензию и NOTICE с описанием конвертации.
+Сетка лица для поиска моргания — [MediaPipe Face Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker) © Google, лицензия Apache 2.0. Модели перегнаны в Core ML (~7 МБ, ~12 мс на лицо на нейроядре) и встроены в приложение вместе с лицензией и NOTICE; в репозитории их нет — `build.sh` берёт архив из выпуска [models-1](https://github.com/araoijj/kadr/releases/tag/models-1).
 
 ## Лицензия
 

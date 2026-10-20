@@ -7,6 +7,18 @@ APP=build/Kadr.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/Kadr "$APP/Contents/MacOS/Kadr"
+# Сетка лица MediaPipe (Apache 2.0) — внутрь приложения, чтобы AI-отбор работал без отдельной установки.
+# В репозитории моделей нет: архив берётся из выпуска models-1 и кэшируется в .build.
+MODELS_ZIP=.build/models/kadr-facemesh-1.zip
+if [ ! -s "$MODELS_ZIP" ]; then
+  mkdir -p .build/models
+  curl -fsSL --max-time 120 -o "$MODELS_ZIP.part" https://github.com/araoijj/kadr/releases/download/models-1/kadr-facemesh-1.zip \
+    && mv "$MODELS_ZIP.part" "$MODELS_ZIP" || { rm -f "$MODELS_ZIP.part"; echo "Модели сетки лица не скачались — сборка без них"; }
+fi
+if [ -s "$MODELS_ZIP" ]; then
+  ditto -x -k "$MODELS_ZIP" .build/models/x && rm -rf "$APP/Contents/Resources/FaceMesh" \
+    && mv .build/models/x/kadr-facemesh-1 "$APP/Contents/Resources/FaceMesh" && rm -rf .build/models/x
+fi
 # Иконка: Resources/AppIcon-1024.png (рисуется tools/make-icon.swift) → AppIcon.icns
 ICONSET=.build/AppIcon.iconset
 rm -rf "$ICONSET" && mkdir -p "$ICONSET"

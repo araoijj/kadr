@@ -466,14 +466,26 @@ struct FaceMeshSection: View {
         Section(tr("Сетка лица MediaPipe")) {
             LabeledContent(tr("Модели (~7 МБ)")) {
                 if busy { ProgressView().controlSize(.small) }
-                else { Text(installed ? tr("установлены") : tr("не установлены")).foregroundStyle(installed ? .green : .secondary) }
+                else {
+                    Text(installed ? (FaceMesh.bundled != nil ? tr("встроены в «Кадр»") : tr("установлены")) : tr("не установлены"))
+                        .foregroundStyle(installed ? .green : .secondary)
+                }
             }
-            HStack {
+            if FaceMesh.bundled != nil {
                 if !installed {
-                    Button(tr("Скачать")) { download() }.disabled(busy)
-                    Button(tr("Установить из файла…")) { pick() }.disabled(busy)
-                } else {
-                    Button(tr("Удалить модели")) { FaceMesh.shared.uninstall(); installed = false }
+                    Button(tr("Установить встроенные модели")) {
+                        busy = true; FaceMesh.shared.installBundledIfNeeded(); installed = FaceMesh.shared.installed; busy = false
+                    }
+                }
+            } else {
+                // Сборка без встроенных моделей — их можно скачать или поставить из файла.
+                HStack {
+                    if !installed {
+                        Button(tr("Скачать")) { download() }.disabled(busy)
+                        Button(tr("Установить из файла…")) { pick() }.disabled(busy)
+                    } else {
+                        Button(tr("Удалить модели")) { FaceMesh.shared.uninstall(); installed = false }
+                    }
                 }
             }
             if let error { Text(error).font(.caption).foregroundStyle(.red) }

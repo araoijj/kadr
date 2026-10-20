@@ -20,7 +20,7 @@ It is built in SwiftUI with Core Image and Apple Vision — no Electron, no subs
 - **Culling mode (O):** viewing progress, kept / rejected / undecided counters, queues (“Undecided”, “Possible defects”, “Quick pass” — burst leaders and single frames), faces at 100% in a side column, and a summary with next steps. Turn **Hints** off for fully manual culling.
 - **AI culling — on demand.** Opening a folder only runs light indexing (EXIF, bursts, duplicates; ~15 ms per frame). The heavy AI analysis runs when you click **Run AI Analysis** (⌥⌘A) in Culling mode, with progress and a Stop button — or automatically, if you enable it in Settings.
 - **Offline reject detection:** out-of-focus shots (judged by the face or main subject, compared within the same scene), **blinks** and closed eyes, blown highlights on the subject, underexposure, utility shots, duplicates, “weaker than the rest of the burst”; a tilted horizon is flagged as fixable, with a one-click **Straighten**. A strictness slider and a 0–100 frame score. Bulk actions ask for confirmation and can be undone.
-- **Blink detection with MediaPipe.** An optional face mesh model (Google MediaPipe Face Landmarker, converted to Core ML, ~12 ms per face on the Neural Engine) tells a real blink from squinting, laughing, looking aside or looking down. A frame counts as a blink when both eyes are closed and another frame of the same burst shows the same pose with eyes open. Install it in *Settings → Memory & speed*.
+- **Blink detection with MediaPipe.** A face mesh model built into the app (Google MediaPipe Face Landmarker, converted to Core ML, ~12 ms per face on the Neural Engine) tells a real blink from squinting, laughing, looking aside or looking down. A frame counts as a blink when both eyes are closed and another frame of the same burst shows the same pose with eyes open.
 - **Tournament (T):** compare a burst or a selection in pairs, ← or → picks the better one; the winner gets a ★, the rest can be rejected.
 - **Scenes:** the shoot is split automatically at pauses (10 minutes by default), with per-scene culling progress.
 - **Bursts and duplicates.** Similar consecutive frames (bursts, brackets) are grouped and the sharpest one is marked; exact file copies are detected.
@@ -57,7 +57,6 @@ Download the latest build from **[Releases](https://github.com/araoijj/kadr/rele
 - Requires a Mac with **Apple Silicon** and **macOS 14 Sonoma** or later; reject detection needs **macOS 15 Sequoia** or later.
 - Unzip and move **Kadr** to *Applications*.
 - The app is not notarized by Apple. On first launch, right-click it → **Open** → **Open**, or run `xattr -dr com.apple.quarantine /Applications/Kadr.app`.
-- Optional: in *Settings → Memory & speed → MediaPipe face mesh*, click **Download** (~3 MB) for accurate blink detection.
 
 ## Keyboard shortcuts
 
@@ -116,7 +115,7 @@ UI strings go through `tr()` (`Sources/Kadr/I18n.swift`); translations live in `
 Thanks to everyone whose work Kadr builds on:
 
 - Film emulation LUTs — [t3mujinpack](https://github.com/t3mujin/t3mujinpack) © João Almeida, MIT license. Not bundled: Kadr downloads them from GitHub on request and keeps the author’s license next to them.
-- Face mesh for blink detection — [MediaPipe Face Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker) © Google, Apache 2.0 license. Converted to Core ML and published separately in the [`models-1` release](https://github.com/araoijj/kadr/releases/tag/models-1) with the license and a NOTICE describing the conversion.
+- Face mesh for blink detection — [MediaPipe Face Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker) © Google, Apache 2.0 license. Converted to Core ML and bundled with the app (`Contents/Resources/FaceMesh`, with the license and a NOTICE); the models are not in the repository — `build.sh` fetches them from the [`models-1` release](https://github.com/araoijj/kadr/releases/tag/models-1).
 - Apple Vision, Core Image and ImageIO, which do the heavy lifting on device.
 
 ## License

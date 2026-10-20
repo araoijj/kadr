@@ -3398,5 +3398,15 @@
   "Bursts & Duplicates",
   "Ráfagas y duplicados",
   "Raffiche e duplicati"
+ ],
+ "Установить встроенные модели": [
+  "Install Built-in Models",
+  "Instalar modelos integrados",
+  "Installa modelli integrati"
+ ],
+ "встроены в «Кадр»": [
+  "built into Kadr",
+  "integrados en Kadr",
+  "integrati in Kadr"
  ]
 }

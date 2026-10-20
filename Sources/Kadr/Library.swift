@@ -825,6 +825,7 @@ final class Library {
     /// пересвет на лице, горизонт, эстетика. Фоном, с прогрессом; уже посчитанное берётся из индекса.
     func startAI() {
         guard !aiRunning, analyzed >= photos.count else { return }
+        FaceMesh.shared.installBundledIfNeeded()   // на случай, если запуск опередил установку при старте
         let mesh = FaceMesh.shared.installed
         let urls = photos.filter { needsAI($0, mesh: mesh) }.map(\.id)
         guard !urls.isEmpty else { return }

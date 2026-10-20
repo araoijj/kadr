@@ -8,6 +8,8 @@ struct KadrApp: App {
     init() {
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate(ignoringOtherApps: true)
+        // Встроенная сетка лица — сразу при запуске, фоном.
+        Task.detached(priority: .utility) { FaceMesh.shared.installBundledIfNeeded() }
     }
 
     var body: some Scene {
