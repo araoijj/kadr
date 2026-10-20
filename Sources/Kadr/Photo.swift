@@ -37,7 +37,7 @@ enum ColorLabel: String, CaseIterable, Identifiable {
     }
 }
 
-struct ExifInfo: Equatable {
+struct ExifInfo: Equatable, Codable, Sendable {
     var date: Date?
     var camera: String?
     var lens: String?
@@ -65,6 +65,7 @@ struct Photo: Identifiable, Equatable {
     var url: URL { id }
     var name: String { id.lastPathComponent }
     var fileSize: Int64
+    var mtime: Double = 0        // время изменения файла — для сверки с индексом
 
     var rating: Int = 0          // 0…5
     var rejected: Bool = false   // в XMP хранится как Rating = -1
@@ -77,6 +78,7 @@ struct Photo: Identifiable, Equatable {
     var seriesID: Int?           // номер серии похожих кадров
     var isBestInSeries = false
     var duplicateOf: URL?        // точная копия другого файла
+    var indexed = false          // анализ есть (из индекса или посчитан сейчас)
 
     var lensName: String { exif.lens?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? "Объектив не указан" }
     var day: Date? { exif.date.map { Calendar.current.startOfDay(for: $0) } }

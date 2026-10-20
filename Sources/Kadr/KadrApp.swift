@@ -54,6 +54,7 @@ struct KadrApp: App {
                 Button("Выделить серию") { library.selectSeries() }
                     .keyboardShortcut("a", modifiers: [.command, .shift])
                 Divider()
+                Button("Пересчитать анализ папки") { library.reanalyze() }
                 Button("Показать в Finder") { library.revealCurrent() }
                     .keyboardShortcut("r", modifiers: [.command, .shift])
                 Toggle("Переходить дальше после оценки", isOn: $library.autoAdvance)

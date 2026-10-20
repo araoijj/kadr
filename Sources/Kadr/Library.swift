@@ -487,12 +487,22 @@ final class Library {
 
         // Обработка хранится в каждой папке своя.
         var edits: [URL: [String: Adjustments]] = [:]
-        for dir in Set(chosen.map { $0.deletingLastPathComponent() }) { edits[dir] = EditStore.load(dir) }
+        var indexes: [URL: [String: IndexEntry]] = [:]
+        for dir in Set(chosen.map { $0.deletingLastPathComponent() }) {
+            edits[dir] = EditStore.load(dir)
+            indexes[dir] = AnalysisIndex.load(dir)
+        }
         photos = chosen.map { f in
-            let size = (try? f.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
+            let v = try? f.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+            let size = Int64(v?.fileSize ?? 0)
             let s = Sidecar.read(for: f)
             var p = Photo(id: f, fileSize: size, rating: s.rating, rejected: s.rejected, label: s.label)
+            p.mtime = v?.contentModificationDate?.timeIntervalSince1970 ?? 0
             p.adj = edits[f.deletingLastPathComponent()]?[f.lastPathComponent] ?? .none
+            // Уже анализировали и файл не менялся — берём из индекса, не пересчитываем.
+            if let c = indexes[f.deletingLastPathComponent()]?[f.lastPathComponent], c.size == size, c.mtime == p.mtime {
+                p.exif = c.exif; p.hash = c.hash; p.sharpness = c.sharpness; p.indexed = true
+            }
             return p
         }
         photos.sort { $0.url.path.localizedStandardCompare($1.url.path) == .orderedAscending }
@@ -503,6 +513,14 @@ final class Library {
     }
 
     func reload() { if let folder { open(folder) } }
+
+    /// Забыть индекс открытой папки (и вложенных) и посчитать заново.
+    func reanalyze() {
+        for dir in Set(photos.map { $0.url.deletingLastPathComponent() }) {
+            try? FileManager.default.removeItem(at: AnalysisIndex.file(for: dir))
+        }
+        reload()
+    }
 
     /// Снимки папки; с recursive — и всех вложенных, кроме скрытых и «_Отклонённые».
     nonisolated static func imageFiles(in url: URL, recursive: Bool) -> [URL] {
@@ -529,16 +547,21 @@ final class Library {
     }
 
     /// Фоном: EXIF, превью, хэш и резкость, затем серии и дубли.
+    /// Фоном и бережно: только новые/изменённые файлы, 2 потока с низким приоритетом,
+    /// индекс сохраняется по ходу (каждые 50 кадров) — прерванный анализ не пропадает.
     private func startAnalysis() {
-        let urls = photos.map(\.id)
+        analyzed = photos.filter(\.indexed).count
+        let urls = photos.filter { !$0.indexed }.map(\.id)
+        guard !urls.isEmpty else { finishAnalysis(); return }
         analysisTask = Task { [weak self] in
             let store = ImageStore.shared
-            let workers = max(2, ProcessInfo.processInfo.activeProcessorCount - 2)
+            let workers = max(1, min(3, ProcessInfo.processInfo.activeProcessorCount / 3))
+            var sinceSave = 0
             await withTaskGroup(of: (URL, ExifInfo, UInt64?, Double?).self) { group in
                 var it = urls.makeIterator()
                 func add() -> Bool {
                     guard let u = it.next() else { return false }
-                    group.addTask {
+                    group.addTask(priority: .utility) {
                         let exif = store.exif(u)
                         guard let img = store.preview(u) else { return (u, exif, nil, nil) }
                         return (u, exif, store.dHash(img), store.sharpness(img))
@@ -547,20 +570,37 @@ final class Library {
                 }
                 for _ in 0..<workers { _ = add() }
                 while let (u, exif, h, s) = await group.next() {
-                    if Task.isCancelled { group.cancelAll(); return }
+                    if Task.isCancelled { group.cancelAll(); break }
+                    sinceSave += 1
+                    let save = sinceSave >= 50
+                    if save { sinceSave = 0 }
                     await MainActor.run {
                         guard let self, let i = self.index[u] else { return }
                         self.photos[i].exif = exif
                         self.photos[i].hash = h
                         self.photos[i].sharpness = s
+                        self.photos[i].indexed = true
                         self.analyzed += 1
+                        if save { self.saveIndex() }
                     }
                     _ = add()
                 }
             }
-            guard !Task.isCancelled else { return }
-            await MainActor.run { self?.finishAnalysis() }
+            await MainActor.run {
+                self?.saveIndex()
+                if !Task.isCancelled { self?.finishAnalysis() }
+            }
         }
+    }
+
+    /// Индекс по папкам: только проанализированные файлы, удалённые выпадают сами.
+    private func saveIndex() {
+        var byDir: [URL: [String: IndexEntry]] = [:]
+        for p in photos where p.indexed {
+            byDir[p.url.deletingLastPathComponent(), default: [:]][p.name] =
+                IndexEntry(size: p.fileSize, mtime: p.mtime, exif: p.exif, hash: p.hash, sharpness: p.sharpness)
+        }
+        Task.detached(priority: .utility) { for (dir, e) in byDir { AnalysisIndex.save(e, for: dir) } }
     }
 
     private func finishAnalysis() {
@@ -661,9 +701,14 @@ final class Library {
     }
 
     /// Клик: обычный — один снимок, ⌘ — добавить/убрать, ⇧ — диапазон.
+    /// Модификаторы в момент нажатия кнопки мыши. Одиночный клик SwiftUI срабатывает с задержкой
+    /// (ждёт возможный двойной), и к этому времени ⌘ часто уже отпущен — поэтому запоминаем при нажатии.
+    var clickModifiers: NSEvent.ModifierFlags = []
+
     func click(_ p: Photo) {
-        let mods = NSEvent.modifierFlags
-        if mods.contains(.command) {
+        let mods = clickModifiers.isEmpty ? NSEvent.modifierFlags : clickModifiers
+        clickModifiers = []
+        if mods.contains(.command) || mods.contains(.control) {
             if selection.contains(p.id) && selection.count > 1 {
                 selection.remove(p.id)
                 if currentID == p.id { currentID = targets.first?.id }

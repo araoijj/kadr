@@ -172,7 +172,9 @@ struct EditPanel: View {
 
     private func styleChip(_ st: Style, _ p: Photo) -> some View {
         let active = st.groups.count < StyleGroup.allCases.count ? p.adj.matches(st.adj, groups: st.groups) && !p.adj.isIdentity : p.adj == st.adj
-        var result = p.adj
+        // Превью — стиль на чистом кадре: не зависит от ползунков, иначе каждое их движение
+        // перерисовывало бы все превью и забивало процессор.
+        var result = Adjustments()
         result.merge(st.adj, groups: st.groups)
         return Button { lib.applyStyle(st) } label: {
             VStack(spacing: 4) {
@@ -239,9 +241,8 @@ struct EditPanel: View {
 
     private func lutChip(_ name: String, _ p: Photo) -> some View {
         let active = p.adj.lut == name
-        var preview = p.adj
+        var preview = Adjustments()   // LUT на чистом кадре, в полную силу — не зависит от ползунков
         preview.lut = name
-        if preview.lutAmount == 0 { preview.lutAmount = 100 }
         return Button {
             var a = p.adj
             a.lut = active ? nil : name

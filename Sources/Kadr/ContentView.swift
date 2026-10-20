@@ -48,9 +48,10 @@ struct ContentView: View {
                 let u = URL(fileURLWithPath: CommandLine.arguments[1])
                 if FileManager.default.fileExists(atPath: u.path) { lib.open(u) }
             }
-            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown]) { e in
                 MainActor.assumeIsolated {
-                    KeyHandler.handle(e, lib) ? nil : e
+                    if e.type == .leftMouseDown { return ClickModifiers.handle(e, lib) }
+                    return KeyHandler.handle(e, lib) ? nil : e
                 }
             }
         }
@@ -220,5 +221,19 @@ struct Toast: View {
         }
         .transition(.opacity)
         .allowsHitTesting(false)
+    }
+}
+
+/// ⌘-клик и Ctrl-клик — добавить кадр к выделению (Ctrl — как привыкли в Windows).
+/// Ctrl-клик на Mac обычно открывает меню, поэтому превращаем его в ⌘-клик; меню — правой кнопкой.
+@MainActor
+enum ClickModifiers {
+    static func handle(_ e: NSEvent, _ lib: Library) -> NSEvent? {
+        lib.clickModifiers = e.modifierFlags.intersection([.command, .shift, .control])
+        guard e.modifierFlags.contains(.control) else { return e }
+        let flags = e.modifierFlags.subtracting(.control).union(.command)
+        return NSEvent.mouseEvent(with: .leftMouseDown, location: e.locationInWindow, modifierFlags: flags,
+                                  timestamp: e.timestamp, windowNumber: e.windowNumber, context: nil,
+                                  eventNumber: e.eventNumber, clickCount: e.clickCount, pressure: e.pressure) ?? e
     }
 }
