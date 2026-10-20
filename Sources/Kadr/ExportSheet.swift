@@ -60,7 +60,10 @@ struct ExportSheet: View {
                 if lib.export.preset == .story {
                     Toggle("Кадры не 9:16 — обрезать по центру (иначе вписать без обрезки)", isOn: $lib.export.presetCrop)
                 }
-                if lib.export.preset != .custom { PlanSummary() }
+                if lib.export.preset != .custom {
+                    PlanSummary()
+                    quality
+                }
             }
 
             if lib.export.preset == .custom {
@@ -75,6 +78,7 @@ struct ExportSheet: View {
                 if lib.export.format == .original {
                     Toggle("Перенести, а не копировать", isOn: $lib.export.move)
                         .help("Файлы исчезнут из текущей папки")
+                    SizeEstimate()
                 } else {
                     HStack {
                         Text("Размер")
@@ -87,12 +91,7 @@ struct ExportSheet: View {
                         .labelsHidden()
                         .frame(width: 210)
                     }
-                    HStack {
-                        Text("Качество")
-                        Slider(value: $lib.export.jpegQuality, in: 0.6...1.0)
-                        Text("\(Int(lib.export.jpegQuality * 100))%")
-                            .monospacedDigit().foregroundStyle(.secondary).frame(width: 40)
-                    }
+                    quality
                     Toggle("С обработкой, стилями и кадрированием из «Кадра»", isOn: $lib.export.applyEdits)
                     Text("Проявление движком macOS; правки Capture One не переносятся. ~1–2 с на кадр.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -190,6 +189,20 @@ struct ExportSheet: View {
                         .disabled(lib.export.destination == nil || lib.photos(for: lib.export.scope).isEmpty)
                 }
             }
+        }
+    }
+
+    /// Качество JPEG и ориентировочный размер файлов.
+    private var quality: some View {
+        @Bindable var lib = lib
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Качество")
+                Slider(value: $lib.export.jpegQuality, in: 0.6...1.0)
+                Text("\(Int((lib.export.jpegQuality * 100).rounded()))%")
+                    .monospacedDigit().foregroundStyle(.secondary).frame(width: 40)
+            }
+            SizeEstimate()
         }
     }
 
