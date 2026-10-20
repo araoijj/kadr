@@ -3,7 +3,7 @@ import Foundation
 
 /// Why a frame looks like a reject. This is a hint; the photographer decides.
 enum CullReason: String, CaseIterable, Identifiable, Hashable {
-    case blur, blink, eyesClosed, overexposed, underexposed, tilted, utility, duplicate, weakerInSeries
+    case blur, blink, eyesClosed, overexposed, underexposed, tilted, utility, duplicate, weakerInSeries, repeated
     var id: String { rawValue }
 
     var title: String {
@@ -17,6 +17,7 @@ enum CullReason: String, CaseIterable, Identifiable, Hashable {
         case .utility: tr("Служебный кадр")
         case .duplicate: tr("Дубль")
         case .weakerInSeries: tr("Слабее в серии")
+        case .repeated: tr("Повтор лучшего")
         }
     }
 
@@ -31,6 +32,7 @@ enum CullReason: String, CaseIterable, Identifiable, Hashable {
         case .utility: "doc.text.viewfinder"
         case .duplicate: "doc.on.doc"
         case .weakerInSeries: "square.stack.3d.down.right"
+        case .repeated: "square.on.square"
         }
     }
 
@@ -40,7 +42,7 @@ enum CullReason: String, CaseIterable, Identifiable, Hashable {
     var isDefect: Bool {
         switch self {
         case .blur, .blink, .overexposed, .utility, .duplicate: true
-        case .eyesClosed, .underexposed, .tilted, .weakerInSeries: false
+        case .eyesClosed, .underexposed, .tilted, .weakerInSeries, .repeated: false
         }
     }
 
@@ -53,6 +55,7 @@ enum CullReason: String, CaseIterable, Identifiable, Hashable {
         case .utility: 50
         case .duplicate: 40
         case .weakerInSeries: 10
+        case .repeated: 5
         case .overexposed: 25
         case .underexposed: 10
         case .tilted: 10
@@ -124,6 +127,12 @@ extension Library {
                let s = c.subjectSharpness, s < best * (0.45 + 0.3 * st), !v.reasons.contains(.blur) {
                 v.reasons.append(.weakerInSeries)
             }
+            // A near-copy of the burst's best frame: nothing wrong with it, it's just redundant —
+            // the user's own rejects on the 2032-frame shoot were mostly these (8 fps bursts, same pose).
+            if let sid = p.seriesID, !p.isBestInSeries, let bp = seriesBestPrint[sid], let pp = c.print,
+               let d = printDistance(bp, pp), d < 0.25 {
+                v.reasons.append(.repeated)
+            }
             // Base is aesthetics (0.5 → 75, 0.85 → 92), minus penalties for defects.
             v.score = Int((50 + (c.aesthetics ?? 0.5) * 50).rounded()) - v.reasons.reduce(0) { $0 + $1.penalty }
         } else {
@@ -189,6 +198,9 @@ extension Library {
             }
         }
         seriesOpenPoses = poses
+        var bestPrints: [Int: Data] = [:]
+        for p in photos where p.isBestInSeries { if let sid = p.seriesID, let pr = p.cull?.print { bestPrints[sid] = pr } }
+        seriesBestPrint = bestPrints
     }
 
     /// Brighten a dark frame: set exposure so the mean luminance reaches ~0.35 (up to +3 EV).
@@ -281,6 +293,18 @@ extension Library {
     }
 }
 
+// MARK: - The good ones
+
+extension Library {
+    /// "Best photos": one per burst (its best) and single photos, with no defects or closed eyes and a good score.
+    /// Calibrated on 2032 frames: the median score of non-rejected photos is 80, the quartile 72.
+    func isRecommended(_ p: Photo) -> Bool {
+        guard aiReady, !p.rejected, p.duplicateOf == nil, p.cull != nil, p.seriesID == nil || p.isBestInSeries else { return false }
+        let v = verdict(p)
+        return !v.reasons.contains { $0.isDefect || $0 == .eyesClosed } && v.score >= 72
+    }
+}
+
 // MARK: - Why: the numbers behind each finding
 
 extension Library {
@@ -319,6 +343,8 @@ extension Library {
             return tr("Похоже на служебный снимок: экран, документ, случайный кадр")
         case .duplicate:
             return tr("Точная копия другого файла (тот же размер, время и картинка)")
+        case .repeated:
+            return tr("Почти копия лучшего кадра серии — оставьте лучший, этот можно в брак")
         case .weakerInSeries:
             let best = p.seriesID.flatMap { seriesBestSharpness[$0] } ?? 0
             return tr("Резкость \(pct(best > 0 ? (c.subjectSharpness ?? 0) / best : 0))% от лучшего кадра серии")

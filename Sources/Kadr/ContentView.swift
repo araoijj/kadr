@@ -89,6 +89,18 @@ struct ContentView: View {
         }
         ToolbarItemGroup(placement: .primaryAction) {
             if lib.folder != nil {
+                // Decisions right in the toolbar: easy to find without knowing the keys.
+                ControlGroup {
+                    Button { lib.keep() } label: { Label(tr("Оставить"), systemImage: "checkmark.circle") }
+                        .help(tr("Оставить (P) — ★, если оценки ещё нет"))
+                    Button { lib.toggleReject() } label: { Label(tr("Брак"), systemImage: "xmark.circle") }
+                        .help(tr("В брак / вернуть (X или Delete)"))
+                }
+                .disabled(lib.current == nil)
+            }
+            Button { lib.showShortcuts = true } label: { Label(tr("Клавиши"), systemImage: "keyboard") }
+                .help(tr("Шпаргалка по клавишам и интерфейсу (?)"))
+            if lib.folder != nil {
                 if lib.analyzed < lib.photos.count {
                     HStack(spacing: 6) {
                         ProgressView().controlSize(.small)

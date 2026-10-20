@@ -8,7 +8,7 @@ enum PhotoFilter: Hashable {
     case label(ColorLabel)
     case duplicates
     // Culling
-    case suspects, undecided, leaders, smiling
+    case suspects, undecided, leaders, smiling, recommended
     case reason(CullReason)
     case scene(Int)
 
@@ -28,6 +28,7 @@ enum PhotoFilter: Hashable {
         case .reason(let r): r.title
         case .scene(let id): tr("Сцена \(id)")
         case .smiling: tr("Улыбаются")
+        case .recommended: tr("Лучшие кадры")
         }
     }
 
@@ -47,6 +48,7 @@ enum PhotoFilter: Hashable {
         case .reason(let r): r.icon
         case .scene: "film.stack"
         case .smiling: "face.smiling"
+        case .recommended: "star.circle"
         }
     }
 }
@@ -156,6 +158,7 @@ final class Library {
     var seriesBestSharpness: [Int: Double] = [:]
     var seriesOpenEyes: [Int: Double] = [:]
     var seriesOpenPoses: [Int: [OpenPose]] = [:]
+    var seriesBestPrint: [Int: Data] = [:]
     var sceneMedians: [Int: (face: Double?, other: Double?)] = [:]
 
     // Change history (History.swift).
@@ -691,6 +694,7 @@ final class Library {
         case .leaders: !p.rejected && (p.seriesID == nil || p.isBestInSeries) && p.duplicateOf == nil
         case .reason(let r): verdict(p).reasons.contains(r)
         case .scene(let id): p.sceneID == id
+        case .recommended: isRecommended(p)
         case .smiling: !p.rejected && (p.cull?.faces.contains { $0.meshUsable && ($0.smile ?? 0) >= 0.6 } ?? false)
         }
     }
