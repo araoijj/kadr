@@ -83,6 +83,13 @@ struct EditPanel: View {
 
     private func sliders(_ p: Photo) -> some View {
         VStack(alignment: .leading, spacing: 22) {
+            if lib.multiSelected {
+                Toggle(isOn: Binding(get: { lib.syncEdits }, set: { lib.syncEdits = $0 })) {
+                    Text(tr("Применять ко всем выделенным (\(lib.targets.count))")).font(.callout.weight(.semibold))
+                }
+                .toggleStyle(.switch)
+                .help(tr("Ползунки, стиль и LUT меняют все выделенные кадры — только то, что вы двигаете. Кадрирование — у каждого своё."))
+            }
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text(tr("Кадр")).font(.headline)
