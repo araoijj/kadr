@@ -79,6 +79,8 @@ extension Library {
     func verdict(_ p: Photo) -> CullVerdict {
         var v = CullVerdict()
         let st = cullStrictness
+        let enabled = aiEnabled
+        func on(_ m: AIModule) -> Bool { enabled.contains(m) }
         if p.duplicateOf != nil { v.reasons.append(.duplicate) }
         if let c = p.cull {
             // Face sharpness and frame sharpness are on different scales; compare each with its own median.
@@ -91,12 +93,12 @@ extension Library {
             let dark = (c.meanLuma ?? 0.5) < 0.06 + 0.06 * st
                 || ((c.meanLuma ?? 0.5) < 0.16 && (c.brightLuma ?? 1) < 0.30 + 0.08 * st)
             // A very dark frame has few transitions: that's underexposure, not blur.
-            if !dark, let s = c.subjectSharpness, median > 0, s / median < 0.18 + 0.27 * st {
+            if on(.subject), !dark, let s = c.subjectSharpness, median > 0, s / median < 0.18 + 0.27 * st {
                 v.reasons.append(.blur)
             }
             // Eyes only for large camera-facing faces. A blink is when eyes are open elsewhere in the same series.
-            let rel = c.faces.filter(\.reliable)
-            let mesh = c.faces.filter(\.meshUsable)
+            let rel = on(.faces) ? c.faces.filter(\.reliable) : []
+            let mesh = on(.faces) ? c.faces.filter(\.meshUsable) : []
             if !mesh.isEmpty {
                 // MediaPipe mesh. A blink if the series has a frame with open eyes in the same pose
                 // (head pitch ±8°, same face size). Head lowered ≥ 15° is a downward gaze, not a defect;
@@ -119,22 +121,22 @@ extension Library {
             }
             // Overexposure on the face/subject; the whole frame only if most of it is blown (white sky behind is normal).
             // Calibration: a bright face against an overcast sky gives 14–25% "blown" pixels; that's normal.
-            if (c.subjectClip ?? 0) > 0.40 - 0.15 * st || c.clipHigh > 0.45 - 0.15 * st { v.reasons.append(.overexposed) }
-            if c.clipLow > 0.30 - 0.12 * st || dark { v.reasons.append(.underexposed) }
-            if let h = c.horizon, abs(h) >= 2.5 - 1.0 * st, abs(h) <= 15 { v.reasons.append(.tilted) }
-            if c.utility { v.reasons.append(.utility) }
-            if let sid = p.seriesID, !p.isBestInSeries, let best = seriesBestSharpness[sid], best > 0,
+            if on(.exposure), (c.subjectClip ?? 0) > 0.40 - 0.15 * st || c.clipHigh > 0.45 - 0.15 * st { v.reasons.append(.overexposed) }
+            if on(.exposure), c.clipLow > 0.30 - 0.12 * st || dark { v.reasons.append(.underexposed) }
+            if on(.horizon), let h = c.horizon, abs(h) >= 2.5 - 1.0 * st, abs(h) <= 15 { v.reasons.append(.tilted) }
+            if on(.aesthetics), c.utility { v.reasons.append(.utility) }
+            if on(.subject), let sid = p.seriesID, !p.isBestInSeries, let best = seriesBestSharpness[sid], best > 0,
                let s = c.subjectSharpness, s < best * (0.45 + 0.3 * st), !v.reasons.contains(.blur) {
                 v.reasons.append(.weakerInSeries)
             }
             // A near-copy of the burst's best frame: nothing wrong with it, it's just redundant —
             // the user's own rejects on the 2032-frame shoot were mostly these (8 fps bursts, same pose).
-            if let sid = p.seriesID, !p.isBestInSeries, let bp = seriesBestPrint[sid], let pp = c.print,
+            if on(.similarity), let sid = p.seriesID, !p.isBestInSeries, let bp = seriesBestPrint[sid], let pp = c.print,
                let d = printDistance(bp, pp), d < 0.25 {
                 v.reasons.append(.repeated)
             }
             // Base is aesthetics (0.5 → 75, 0.85 → 92), minus penalties for defects.
-            v.score = Int((50 + (c.aesthetics ?? 0.5) * 50).rounded()) - v.reasons.reduce(0) { $0 + $1.penalty }
+            v.score = Int((50 + (on(.aesthetics) ? c.aesthetics ?? 0.5 : 0.5) * 50).rounded()) - v.reasons.reduce(0) { $0 + $1.penalty }
         } else {
             v.score = 75 - v.reasons.reduce(0) { $0 + $1.penalty }
         }

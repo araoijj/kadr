@@ -8,6 +8,7 @@ struct SettingsView: View {
             GeneralSettings().tabItem { Label(tr("Общие"), systemImage: "gearshape") }
             StorageSettings().tabItem { Label(tr("Хранилище"), systemImage: "internaldrive") }
             PerformanceSettings().tabItem { Label(tr("Память и скорость"), systemImage: "speedometer") }
+            AISettings().tabItem { Label("AI", systemImage: "sparkles") }
             ImportSettingsTab().tabItem { Label(tr("Импорт"), systemImage: "sdcard") }
             PresetsSettings().tabItem { Label(tr("Стили и LUT"), systemImage: "camera.filters") }
             BackupSettings().tabItem { Label(tr("Резервная копия"), systemImage: "externaldrive.badge.timemachine") }
@@ -24,7 +25,6 @@ struct GeneralSettings: View {
     @AppStorage("pref.reopenLast") private var reopenLast = true
     @AppStorage("pref.cardBanner") private var cardBanner = true
     @AppStorage("pref.cullDefault") private var cullDefault = false
-    @AppStorage("pref.aiAuto") private var aiAuto = false
     @AppStorage("pref.sceneGap") private var sceneGap = 10
     @State private var startLanguage = Prefs.language
 
@@ -49,8 +49,6 @@ struct GeneralSettings: View {
             Section(tr("Работа")) {
                 Toggle(tr("Открывать последнюю папку при запуске"), isOn: $reopenLast)
                 Toggle(tr("Открывать папку сразу в режиме «Отбор»"), isOn: $cullDefault)
-                Toggle(tr("Запускать AI-анализ автоматически после индексации"), isOn: $aiAuto)
-                    .help(tr("Лица, глаза, смаз, пересвет. Нагружает Mac: ~1 минута на 1000 кадров. Выключено — запуск кнопкой «Запустить AI-анализ» в режиме «Отбор» (⌥⌘A)."))
                 Picker(tr("Новая сцена после паузы"), selection: $sceneGap) {
                     ForEach([5, 10, 20, 30, 60], id: \.self) { Text(tr("\($0) мин")).tag($0) }
                 }
@@ -182,7 +180,6 @@ struct PerformanceSettings: View {
                 }
                 Toggle(tr("Хранить индекс анализа (повторное открытие папки — мгновенно)"), isOn: $indexEnabled)
             }
-            FaceMeshSection()
             Section(tr("Память")) {
                 Picker(tr("Память под превью"), selection: $previewPct) {
                     Text(tr("Авто — 18% (\(mem(18)))")).tag(0)
@@ -525,5 +522,54 @@ struct FaceMeshSection: View {
         p.allowedContentTypes = [.zip, .package, .folder]
         p.message = tr("Архив .zip или папка с face_landmarks_detector и face_blendshapes (.mlpackage)")
         if p.runModal() == .OK, let u = p.url { busy = true; finish(u, nil) }
+    }
+}
+
+// MARK: - AI
+
+/// Which AI modules to compute: like Capture One's tool sets — only what you use, so nothing extra slows the Mac.
+struct AISettings: View {
+    @Environment(Library.self) private var lib
+    @AppStorage("pref.aiAuto") private var aiAuto = false
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(AIModule.allCases) { m in
+                    Toggle(isOn: Binding(get: { lib.aiEnabled.contains(m) }, set: { on in
+                        if on { lib.aiEnabled.insert(m) } else { lib.aiEnabled.remove(m) }
+                        lib.aiModulesChanged()
+                    })) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack {
+                                Text(m.title)
+                                Spacer()
+                                Text(tr("~\(m.cost) мс")).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                            }
+                            Text(m.detail).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } header: {
+                Text(tr("Что считать при AI-анализе"))
+            } footer: {
+                let ms = lib.aiEnabled.reduce(0) { $0 + $1.cost }
+                Text(tr("Выбрано: ~\(ms) мс на кадр, на 1000 кадров ~\(max(1, ms * 1000 / max(1, Prefs.analysisThreads) / 1000)) с. Выключенное не считается, а уже посчитанное перестаёт показываться. Включили модуль — досчитается только он."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section(tr("Открытая папка")) {
+                let pending = lib.aiPending
+                LabeledContent(tr("Не посчитано для выбранного")) { Text(lib.folder == nil ? "—" : "\(pending)") }
+                HStack {
+                    Button(lib.aiRunning ? tr("Идёт AI-анализ…") : tr("Досчитать сейчас")) { lib.startAI() }
+                        .disabled(lib.folder == nil || lib.aiRunning || pending == 0 || lib.analyzed < lib.photos.count)
+                    if lib.aiRunning { Button(tr("Стоп")) { lib.stopAI() } }
+                }
+                Toggle(tr("Запускать AI-анализ автоматически после индексации"), isOn: $aiAuto)
+                    .help(tr("Нагружает Mac. Выключено — запуск кнопкой «Запустить AI-анализ» в режиме «Отбор» (⌥⌘A)."))
+            }
+            FaceMeshSection()
+        }
+        .formStyle(.grouped)
     }
 }
