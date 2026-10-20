@@ -110,7 +110,7 @@ struct Sidebar: View {
                         }
                     }
                 }
-                let tags = lib.aiReady ? Array(lib.tags.prefix(25)) : []
+                let tags = lib.aiReady && lib.aiEnabled.contains(.tags) ? Array(lib.tags.prefix(25)) : []
                 if !tags.isEmpty {
                     Section(tr("Что на снимках"), isExpanded: $showTags) {
                         ForEach(tags, id: \.id) { t in

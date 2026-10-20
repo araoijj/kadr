@@ -3833,5 +3833,120 @@
   "Keyboard and interface cheat sheet (?)",
   "Chuleta de teclas e interfaz (?)",
   "Promemoria di tasti e interfaccia (?)"
+ ],
+ "Лица и глаза": [
+  "Faces and eyes",
+  "Caras y ojos",
+  "Volti e occhi"
+ ],
+ "Главный объект и резкость": [
+  "Main subject and sharpness",
+  "Sujeto principal y nitidez",
+  "Soggetto principale e nitidezza"
+ ],
+ "Пересвет и недосвет": [
+  "Over- and underexposure",
+  "Sobre y subexposición",
+  "Sovra- e sottoesposizione"
+ ],
+ "Оценка кадра и служебные снимки": [
+  "Photo score and utility shots",
+  "Puntuación de la foto y fotos de servicio",
+  "Punteggio della foto e scatti di servizio"
+ ],
+ "Что на снимках (теги)": [
+  "What's in the photos (tags)",
+  "Qué hay en las fotos (etiquetas)",
+  "Cosa c’è nelle foto (tag)"
+ ],
+ "Похожие кадры и повторы": [
+  "Similar photos and repeats",
+  "Fotos similares y repeticiones",
+  "Foto simili e ripetizioni"
+ ],
+ "Фигуры людей": [
+  "People's figures",
+  "Figuras de personas",
+  "Figure delle persone"
+ ],
+ "Лица в 100%, моргание, закрытые глаза, улыбка (MediaPipe), резкость по лицу": [
+  "Faces at 100%, blinks, closed eyes, smiles (MediaPipe), face sharpness",
+  "Caras al 100%, parpadeos, ojos cerrados, sonrisas (MediaPipe), nitidez de la cara",
+  "Volti al 100%, occhi chiusi, sorrisi (MediaPipe), nitidezza del volto"
+ ],
+ "Смаз: резкость лица или главного объекта относительно сцены": [
+  "Blur: sharpness of the face or main subject relative to the scene",
+  "Desenfoque: nitidez de la cara o el sujeto principal respecto a la escena",
+  "Sfocatura: nitidezza del volto o del soggetto rispetto alla scena"
+ ],
+ "Выбитые света на лице и в кадре, тёмные кадры": [
+  "Blown highlights on the face and in the frame, dark photos",
+  "Luces quemadas en la cara y en la foto, fotos oscuras",
+  "Alte luci bruciate su volto e foto, foto scure"
+ ],
+ "Завал горизонта и кнопка «Выровнять»": [
+  "Tilted horizon and the Straighten button",
+  "Horizonte inclinado y el botón Enderezar",
+  "Orizzonte inclinato e il pulsante Raddrizza"
+ ],
+ "Оценка 0–100, «Лучшие кадры», экраны и документы": [
+  "Score 0–100, Best Photos, screens and documents",
+  "Puntuación 0–100, Mejores fotos, pantallas y documentos",
+  "Punteggio 0–100, Foto migliori, schermi e documenti"
+ ],
+ "Фильтр «Что на снимках»: люди, природа, собака…": [
+  "The “What's in the photos” filter: people, nature, dog…",
+  "El filtro «Qué hay en las fotos»: personas, naturaleza, perro…",
+  "Il filtro «Cosa c’è nelle foto»: persone, natura, cane…"
+ ],
+ "Серии по смыслу и «Повтор лучшего»": [
+  "Bursts by content and “Repeat of the best”",
+  "Ráfagas por contenido y «Repetición de la mejor»",
+  "Raffiche per contenuto e «Ripetizione della migliore»"
+ ],
+ "Автокадрирование не режет фигуры": [
+  "Auto crop never cuts figures",
+  "El recorte automático no corta figuras",
+  "Il ritaglio automatico non taglia le figure"
+ ],
+ "~{} мс": [
+  "~{} ms",
+  "~{} ms",
+  "~{} ms"
+ ],
+ "Что считать при AI-анализе": [
+  "What the AI analysis computes",
+  "Qué calcula el análisis IA",
+  "Cosa calcola l’analisi IA"
+ ],
+ "Выбрано: ~{} мс на кадр, на 1000 кадров ~{} с. Выключенное не считается, а уже посчитанное перестаёт показываться. Включили модуль — досчитается только он.": [
+  "Selected: ~{} ms per photo, ~{} s per 1,000 photos. What's off isn't computed, and results already computed stop showing. Turn a module on and only it is computed.",
+  "Seleccionado: ~{} ms por foto, ~{} s por cada 1000 fotos. Lo desactivado no se calcula y lo ya calculado deja de mostrarse. Al activar un módulo, solo se calcula ese.",
+  "Selezionato: ~{} ms per foto, ~{} s ogni 1000 foto. Ciò che è disattivato non viene calcolato e i risultati già calcolati non vengono mostrati. Attivando un modulo si calcola solo quello."
+ ],
+ "Открытая папка": [
+  "Open folder",
+  "Carpeta abierta",
+  "Cartella aperta"
+ ],
+ "Не посчитано для выбранного": [
+  "Not yet computed for the selection",
+  "Pendiente para lo seleccionado",
+  "Da calcolare per la selezione"
+ ],
+ "Идёт AI-анализ…": [
+  "AI analysis running…",
+  "Análisis IA en curso…",
+  "Analisi IA in corso…"
+ ],
+ "Досчитать сейчас": [
+  "Compute Now",
+  "Calcular ahora",
+  "Calcola ora"
+ ],
+ "Нагружает Mac. Выключено — запуск кнопкой «Запустить AI-анализ» в режиме «Отбор» (⌥⌘A).": [
+  "Heavy on the Mac. When off, start it with “Run AI Analysis” in Culling mode (⌥⌘A).",
+  "Exige al Mac. Desactivado: se inicia con «Ejecutar análisis IA» en el modo Selección (⌥⌘A).",
+  "Impegna il Mac. Se disattivato, avviala con «Avvia analisi IA» in modalità Selezione (⌥⌘A)."
  ]
 }

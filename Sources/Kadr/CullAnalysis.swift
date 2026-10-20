@@ -51,7 +51,65 @@ struct CullData: Codable, Sendable, Hashable {
     var tags: [String]?             // what is in the photo (Vision classifier, high-precision labels)
     var print: Data?                // whole-photo feature print (Vision, float32) — similarity for bursts
     var people: [CGRectCodable]?    // full-body boxes of people (for auto crop: never cut a figure)
+    var modules: [String]?          // AI modules computed for this photo (AIModule raw values)
     var mesh: Bool?                 // eyes were measured by the MediaPipe face mesh (frames with faces are reanalyzed after the models are installed)
+}
+
+extension CullData {
+    /// Modules already computed. Index entries from before modules existed: everything of that time,
+    /// plus tags / similarity / people if their data is there.
+    var computed: Set<AIModule> {
+        if let modules { return Set(modules.compactMap(AIModule.init(rawValue:))) }
+        var s: Set<AIModule> = [.faces, .subject, .exposure, .horizon, .aesthetics]
+        if tags != nil { s.insert(.tags) }
+        if print != nil { s.insert(.similarity) }
+        if people != nil { s.insert(.people) }
+        return s
+    }
+}
+
+/// Parts of the AI analysis; each can be turned off in Settings → AI so it isn't computed.
+enum AIModule: String, CaseIterable, Codable, Identifiable, Sendable {
+    case faces, subject, exposure, horizon, aesthetics, tags, similarity, people
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .faces: tr("Лица и глаза")
+        case .subject: tr("Главный объект и резкость")
+        case .exposure: tr("Пересвет и недосвет")
+        case .horizon: tr("Горизонт")
+        case .aesthetics: tr("Оценка кадра и служебные снимки")
+        case .tags: tr("Что на снимках (теги)")
+        case .similarity: tr("Похожие кадры и повторы")
+        case .people: tr("Фигуры людей")
+        }
+    }
+
+    /// Measured on 40 frames of a real shoot (M-series, one thread), ms per photo.
+    var cost: Int {
+        switch self {
+        case .faces: 31
+        case .subject: 15
+        case .exposure, .aesthetics: 5
+        case .horizon: 6
+        case .tags: 7
+        case .similarity, .people: 4
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .faces: tr("Лица в 100%, моргание, закрытые глаза, улыбка (MediaPipe), резкость по лицу")
+        case .subject: tr("Смаз: резкость лица или главного объекта относительно сцены")
+        case .exposure: tr("Выбитые света на лице и в кадре, тёмные кадры")
+        case .horizon: tr("Завал горизонта и кнопка «Выровнять»")
+        case .aesthetics: tr("Оценка 0–100, «Лучшие кадры», экраны и документы")
+        case .tags: tr("Фильтр «Что на снимках»: люди, природа, собака…")
+        case .similarity: tr("Серии по смыслу и «Повтор лучшего»")
+        case .people: tr("Автокадрирование не режет фигуры")
+        }
+    }
 }
 
 struct CGRectCodable: Codable, Sendable, Hashable {
@@ -74,108 +132,122 @@ enum CullAnalyzer {
     /// ~25 ms per frame after the first run (macOS models load once, ~1 s).
     /// On macOS 14 there is no recognition (center sharpness, overexposure and crushed shadows only).
     static func analyze(_ img: CGImage) async -> CullData {
-        if #available(macOS 15.0, *) { return await analyzeVision(img) }
-        var d = CullData()
-        d.subjectSharpness = ImageStore.shared.sharpness(img)
-        (d.clipHigh, d.clipLow, d.meanLuma, d.brightLuma) = clipping(img)
+        await analyze(img, modules: Set(AIModule.allCases), into: nil)
+    }
+
+    /// Runs only the requested modules and keeps everything else already in `base` —
+    /// so turning a module on later computes just that module.
+    static func analyze(_ img: CGImage, modules: Set<AIModule>, into base: CullData?) async -> CullData {
+        var d = base ?? CullData()
+        if base == nil { d.modules = [] }   // a fresh record has nothing computed yet (not the legacy "everything")
+        var m = modules
+        // Subject sharpness and clipping on the face/subject depend on the faces: recompute them along.
+        if m.contains(.faces) || m.contains(.subject) { m.formUnion(d.computed.intersection([.subject, .exposure])) }
+        if #available(macOS 15.0, *) {
+            await analyzeVision(img, m, &d)
+        } else {
+            if m.contains(.subject) { d.subjectSharpness = ImageStore.shared.sharpness(img) }
+            if m.contains(.exposure) { (d.clipHigh, d.clipLow, d.meanLuma, d.brightLuma) = clipping(img) }
+        }
+        d.modules = d.computed.union(m).map(\.rawValue).sorted()
         return d
     }
 
     @available(macOS 15.0, *)
-    private static func analyzeVision(_ img: CGImage) async -> CullData {
-        var d = CullData()
+    private static func analyzeVision(_ img: CGImage, _ m: Set<AIModule>, _ d: inout CullData) async {
         // Vision measures from the bottom-left corner; convert to top-to-bottom.
         func topDown(_ r: CGRect) -> CGRect { CGRect(x: r.minX, y: 1 - r.maxY, width: r.width, height: r.height) }
 
-        let marks = (try? await DetectFaceLandmarksRequest().perform(on: img)) ?? []
-        let quality = (try? await DetectFaceCaptureQualityRequest().perform(on: img)) ?? []
-        for f in marks {
-            let r = topDown(f.boundingBox.cgRect)
-            // Quality comes from the second request, matched by the nearest box center.
-            let q = quality.min { a, b in
-                dist(topDown(a.boundingBox.cgRect), r) < dist(topDown(b.boundingBox.cgRect), r)
-            }.flatMap { $0.captureQuality.map { Double($0.score) } }
-            var eyes: [Double] = []
-            for e in [f.landmarks?.leftEye, f.landmarks?.rightEye].compactMap({ $0 }) {
-                let pts = e.points.map(\.cgPoint)
-                guard let xmin = pts.map(\.x).min(), let xmax = pts.map(\.x).max(),
-                      let ymin = pts.map(\.y).min(), let ymax = pts.map(\.y).max(), xmax > xmin else { continue }
-                eyes.append(Double((ymax - ymin) / (xmax - xmin)))
+        if m.contains(.faces) {
+            d.faces = []
+            d.mesh = nil
+            let marks = (try? await DetectFaceLandmarksRequest().perform(on: img)) ?? []
+            let quality = (try? await DetectFaceCaptureQualityRequest().perform(on: img)) ?? []
+            for f in marks {
+                let r = topDown(f.boundingBox.cgRect)
+                // Quality comes from the second request, matched by the nearest box center.
+                let q = quality.min { a, b in
+                    dist(topDown(a.boundingBox.cgRect), r) < dist(topDown(b.boundingBox.cgRect), r)
+                }.flatMap { $0.captureQuality.map { Double($0.score) } }
+                var eyes: [Double] = []
+                for e in [f.landmarks?.leftEye, f.landmarks?.rightEye].compactMap({ $0 }) {
+                    let pts = e.points.map(\.cgPoint)
+                    guard let xmin = pts.map(\.x).min(), let xmax = pts.map(\.x).max(),
+                          let ymin = pts.map(\.y).min(), let ymax = pts.map(\.y).max(), xmax > xmin else { continue }
+                    eyes.append(Double((ymax - ymin) / (xmax - xmin)))
+                }
+                var face = FaceInfo(x: r.minX, y: r.minY, w: r.width, h: r.height, quality: q,
+                                    eyes: eyes.isEmpty ? nil : eyes.reduce(0, +) / Double(eyes.count))
+                face.px = Double(r.width) * Double(img.width)
+                face.pitch = f.pitch.converted(to: .degrees).value
+                face.sharpness = ImageStore.shared.sharpness(img, region: r)
+                d.faces.append(face)
             }
-            var face = FaceInfo(x: r.minX, y: r.minY, w: r.width, h: r.height, quality: q,
-                                eyes: eyes.isEmpty ? nil : eyes.reduce(0, +) / Double(eyes.count))
-            face.px = Double(r.width) * Double(img.width)
-            face.pitch = f.pitch.converted(to: .degrees).value
-            face.sharpness = ImageStore.shared.sharpness(img, region: r)
-            d.faces.append(face)
-        }
-        d.faces.sort { $0.w * $0.h > $1.w * $1.h }   // largest faces first
-        // Eyes via the MediaPipe face mesh (~12 ms per face): tells a blink apart from a squint or a downward gaze.
-        let mesh = FaceMesh.shared
-        if !d.faces.isEmpty, mesh.available {
-            d.mesh = true
-            for i in d.faces.indices.prefix(6) where (d.faces[i].px ?? 0) >= 40 {
-                // The mesh didn't find a face: almost always a profile, so we don't judge the eyes (the macOS contour is wrong here too).
-                guard let e = mesh.eyes(img, face: d.faces[i].rect) else { d.faces[i].eyes = nil; continue }
-                d.faces[i].blink = e.blink
-                d.faces[i].squint = e.squint
-                d.faces[i].lookDown = e.lookDown
-                d.faces[i].smile = e.smile
+            d.faces.sort { $0.w * $0.h > $1.w * $1.h }   // largest faces first
+            // Eyes via the MediaPipe face mesh (~12 ms per face): tells a blink apart from a squint or a downward gaze.
+            let mesh = FaceMesh.shared
+            if !d.faces.isEmpty, mesh.available {
+                d.mesh = true
+                for i in d.faces.indices.prefix(6) where (d.faces[i].px ?? 0) >= 40 {
+                    // The mesh didn't find a face: almost always a profile, so we don't judge the eyes (the macOS contour is wrong here too).
+                    guard let e = mesh.eyes(img, face: d.faces[i].rect) else { d.faces[i].eyes = nil; continue }
+                    d.faces[i].blink = e.blink
+                    d.faces[i].squint = e.squint
+                    d.faces[i].lookDown = e.lookDown
+                    d.faces[i].smile = e.smile
+                }
             }
         }
 
-        if !d.faces.contains(where: \.reliable), let sal = try? await GenerateAttentionBasedSaliencyImageRequest().perform(on: img),
-           let o = sal.salientObjects.first {
-            let xs = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.x)
-            let ys = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.y)
-            let r = topDown(CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!))
-            d.subject = CGRectCodable(x: r.minX, y: r.minY, w: r.width, h: r.height)
-        }
-        // Sharpness of the "main" subject: the best of the large camera-facing faces, otherwise the saliency object, otherwise the frame center.
-        // A small face gets stretched when measured and always looks "blurry"; the back of a head isn't a face either.
-        if let best = d.faces.filter(\.reliable).compactMap(\.sharpness).max() {
-            d.subjectSharpness = best
-        } else if let s = d.subject {
-            d.subjectSharpness = ImageStore.shared.sharpness(img, region: s.rect)
-        } else {
-            d.subjectSharpness = ImageStore.shared.sharpness(img)
+        if m.contains(.subject) {
+            d.subject = nil
+            if !d.faces.contains(where: \.reliable), let sal = try? await GenerateAttentionBasedSaliencyImageRequest().perform(on: img),
+               let o = sal.salientObjects.first {
+                let xs = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.x)
+                let ys = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.y)
+                let r = topDown(CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!))
+                d.subject = CGRectCodable(x: r.minX, y: r.minY, w: r.width, h: r.height)
+            }
+            // Sharpness of the "main" subject: the best of the large camera-facing faces, otherwise the saliency object, otherwise the frame center.
+            // A small face gets stretched when measured and always looks "blurry"; the back of a head isn't a face either.
+            if let best = d.faces.filter(\.reliable).compactMap(\.sharpness).max() {
+                d.subjectSharpness = best
+            } else if let s = d.subject {
+                d.subjectSharpness = ImageStore.shared.sharpness(img, region: s.rect)
+            } else {
+                d.subjectSharpness = ImageStore.shared.sharpness(img)
+            }
         }
 
-        // Tags: only labels the classifier is confident in (90% precision).
-        if let cls = try? await ClassifyImageRequest().perform(on: img) {
+        if m.contains(.tags), let cls = try? await ClassifyImageRequest().perform(on: img) {
+            // Only labels the classifier is confident in (90% precision).
             d.tags = Array(cls.filter { $0.hasMinimumRecall(0.01, forPrecision: 0.9) }
                 .sorted { $0.confidence > $1.confidence }.prefix(10).map(\.identifier))
         }
-        // Feature prints: of the whole photo (bursts) and of each sizeable face (people).
-        if let fp = try? await GenerateImageFeaturePrintRequest().perform(on: img) { d.print = fp.data }
-        for i in d.faces.indices.prefix(6) where (d.faces[i].px ?? 0) >= 80 {
-            let f = d.faces[i].rect
-            let r = CGRect(x: (f.midX - f.width * 0.7) * CGFloat(img.width), y: (f.midY - f.height * 0.7) * CGFloat(img.height),
-                           width: f.width * 1.4 * CGFloat(img.width), height: f.height * 1.4 * CGFloat(img.height))
-                .intersection(CGRect(x: 0, y: 0, width: img.width, height: img.height)).integral
-            if let crop = img.cropping(to: r), let fp = try? await GenerateImageFeaturePrintRequest().perform(on: crop) {
-                d.faces[i].print = fp.data
-            }
+        if m.contains(.similarity), let fp = try? await GenerateImageFeaturePrintRequest().perform(on: img) {
+            d.print = fp.data
         }
-        var humans = DetectHumanRectanglesRequest()
-        humans.upperBodyOnly = false
-        if let hs = try? await humans.perform(on: img) {
-            d.people = hs.filter { $0.confidence >= 0.5 }.map { o in
+        if m.contains(.people) {
+            var humans = DetectHumanRectanglesRequest()
+            humans.upperBodyOnly = false
+            d.people = ((try? await humans.perform(on: img)) ?? []).filter { $0.confidence >= 0.5 }.map { o in
                 let r = topDown(o.boundingBox.cgRect)
                 return CGRectCodable(x: r.minX, y: r.minY, w: r.width, h: r.height)
             }
         }
-        if let h = try? await DetectHorizonRequest().perform(on: img) {
-            d.horizon = h.angle.converted(to: .degrees).value
+        if m.contains(.horizon) {
+            d.horizon = (try? await DetectHorizonRequest().perform(on: img)).map { $0.angle.converted(to: .degrees).value }
         }
-        if let a = try? await CalculateImageAestheticsScoresRequest().perform(on: img) {
+        if m.contains(.aesthetics), let a = try? await CalculateImageAestheticsScoresRequest().perform(on: img) {
             d.aesthetics = Double(a.overallScore)
             d.utility = a.isUtility
         }
-        (d.clipHigh, d.clipLow, d.meanLuma, d.brightLuma) = clipping(img)
-        if let f = d.faces.first(where: \.reliable) { d.subjectClip = clipping(img, region: f.rect) }
-        else if let s = d.subject { d.subjectClip = clipping(img, region: s.rect) }
-        return d
+        if m.contains(.exposure) {
+            (d.clipHigh, d.clipLow, d.meanLuma, d.brightLuma) = clipping(img)
+            if let f = d.faces.first(where: \.reliable) { d.subjectClip = clipping(img, region: f.rect) }
+            else if let s = d.subject { d.subjectClip = clipping(img, region: s.rect) }
+            else { d.subjectClip = nil }
+        }
     }
 
     /// Fraction of overexposed pixels within a frame region.

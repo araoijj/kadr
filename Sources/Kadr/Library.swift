@@ -140,6 +140,10 @@ final class Library {
 
     // AI analysis (defect detection): started by a button; opening a folder only runs lightweight indexing.
     var aiRunning = false
+    /// Modules turned on in Settings → AI; findings of the others are hidden even if computed earlier.
+    var aiEnabled = Prefs.aiModules {
+        didSet { Prefs.setAIModules(aiEnabled) }
+    }
     var aiDone = 0
     var aiTotal = 0
     var aiCount = 0               // photos with finished AI analysis
@@ -474,7 +478,7 @@ final class Library {
             matches(p, filter)
                 && (lensFilter == nil || p.lensName == lensFilter)
                 && (dayFilter == nil || p.day == dayFilter)
-                && (tagFilter == nil || (p.cull?.tags?.contains(tagFilter!) ?? false))
+                && (tagFilter == nil || !aiEnabled.contains(.tags) || (p.cull?.tags?.contains(tagFilter!) ?? false))
         }
         .sorted(by: inOrder)
     }
@@ -695,7 +699,7 @@ final class Library {
         case .reason(let r): verdict(p).reasons.contains(r)
         case .scene(let id): p.sceneID == id
         case .recommended: isRecommended(p)
-        case .smiling: !p.rejected && (p.cull?.faces.contains { $0.meshUsable && ($0.smile ?? 0) >= 0.6 } ?? false)
+        case .smiling: aiEnabled.contains(.faces) && !p.rejected && (p.cull?.faces.contains { $0.meshUsable && ($0.smile ?? 0) >= 0.6 } ?? false)
         }
     }
 
@@ -877,12 +881,17 @@ final class Library {
     }
 
     /// The photo needs AI analysis: it hasn't had one yet, or its face eyes were measured the old way before the MediaPipe face mesh was installed.
-    func needsAI(_ p: Photo, mesh: Bool = FaceMesh.shared.installed) -> Bool {
-        guard let c = p.cull else { return true }
-        // Faces measured before the face mesh was installed, or before smiles were measured.
-        if c.tags == nil || c.print == nil { return true }   // analyzed before tags and feature prints
-        return mesh && !c.faces.isEmpty && (c.mesh != true || c.faces.contains { $0.blink != nil && $0.smile == nil })
+    /// Modules this photo still lacks: never computed, or (faces) measured before the face mesh or smiles existed.
+    func missingAI(_ p: Photo, enabled: Set<AIModule>? = nil, mesh: Bool = FaceMesh.shared.installed) -> Set<AIModule> {
+        let enabled = enabled ?? aiEnabled
+        guard let c = p.cull else { return enabled }
+        var miss = enabled.subtracting(c.computed)
+        if enabled.contains(.faces), mesh, !c.faces.isEmpty,
+           c.mesh != true || c.faces.contains(where: { $0.blink != nil && $0.smile == nil }) { miss.insert(.faces) }
+        return miss
     }
+
+    func needsAI(_ p: Photo, mesh: Bool = FaceMesh.shared.installed) -> Bool { !missingAI(p, mesh: mesh).isEmpty }
 
     var aiPending: Int {
         if aiRunning { return 0 }
@@ -895,8 +904,12 @@ final class Library {
     func startAI() {
         guard !aiRunning, analyzed >= photos.count else { return }
         FaceMesh.shared.installBundledIfNeeded()   // in case launch got ahead of the install at startup
-        let mesh = FaceMesh.shared.installed
-        let urls = photos.filter { needsAI($0, mesh: mesh) }.map(\.id)
+        let mesh = FaceMesh.shared.installed, enabled = aiEnabled
+        let jobs = photos.compactMap { p -> (URL, Set<AIModule>, CullData?)? in
+            let miss = missingAI(p, enabled: enabled, mesh: mesh)
+            return miss.isEmpty ? nil : (p.id, miss, p.cull)
+        }
+        let urls = jobs.map(\.0)
         guard !urls.isEmpty else { return }
         aiRunning = true; aiDone = 0; aiTotal = urls.count
         aiTask = Task { [weak self] in
@@ -904,12 +917,12 @@ final class Library {
             let workers = min(max(1, Prefs.analysisThreads), 4)
             var sinceSave = 0
             await withTaskGroup(of: (URL, CullData?).self) { group in
-                var it = urls.makeIterator()
+                var it = jobs.makeIterator()
                 func add() -> Bool {
-                    guard let u = it.next() else { return false }
+                    guard let (u, mods, base) = it.next() else { return false }
                     group.addTask(priority: .utility) {
                         guard let img = store.preview(u) else { return (u, nil) }
-                        return (u, await CullAnalyzer.analyze(img))
+                        return (u, await CullAnalyzer.analyze(img, modules: mods, into: base))
                     }
                     return true
                 }
@@ -949,6 +962,9 @@ final class Library {
     }
 
     func stopAI() { aiTask?.cancel() }
+
+    /// After modules are turned on or off: regroup bursts and recount (findings of off modules disappear).
+    func aiModulesChanged() { if !photos.isEmpty, !aiRunning, analyzed >= photos.count { finishAnalysis() } }
 
     /// Per-folder index: only analyzed files; deleted ones drop out on their own.
     private func saveIndex() {
@@ -1002,7 +1018,7 @@ final class Library {
             // within 30 s are the same burst; the hash still helps where prints disagree (dark frames).
             var looksSame = false
             if let ha = a.hash, let hb = b.hash, (ha ^ hb).nonzeroBitCount <= 12 { looksSame = true }
-            if !looksSame, let pa = a.cull?.print, let pb = b.cull?.print, let d = printDistance(pa, pb), d < 0.45 { looksSame = true }
+            if !looksSame, aiEnabled.contains(.similarity), let pa = a.cull?.print, let pb = b.cull?.print, let d = printDistance(pa, pb), d < 0.45 { looksSame = true }
             var similar = false
             if looksSame {
                 if let da = a.exif.date, let db = b.exif.date { similar = abs(db.timeIntervalSince(da)) <= 30 } else { similar = true }
