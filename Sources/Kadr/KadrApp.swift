@@ -90,6 +90,7 @@ struct KadrApp: App {
                         .keyboardShortcut("a", modifiers: [.command, .option])
                         .disabled(library.folder == nil || library.analyzed < library.photos.count || library.aiPending == 0)
                 }
+                AutoCropMenu(lib: library).disabled(library.folder == nil)
                 Button(tr("Пересчитать анализ папки")) { library.reanalyze() }
                 Button(tr("Показать в Finder")) { library.revealCurrent() }
                     .keyboardShortcut("r", modifiers: [.command, .shift])
@@ -114,8 +115,10 @@ struct KeyHandler {
             switch e.keyCode {
             case 36, 76: lib.finishCrop(); return true      // Enter: done
             case 53: lib.cancelCrop(); return true          // Esc: cancel
+            case 124 where !lib.autoCropQueue.isEmpty: lib.cancelCrop(); return true   // →: skip this suggestion
             default: break
             }
+            if ["a", "ф"].contains(e.charactersIgnoringModifiers?.lowercased() ?? "") { lib.autoCropCurrent(); return true }   // A: auto crop
             if ["r", "к"].contains(e.charactersIgnoringModifiers?.lowercased() ?? "") { lib.finishCrop(); return true }
         }
         if lib.tournamentActive {

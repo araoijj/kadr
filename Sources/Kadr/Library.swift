@@ -223,6 +223,13 @@ final class Library {
     var cropMode = false
     private var cropBackup: Adjustments?
 
+    // Auto crop review (AutoCrop.swift): suggestions open one by one in the crop editor.
+    var autoCropQueue: [URL] = []
+    var autoCropPos = 0
+    var autoCropAccepted = 0
+    var autoCropRatio: Double?          // nil — keep each photo's own proportions
+    var autoCropBusy = false
+
     func startCrop() {
         guard current != nil else { return }
         cropBackup = current?.adj
@@ -243,12 +250,14 @@ final class Library {
         }
         cropMode = false
         cropBackup = nil
+        autoCropAdvance(accepted: true)
     }
 
     func cancelCrop() {
         if let b = cropBackup { withoutHistory { setAdjustments(b) } }
         cropMode = false
         cropBackup = nil
+        autoCropAdvance(accepted: false)
     }
 
     func resetCrop() {

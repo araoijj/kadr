@@ -43,6 +43,9 @@ struct PhotoContextMenu: ViewModifier {
         Button(tr("Вставить обработку") + suffix, systemImage: "doc.on.clipboard") { act { lib.pasteAdjustments() } }
             .disabled(lib.copiedAdj == nil)
         Button(tr("Сбросить обработку") + suffix, systemImage: "arrow.counterclockwise") { act { lib.resetAdjustments() } }
+        Button(n > 1 ? tr("Предложить кадрирование") + suffix : tr("Предложить кадрирование (A)"), systemImage: "sparkles") {
+            act { if lib.multiSelected { lib.startAutoCropReview(ratio: nil) } else { lib.autoCropCurrent() } }
+        }
 
         Divider()
 

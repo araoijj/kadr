@@ -3408,5 +3408,90 @@
   "built into Kadr",
   "integrados en Kadr",
   "integrati in Kadr"
+ ],
+ "Кадр уже скомпонован — предложить нечего": [
+  "The photo is already well composed — nothing to suggest",
+  "La foto ya está bien compuesta: no hay nada que sugerir",
+  "La foto è già ben composta: niente da suggerire"
+ ],
+ "Оставьте кадры (P) или выделите нужные — им будет предложено кадрирование": [
+  "Keep photos (P) or select some — they will get crop suggestions",
+  "Conserva fotos (P) o selecciona algunas: recibirán sugerencias de recorte",
+  "Tieni le foto (P) o selezionane alcune: riceveranno suggerimenti di ritaglio"
+ ],
+ "Автокадрирование: принято {}": [
+  "Auto crop: {} accepted",
+  "Recorte automático: {} aceptados",
+  "Ritaglio automatico: {} accettati"
+ ],
+ "Автокадрирование: принято {} из {}": [
+  "Auto crop: {} of {} accepted",
+  "Recorte automático: {} de {} aceptados",
+  "Ritaglio automatico: {} su {} accettati"
+ ],
+ "Предложить кадрирование": [
+  "Suggest Crop",
+  "Sugerir recorte",
+  "Suggerisci ritaglio"
+ ],
+ "Как снято (только композиция и горизонт)": [
+  "As shot (composition and horizon only)",
+  "Como se tomó (solo composición y horizonte)",
+  "Come scattata (solo composizione e orizzonte)"
+ ],
+ "4:5 — пост Instagram": [
+  "4:5 — Instagram post",
+  "4:5 — publicación de Instagram",
+  "4:5 — post Instagram"
+ ],
+ "1:1 — квадрат": [
+  "1:1 — square",
+  "1:1 — cuadrado",
+  "1:1 — quadrato"
+ ],
+ "9:16 — сторис, Reels": [
+  "9:16 — Stories, Reels",
+  "9:16 — Stories, Reels",
+  "9:16 — Storie, Reel"
+ ],
+ "16:9 — обложка, видео": [
+  "16:9 — cover, video",
+  "16:9 — portada, vídeo",
+  "16:9 — copertina, video"
+ ],
+ "Оставленным кадрам (или выделенным) по очереди — рамка от AI; каждую принимаете или пропускаете": [
+  "Kept (or selected) photos one by one get an AI crop; accept or skip each",
+  "Las fotos conservadas (o seleccionadas), una a una, reciben un recorte de la IA; acepta u omite cada uno",
+  "Le foto tenute (o selezionate), una alla volta, ricevono un ritaglio dall’IA; accetta o salta ciascuno"
+ ],
+ "Автокадрирование {} из {}": [
+  "Auto crop {} of {}",
+  "Recorte automático {} de {}",
+  "Ritaglio automatico {} di {}"
+ ],
+ "Enter — принять (можно поправить рамку) · Esc или → — пропустить": [
+  "Enter — accept (adjust the frame first if you like) · Esc or → — skip",
+  "Enter: aceptar (puedes ajustar el marco antes) · Esc o →: omitir",
+  "Invio: accetta (puoi regolare la cornice prima) · Esc o →: salta"
+ ],
+ "Закончить": [
+  "Finish",
+  "Terminar",
+  "Termina"
+ ],
+ "Авто": [
+  "Auto",
+  "Auto",
+  "Auto"
+ ],
+ "AI предложит рамку и горизонт: лица и главный объект — по третям, в выбранном формате (A)": [
+  "AI suggests a frame and horizon: faces and the main subject on the thirds, in the chosen format (A)",
+  "La IA sugiere marco y horizonte: caras y sujeto principal en los tercios, en el formato elegido (A)",
+  "L’IA suggerisce cornice e orizzonte: volti e soggetto principale sui terzi, nel formato scelto (A)"
+ ],
+ "Предложить кадрирование (A)": [
+  "Suggest Crop (A)",
+  "Sugerir recorte (A)",
+  "Suggerisci ritaglio (A)"
  ]
 }

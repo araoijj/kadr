@@ -171,6 +171,8 @@ struct CullTopBar: View {
         Menu(tr("AI-действия")) {
             Button(tr("Отклонить предложенный брак…")) { lib.acceptSuggestions() }
             Button(tr("Оставить лучшие в сериях, остальные в брак…")) { lib.keepBestInSeries() }
+            Divider()
+            AutoCropMenu(lib: lib)
         }
         .fixedSize()
     }

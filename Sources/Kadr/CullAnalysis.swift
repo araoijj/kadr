@@ -46,6 +46,7 @@ struct CullData: Codable, Sendable, Hashable {
     var horizon: Double?            // horizon tilt, degrees
     var aesthetics: Double?         // frame aesthetics as scored by macOS (−1…1)
     var utility = false             // utility frame: screen, document, accidental shot
+    var people: [CGRectCodable]?    // full-body boxes of people (for auto crop: never cut a figure)
     var mesh: Bool?                 // eyes were measured by the MediaPipe face mesh (frames with faces are reanalyzed after the models are installed)
 }
 
@@ -124,6 +125,14 @@ enum CullAnalyzer {
             d.subjectSharpness = ImageStore.shared.sharpness(img)
         }
 
+        var humans = DetectHumanRectanglesRequest()
+        humans.upperBodyOnly = false
+        if let hs = try? await humans.perform(on: img) {
+            d.people = hs.filter { $0.confidence >= 0.5 }.map { o in
+                let r = topDown(o.boundingBox.cgRect)
+                return CGRectCodable(x: r.minX, y: r.minY, w: r.width, h: r.height)
+            }
+        }
         if let h = try? await DetectHorizonRequest().perform(on: img) {
             d.horizon = h.angle.converted(to: .degrees).value
         }

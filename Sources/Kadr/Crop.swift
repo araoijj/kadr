@@ -247,7 +247,28 @@ struct CropBar: View {
     var body: some View {
         let adj = lib.current?.adj ?? Adjustments()
         VStack(spacing: 8) {
+            if !lib.autoCropQueue.isEmpty {
+                // Auto crop review: one suggestion at a time, the photographer decides.
+                HStack(spacing: 10) {
+                    Label(tr("Автокадрирование \(lib.autoCropPos + 1) из \(lib.autoCropQueue.count)"), systemImage: "sparkles")
+                        .font(.callout.weight(.semibold)).foregroundStyle(Color.accentColor)
+                    Text(tr("Enter — принять (можно поправить рамку) · Esc или → — пропустить"))
+                        .font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button(tr("Закончить")) { lib.stopAutoCropReview() }.controlSize(.small)
+                }
+            }
             HStack(spacing: 4) {
+                Button { lib.autoCropCurrent() } label: {
+                    HStack(spacing: 4) {
+                        if lib.autoCropBusy { ProgressView().controlSize(.mini) } else { Image(systemName: "sparkles") }
+                        Text(tr("Авто")).font(.caption.weight(.semibold))
+                    }
+                    .padding(.horizontal, 8).padding(.vertical, 6)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.accentColor.opacity(0.25)))
+                }
+                .buttonStyle(.plain)
+                .help(tr("AI предложит рамку и горизонт: лица и главный объект — по третям, в выбранном формате (A)"))
                 ForEach(CropFormat.all) { f in
                     Button { lib.applyCropFormat(f) } label: {
                         VStack(spacing: 0) {

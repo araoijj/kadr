@@ -40,6 +40,7 @@ It is built in SwiftUI with Core Image and Apple Vision — no Electron, no subs
 ### Quick edits and export
 - **Lightroom-style controls:** exposure ±5 EV, white balance in Kelvin from the RAW “as shot” value, tint, contrast, highlights, shadows, clarity, vibrance, saturation, toning, vignette, grain — live on the RAW (~25 ms per slider move). A **Camera matching** profile starts from the camera’s own JPEG colors.
 - **Styles and LUTs:** ~36 built-in recipes (portrait, landscape, cinema, black & white, film looks), your own presets, `.cube` and HaldCLUT LUTs with adjustable strength; a free film LUT pack downloads from within the app.
+- **AI crop suggestions:** for kept or selected photos, Kadr proposes a crop one photo at a time — whole figures are never cut, faces go to the rule of thirds, small horizon tilts are leveled; press Enter to accept (or adjust the frame first), Esc to skip. Also **Auto** (A) in the crop editor.
 - **Crop and straighten (R)** with Instagram formats (4:5, 1:1, 9:16, 1.91:1) and classic ratios.
 - **Before / after split (Y)** and an undo history journal (⌘Z / ⇧⌘Z, up to 100 steps per folder, kept between launches).
 - **Save to folder:** original RAW+XMP (copy or move) or JPEG with size, quality (with a file-size estimate), watermark and file-name template; export presets for Instagram feed, Stories/Reels and web.
