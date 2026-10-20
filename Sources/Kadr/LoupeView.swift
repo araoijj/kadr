@@ -12,11 +12,12 @@ struct LoupeView: View {
                         FullResView(photo: p, adj: lib.showOriginal ? .none : p.adj)
                     } else {
                         Group {
-                            // Для отбора хватает встроенного превью; с обработкой — проявляем RAW.
-                            if p.adj.isIdentity && lib.inspectorTab != .edit {
+                            // Без правок (и в режиме «До») — JPEG камеры как есть: открытие вкладки
+                            // «Обработка» ничего не меняет. С правками — проявляем RAW с профилем камеры.
+                            if p.adj.isIdentity || lib.showOriginal {
                                 PreviewImage(photo: p)
                             } else {
-                                EditedImage(photo: p, adj: lib.showOriginal ? .none : p.adj)
+                                EditedImage(photo: p, adj: p.adj)
                             }
                         }
                             .padding(20)

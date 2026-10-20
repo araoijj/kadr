@@ -63,6 +63,18 @@ final class Library {
     var styles: [Style] = Style.builtIns + StyleStore.load()
     var luts: [String] = LUTStore.shared.list()
     var copiedAdj: Adjustments?
+    let collections = CollectionDownloader()
+
+    func downloadCollection(_ c: LUTCollection) {
+        collections.download(c) { [weak self] in self?.luts = LUTStore.shared.list() }
+    }
+
+    /// Стили по коллекциям в заданном порядке.
+    var styleGroups: [(name: String, styles: [Style])] {
+        let groups = Dictionary(grouping: styles, by: \.collection)
+        let order = Style.collectionOrder + groups.keys.filter { !Style.collectionOrder.contains($0) }.sorted()
+        return order.compactMap { k in groups[k].map { (k, $0) } }
+    }
     private var saveEditsTask: Task<Void, Never>?
 
     /// Ползунки двигают только текущий кадр (как основной вариант в Capture One).

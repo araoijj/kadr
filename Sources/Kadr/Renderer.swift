@@ -24,7 +24,8 @@ final class Renderer: @unchecked Sendable {
             queue.async {
                 guard self.current(channel) == gen else { cont.resume(returning: nil); return }
                 guard let base = self.base(url, maxSide: maxSide) else { cont.resume(returning: nil); return }
-                let out = EditPipeline.apply(adj, to: base)
+                let cube = adj.profile == .camera ? CameraMatch.shared.cube(for: url) : nil
+                let out = EditPipeline.apply(adj, to: base, cameraCube: cube)
                 let cg = self.context.createCGImage(out, from: out.extent.integral, format: .RGBA8,
                                                     colorSpace: CGColorSpace(name: CGColorSpace.displayP3))
                 cont.resume(returning: cg)
@@ -33,12 +34,12 @@ final class Renderer: @unchecked Sendable {
     }
 
     /// Миниатюра с обработкой: фильтры поверх встроенного превью (быстро, близко к итогу).
-    func thumbnail(_ url: URL, _ adj: Adjustments) -> CGImage? {
-        let key = "\(url.path)|\(adj.hashValue)" as NSString
+    func thumbnail(_ url: URL, _ adj: Adjustments, size: CGFloat = 640) -> CGImage? {
+        let key = "\(url.path)|\(adj.hashValue)|\(Int(size))" as NSString
         if let c = thumbs.object(forKey: key) { return c }
         guard let prev = ImageStore.shared.preview(url) else { return nil }
         var img = CIImage(cgImage: prev)
-        let k = 640 / max(img.extent.width, img.extent.height)
+        let k = size / max(img.extent.width, img.extent.height)
         if k < 1 { img = img.transformed(by: CGAffineTransform(scaleX: k, y: k)) }
         let out = EditPipeline.apply(adj, to: img)
         guard let cg = context.createCGImage(out, from: out.extent.integral, format: .RGBA8,
@@ -58,8 +59,8 @@ final class Renderer: @unchecked Sendable {
         return await Task.detached(priority: .userInitiated) { shared.thumbnail(url, adj) }.value
     }
 
-    func cachedThumbnail(_ url: URL, _ adj: Adjustments) -> CGImage? {
-        thumbs.object(forKey: "\(url.path)|\(adj.hashValue)" as NSString)
+    func cachedThumbnail(_ url: URL, _ adj: Adjustments, size: CGFloat = 640) -> CGImage? {
+        thumbs.object(forKey: "\(url.path)|\(adj.hashValue)|\(Int(size))" as NSString)
     }
 
     // MARK: -

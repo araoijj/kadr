@@ -129,7 +129,9 @@ enum Exporter {
     /// Проявление RAW → обработка → водяной знак → JPEG sRGB с EXIF исходника.
     private static func writeJPEG(_ item: ExportItem, to target: URL, _ s: ExportSettings) -> Bool {
         guard var img = EditPipeline.source(item.url, maxSide: s.longSide > 0 ? CGFloat(s.longSide) : nil) else { return false }
-        if s.applyEdits { img = EditPipeline.apply(item.adj, to: img) }
+        // Без обработки — всё равно с профилем «как в камере», чтобы цвета совпадали с превью.
+        let adj = s.applyEdits ? item.adj : Adjustments()
+        img = EditPipeline.apply(adj, to: img, cameraCube: adj.profile == .camera ? CameraMatch.shared.cube(for: item.url) : nil)
         if s.watermarkOn {
             img = EditPipeline.watermark(img, text: s.watermarkText, sizePercent: s.watermarkSize,
                                          opacity: s.watermarkOpacity, position: s.watermarkPosition)

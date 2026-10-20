@@ -1,9 +1,16 @@
 import AppKit
 import CoreImage
 import Foundation
+import ImageIO
 
-/// Настройки обработки кадра. Все ползунки −100…100 (экспозиция — в EV), 0 — без изменений.
+/// Настройки обработки кадра. Ползунки −100…100 (экспозиция — в EV, оттенки — в градусах), 0 — без изменений.
 struct Adjustments: Codable, Equatable, Hashable {
+    enum Profile: String, Codable, CaseIterable {
+        case camera     // цвета как в JPEG камеры (подбираются по встроенному превью)
+        case standard   // проявление macOS как есть
+    }
+
+    var profile: Profile = .camera
     var exposure: Double = 0      // −3…+3 EV
     var temperature: Double = 0   // холоднее ← → теплее
     var tint: Double = 0          // зеленее ← → пурпурнее
@@ -11,14 +18,45 @@ struct Adjustments: Codable, Equatable, Hashable {
     var highlights: Double = 0
     var shadows: Double = 0
     var fade: Double = 0          // 0…100, «матовость» — приподнятые чёрные
+    var clarity: Double = 0       // локальный контраст
     var vibrance: Double = 0
     var saturation: Double = 0
-    var lut: String?              // имя файла .cube из папки LUT
+    var shadowHue: Double = 0     // тонирование теней: 0…360
+    var shadowSat: Double = 0     // 0…100
+    var highlightHue: Double = 0  // тонирование светов
+    var highlightSat: Double = 0
+    var vignette: Double = 0      // − затемнить края, + осветлить
+    var grain: Double = 0         // 0…100
+    var lut: String?              // путь в папке LUT (.cube или HaldCLUT .png)
     var lutAmount: Double = 100   // 0…100
 
     static let none = Adjustments()
-    /// Без изменений: все ползунки на нуле и LUT не выбран (его сила тогда не важна).
+    /// Без изменений: всё по умолчанию и LUT не выбран (его сила тогда не важна).
     var isIdentity: Bool { var a = self; a.lutAmount = 100; return a == .none }
+}
+
+extension Adjustments {
+    /// Сборка рецепта: Adjustments { $0.contrast = 20; $0.vibrance = 30 }
+    init(_ build: (inout Adjustments) -> Void) {
+        self.init()
+        build(&self)
+    }
+
+    /// Старые edits.json и styles.json без новых полей тоже читаются.
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        self.init()
+        func v(_ k: CodingKeys) -> Double? { try? c.decodeIfPresent(Double.self, forKey: k) }
+        profile = (try? c.decodeIfPresent(Profile.self, forKey: .profile)) ?? .camera
+        exposure = v(.exposure) ?? 0; temperature = v(.temperature) ?? 0; tint = v(.tint) ?? 0
+        contrast = v(.contrast) ?? 0; highlights = v(.highlights) ?? 0; shadows = v(.shadows) ?? 0
+        fade = v(.fade) ?? 0; clarity = v(.clarity) ?? 0; vibrance = v(.vibrance) ?? 0; saturation = v(.saturation) ?? 0
+        shadowHue = v(.shadowHue) ?? 0; shadowSat = v(.shadowSat) ?? 0
+        highlightHue = v(.highlightHue) ?? 0; highlightSat = v(.highlightSat) ?? 0
+        vignette = v(.vignette) ?? 0; grain = v(.grain) ?? 0
+        lut = try? c.decodeIfPresent(String.self, forKey: .lut)
+        lutAmount = v(.lutAmount) ?? 100
+    }
 }
 
 struct Style: Codable, Identifiable, Hashable {
@@ -26,17 +64,32 @@ struct Style: Codable, Identifiable, Hashable {
     var name: String
     var adj: Adjustments
     var builtIn = false
+    var collection = "Мои стили"
 
-    static let builtIns: [Style] = [
-        Style(name: "Тёплый свет", adj: .init(temperature: 25, shadows: 10, vibrance: 15), builtIn: true),
-        Style(name: "Холодный", adj: .init(temperature: -25, saturation: -5), builtIn: true),
-        Style(name: "Мягкий портрет", adj: .init(temperature: 8, contrast: -15, highlights: -20, shadows: 20, vibrance: -10), builtIn: true),
-        Style(name: "Сочный", adj: .init(contrast: 20, vibrance: 35), builtIn: true),
-        Style(name: "Яркий день", adj: .init(exposure: 0.3, highlights: -25, shadows: 25, vibrance: 20), builtIn: true),
-        Style(name: "Матовая плёнка", adj: .init(temperature: 10, contrast: -10, fade: 30, saturation: -15), builtIn: true),
-        Style(name: "Ч/Б контраст", adj: .init(contrast: 35, saturation: -100), builtIn: true),
-        Style(name: "Ч/Б мягкий", adj: .init(contrast: -10, fade: 20, saturation: -100), builtIn: true),
-    ]
+    init(_ name: String, _ collection: String, builtIn: Bool = true, _ build: (inout Adjustments) -> Void) {
+        self.name = name
+        self.collection = collection
+        self.builtIn = builtIn
+        self.adj = Adjustments(build)
+    }
+
+    init(name: String, adj: Adjustments) {
+        self.name = name
+        self.adj = adj
+        builtIn = false
+    }
+
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        id = (try? c.decode(UUID.self, forKey: .id)) ?? UUID()
+        name = try c.decode(String.self, forKey: .name)
+        adj = try c.decode(Adjustments.self, forKey: .adj)
+        builtIn = false
+        collection = (try? c.decode(String.self, forKey: .collection)) ?? "Мои стили"
+    }
+
+    /// Нужен ли для стиля LUT, которого ещё нет (коллекцию не скачали).
+    var missingLUT: Bool { adj.lut.map { !LUTStore.shared.exists($0) } ?? false }
 }
 
 // MARK: - Хранилища
@@ -89,35 +142,77 @@ enum StyleStore {
     }
 }
 
-/// LUT в формате .cube (3D). Разбираем один раз и держим в памяти.
+/// LUT: .cube (3D) или HaldCLUT .png любого уровня. Разбираем один раз и держим в памяти.
+/// Лежат в папке LUT приложения, в том числе в подпапках-коллекциях.
 final class LUTStore: @unchecked Sendable {
     static let shared = LUTStore()
     private let lock = NSLock()
     private var cache: [String: (size: Int, data: Data)] = [:]
 
+    static func isLUT(_ name: String) -> Bool {
+        let e = (name as NSString).pathExtension.lowercased()
+        return e == "cube" || e == "png"
+    }
+
+    /// Относительные пути всех LUT, например «t3mujinpack/… Portra 400.png».
     func list() -> [String] {
-        ((try? FileManager.default.contentsOfDirectory(atPath: AppFolders.luts.path)) ?? [])
-            .filter { $0.lowercased().hasSuffix(".cube") }
-            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        let root = AppFolders.luts
+        let en = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+        var out: [String] = []
+        while let u = en?.nextObject() as? URL {
+            guard Self.isLUT(u.lastPathComponent) else { continue }
+            out.append(String(u.standardizedFileURL.path.dropFirst(root.standardizedFileURL.path.count + 1)))
+        }
+        return out.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    func exists(_ name: String) -> Bool { FileManager.default.fileExists(atPath: AppFolders.luts.appendingPathComponent(name).path) }
+
+    /// Человеческое имя: без папки, расширения и префикса коллекции.
+    static func displayName(_ path: String) -> String {
+        var n = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
+        for prefix in ["t3mujinpack - "] where n.hasPrefix(prefix) { n = String(n.dropFirst(prefix.count)) }
+        for cat in ["Color Negative - ", "Color Slide - ", "Black and White - "] where n.hasPrefix(cat) { n = String(n.dropFirst(cat.count)) }
+        return n
+    }
+
+    /// Группа для списка: папка коллекции + категория плёнки.
+    static func group(_ path: String) -> String {
+        let folder = (path as NSString).deletingLastPathComponent
+        let n = (path as NSString).lastPathComponent
+        let cat = n.contains("Color Negative") ? "негатив" : n.contains("Color Slide") ? "слайд" : n.contains("Black and White") ? "ч/б" : nil
+        let base = folder.isEmpty ? "Мои LUT" : folder
+        return cat.map { "\(base) · \($0)" } ?? base
     }
 
     /// Копирует файлы в папку LUT приложения. Возвращает имена принятых.
     func importFiles(_ urls: [URL]) -> [String] {
         var ok: [String] = []
-        for u in urls where u.pathExtension.lowercased() == "cube" {
+        for u in urls where Self.isLUT(u.lastPathComponent) {
             let dest = AppFolders.luts.appendingPathComponent(u.lastPathComponent)
             try? FileManager.default.removeItem(at: dest)
             if (try? FileManager.default.copyItem(at: u, to: dest)) != nil, cube(u.lastPathComponent) != nil {
                 ok.append(u.lastPathComponent)
+            } else {
+                try? FileManager.default.removeItem(at: dest)
             }
         }
         return ok
     }
 
     func cube(_ name: String) -> (size: Int, data: Data)? {
-        lock.lock(); defer { lock.unlock() }
-        if let c = cache[name] { return c }
-        guard let text = try? String(contentsOf: AppFolders.luts.appendingPathComponent(name), encoding: .utf8) else { return nil }
+        lock.lock()
+        if let c = cache[name] { lock.unlock(); return c }
+        lock.unlock()
+        let url = AppFolders.luts.appendingPathComponent(name)
+        let parsed = url.pathExtension.lowercased() == "png" ? Self.parseHald(url) : Self.parseCube(url)
+        guard let parsed else { return nil }
+        lock.lock(); cache[name] = parsed; lock.unlock()
+        return parsed
+    }
+
+    private static func parseCube(_ url: URL) -> (size: Int, data: Data)? {
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
         var size = 0
         var values: [Float] = []
         var lo: [Float] = [0, 0, 0], hi: [Float] = [1, 1, 1]
@@ -135,20 +230,65 @@ final class LUTStore: @unchecked Sendable {
             values.append(1)
         }
         guard size >= 2, values.count == size * size * size * 4 else { return nil }
-        let data = values.withUnsafeBufferPointer { Data(buffer: $0) }
-        cache[name] = (size, data)
-        return (size, data)
+        return (size, values.withUnsafeBufferPointer { Data(buffer: $0) })
+    }
+
+    /// HaldCLUT уровня L: картинка L³×L³, куб L²; при кубе больше 64 — пересэмплируем до 64.
+    private static func parseHald(_ url: URL) -> (size: Int, data: Data)? {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let img = CGImageSourceCreateImageAtIndex(src, 0, nil), img.width == img.height else { return nil }
+        let w = img.width
+        let level = Int(pow(Double(w), 1.0 / 3).rounded())   // w = L³ → L
+        guard level >= 2, level * level * level == w else { return nil }
+        let n = level * level
+        var px = [UInt8](repeating: 0, count: w * w * 4)
+        guard let ctx = CGContext(data: &px, width: w, height: w, bitsPerComponent: 8, bytesPerRow: w * 4,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
+        ctx.draw(img, in: CGRect(x: 0, y: 0, width: w, height: w))
+        // В HaldCLUT красный меняется быстрее всего — как в кубе Core Image.
+        func at(_ r: Int, _ g: Int, _ b: Int, _ ch: Int) -> Float { Float(px[(r + g * n + b * n * n) * 4 + ch]) / 255 }
+        let out = min(n, 64)
+        var values = [Float](repeating: 1, count: out * out * out * 4)
+        let k = Float(n - 1) / Float(out - 1)
+        for b in 0..<out {
+            for g in 0..<out {
+                for r in 0..<out {
+                    let fr = Float(r) * k, fg = Float(g) * k, fb = Float(b) * k
+                    let r0 = Int(fr), g0 = Int(fg), b0 = Int(fb)
+                    let r1 = min(r0 + 1, n - 1), g1 = min(g0 + 1, n - 1), b1 = min(b0 + 1, n - 1)
+                    let dr = fr - Float(r0), dg = fg - Float(g0), db = fb - Float(b0)
+                    let i = (r + g * out + b * out * out) * 4
+                    for ch in 0..<3 {
+                        let c00 = at(r0, g0, b0, ch) * (1 - dr) + at(r1, g0, b0, ch) * dr
+                        let c10 = at(r0, g1, b0, ch) * (1 - dr) + at(r1, g1, b0, ch) * dr
+                        let c01 = at(r0, g0, b1, ch) * (1 - dr) + at(r1, g0, b1, ch) * dr
+                        let c11 = at(r0, g1, b1, ch) * (1 - dr) + at(r1, g1, b1, ch) * dr
+                        values[i + ch] = (c00 * (1 - dg) + c10 * dg) * (1 - db) + (c01 * (1 - dg) + c11 * dg) * db
+                    }
+                }
+            }
+        }
+        return (out, values.withUnsafeBufferPointer { Data(buffer: $0) })
     }
 }
 
 // MARK: - Конвейер обработки
 
 enum EditPipeline {
-    /// Применяет настройки к линейному изображению (выход CIRAWFilter или превью).
-    static func apply(_ a: Adjustments, to input: CIImage) -> CIImage {
-        guard !a.isIdentity else { return input }
-        var img = input
+    static let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
 
+    private static let grainKernel = CIColorKernel(source:
+        "kernel vec4 grain(__sample s, __sample n, float a) { return vec4(s.rgb * (1.0 + (n.r - 0.5) * a), s.a); }")!
+
+    /// Применяет настройки к линейному изображению (выход CIRAWFilter или превью).
+    /// cameraCube — подобранный профиль «как в камере» (только для проявленного RAW).
+    static func apply(_ a: Adjustments, to input: CIImage, cameraCube: (size: Int, data: Data)? = nil) -> CIImage {
+        var img = input
+        let e = input.extent
+        let longSide = max(e.width, e.height)
+
+        // 1. Линейная часть — как «Основные» в Lightroom: до профиля.
         if a.exposure != 0 {
             img = img.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: a.exposure])
         }
@@ -156,10 +296,9 @@ enum EditPipeline {
             // Знаки подобраны замером R/G/B: «+» температура — теплее, «+» оттенок — пурпурнее.
             img = img.applyingFilter("CITemperatureAndTint", parameters: [
                 "inputNeutral": CIVector(x: 6500, y: 0),
-                "inputTargetNeutral": CIVector(x: 6500 - a.temperature * 30, y: -a.tint),  // минус: «+» = пурпурнее
+                "inputTargetNeutral": CIVector(x: 6500 - a.temperature * 30, y: -a.tint),
             ])
         }
-        // Восстановление светов и подъём теней — локальный фильтр, работает лучше кривой.
         let hlAmount = a.highlights < 0 ? 1 + a.highlights / 100 : 1
         let shAmount = a.shadows > 0 ? a.shadows / 100 : 0
         if hlAmount != 1 || shAmount != 0 {
@@ -167,20 +306,36 @@ enum EditPipeline {
                 "inputHighlightAmount": hlAmount, "inputShadowAmount": shAmount, "inputRadius": 0,
             ])
         }
-        // Кривая в гамма-пространстве: контраст, «плюсовые» света, «минусовые» тени, матовость.
+
+        // 2. Профиль камеры: цвета и тон как в JPEG Sony.
+        if a.profile == .camera, let cube = cameraCube {
+            img = img.applyingFilter("CIColorCubeWithColorSpace", parameters: [
+                "inputCubeDimension": cube.size, "inputCubeData": cube.data, "inputColorSpace": srgb,
+            ])
+        }
+
+        // 3. Чёткость — локальный контраст крупным радиусом (масштабируется с размером кадра).
+        if a.clarity != 0 {
+            let radius = longSide * 0.012
+            if a.clarity > 0 {
+                img = img.applyingFilter("CIUnsharpMask", parameters: [kCIInputRadiusKey: radius, kCIInputIntensityKey: a.clarity / 100 * 0.6])
+            } else {
+                let blur = img.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: radius]).cropped(to: e)
+                img = img.applyingFilter("CIDissolveTransition", parameters: [kCIInputTargetImageKey: blur, kCIInputTimeKey: -a.clarity / 100 * 0.35])
+            }
+        }
+
+        // 4. Кривая в гамма-пространстве: контраст, «плюсовые» света, «минусовые» тени, матовость.
         let c = a.contrast / 100
         let hUp = max(a.highlights, 0) / 100, sDown = min(a.shadows, 0) / 100
         let f = a.fade / 100
         if c != 0 || hUp != 0 || sDown != 0 || f != 0 {
-            let p0 = 0.0 + f * 0.14
-            let p1 = 0.25 - c * 0.07 + sDown * 0.10 + f * 0.06
-            let p3 = 0.75 + c * 0.07 + hUp * 0.10
             img = img.applyingFilter("CILinearToSRGBToneCurve")
                 .applyingFilter("CIToneCurve", parameters: [
-                    "inputPoint0": CIVector(x: 0, y: p0),
-                    "inputPoint1": CIVector(x: 0.25, y: p1),
+                    "inputPoint0": CIVector(x: 0, y: f * 0.14),
+                    "inputPoint1": CIVector(x: 0.25, y: 0.25 - c * 0.07 + sDown * 0.10 + f * 0.06),
                     "inputPoint2": CIVector(x: 0.5, y: 0.5 + f * 0.02),
-                    "inputPoint3": CIVector(x: 0.75, y: p3),
+                    "inputPoint3": CIVector(x: 0.75, y: 0.75 + c * 0.07 + hUp * 0.10),
                     "inputPoint4": CIVector(x: 1, y: 1 - f * 0.04),
                 ])
                 .applyingFilter("CISRGBToneCurveToLinear")
@@ -191,8 +346,9 @@ enum EditPipeline {
         if a.saturation != 0 {
             img = img.applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 1 + a.saturation / 100])
         }
-        if let name = a.lut, a.lutAmount > 0, let cube = LUTStore.shared.cube(name),
-           let srgb = CGColorSpace(name: CGColorSpace.sRGB) {
+
+        // 5. LUT.
+        if let name = a.lut, a.lutAmount > 0, let cube = LUTStore.shared.cube(name) {
             let lutted = img.applyingFilter("CIColorCubeWithColorSpace", parameters: [
                 "inputCubeDimension": cube.size, "inputCubeData": cube.data, "inputColorSpace": srgb,
             ])
@@ -200,10 +356,49 @@ enum EditPipeline {
                 kCIInputTargetImageKey: lutted, kCIInputTimeKey: a.lutAmount / 100,
             ])
         }
-        return img.cropped(to: input.extent)
+
+        // 6. Тонирование теней и светов: мягкий свет цветом, маской по яркости.
+        if a.shadowSat > 0 { img = tone(img, hue: a.shadowHue, sat: a.shadowSat, shadows: true) }
+        if a.highlightSat > 0 { img = tone(img, hue: a.highlightHue, sat: a.highlightSat, shadows: false) }
+
+        // 7. Виньетка.
+        if a.vignette != 0 {
+            img = img.applyingFilter("CIVignetteEffect", parameters: [
+                kCIInputCenterKey: CIVector(x: e.midX, y: e.midY),
+                kCIInputRadiusKey: hypot(e.width, e.height) * 0.42,
+                kCIInputIntensityKey: -a.vignette / 100,
+                "inputFalloff": 0.6,
+            ])
+        }
+
+        // 8. Зерно: каждый пиксель умножается на 1 ± шум (средняя яркость не меняется — проверено замером).
+        // Шум укрупнён по размеру кадра — одинаково на превью и в экспорте.
+        if a.grain > 0 {
+            let scale = max(1, longSide / 2400)
+            let noise = CIFilter(name: "CIRandomGenerator")!.outputImage!
+                .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                .cropped(to: e)
+            img = grainKernel.apply(extent: e, arguments: [img, noise, a.grain / 100 * 0.7]) ?? img
+        }
+        return img.cropped(to: e)
+    }
+
+    private static func tone(_ img: CIImage, hue: Double, sat: Double, shadows: Bool) -> CIImage {
+        let e = img.extent
+        let rgb = NSColor(hue: hue / 360, saturation: 1, brightness: 1, alpha: 1).usingColorSpace(.sRGB) ?? .gray
+        let k = sat / 100 * 0.6
+        let color = CIImage(color: CIColor(red: 0.5 + (rgb.redComponent - 0.5) * k,
+                                           green: 0.5 + (rgb.greenComponent - 0.5) * k,
+                                           blue: 0.5 + (rgb.blueComponent - 0.5) * k)).cropped(to: e)
+        let toned = color.applyingFilter("CISoftLightBlendMode", parameters: [kCIInputBackgroundImageKey: img])
+        var mask = img.applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 0]).applyingFilter("CILinearToSRGBToneCurve")
+        if shadows { mask = mask.applyingFilter("CIColorInvert") }
+        return toned.applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: img, kCIInputMaskImageKey: mask]).cropped(to: e)
     }
 
     /// Исходник как линейный CIImage. maxSide — уменьшить при проявлении (быстрее), nil — полный размер.
+    /// У RAW повторяем кадрирование камеры: если JPEG камеры другой пропорции (например, съёмка в 4:3),
+    /// обрезаем по центру так же — иначе после первой правки в кадре появлялись бы лишние края.
     static func source(_ url: URL, maxSide: CGFloat?) -> CIImage? {
         if ImageStore.rawExtensions.contains(url.pathExtension.lowercased()), let raw = CIRAWFilter(imageURL: url) {
             if let maxSide {
@@ -211,7 +406,8 @@ enum EditPipeline {
                 let k = maxSide / max(n.width, n.height)
                 if k < 1 { raw.scaleFactor = Float(k) }
             }
-            return raw.outputImage
+            guard let img = raw.outputImage else { return nil }
+            return cropToCamera(img, url)
         }
         guard var img = CIImage(contentsOf: url, options: [.applyOrientationProperty: true]) else { return nil }
         if let maxSide {
@@ -219,6 +415,18 @@ enum EditPipeline {
             if k < 1 { img = img.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k]) }
         }
         return img
+    }
+
+    static func cropToCamera(_ img: CIImage, _ url: URL) -> CIImage {
+        guard let prev = ImageStore.shared.preview(url) else { return img }
+        let e = img.extent
+        let want = CGFloat(prev.width) / CGFloat(prev.height), have = e.width / e.height
+        guard abs(want - have) / want > 0.02 else { return img }
+        let r = want < have
+            ? CGRect(x: e.midX - e.height * want / 2, y: e.minY, width: e.height * want, height: e.height)
+            : CGRect(x: e.minX, y: e.midY - e.width / want / 2, width: e.width, height: e.width / want)
+        let c = img.cropped(to: r.integral)
+        return c.transformed(by: CGAffineTransform(translationX: -c.extent.minX, y: -c.extent.minY))
     }
 
     /// Текстовый водяной знак поверх кадра.
