@@ -10,6 +10,7 @@ struct Sidebar: View {
     @AppStorage("sb.days") private var showDays = true
     @AppStorage("sb.analysis") private var showAnalysis = true
     @AppStorage("sb.cull") private var showCull = true
+    @AppStorage("sb.scenes") private var showScenes = true
 
     var body: some View {
         @Bindable var lib = lib
@@ -73,6 +74,19 @@ struct Sidebar: View {
                                 lib.dayFilter = lib.dayFilter == d.day ? nil : d.day
                                 lib.move(0)
                             }
+                        }
+                    }
+                }
+                if lib.scenes.count > 1 {
+                    Section(tr("Сцены"), isExpanded: $showScenes) {
+                        ForEach(lib.scenes) { sc in
+                            HStack {
+                                Label(sc.title, systemImage: "film.stack").lineLimit(1)
+                                Spacer()
+                                Text("\(lib.sceneProgress(sc))/\(sc.count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                                    .help(tr("Решено (оставлено или в браке) из всех кадров сцены"))
+                            }
+                            .tag(PhotoFilter.scene(sc.id))
                         }
                     }
                 }

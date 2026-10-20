@@ -29,7 +29,29 @@ struct CompareView: View {
         }
     }
 
+    @ViewBuilder
     private func toolbar(_ photos: [Photo]) -> some View {
+        if lib.tournamentActive { tournamentBar } else { compareBar(photos) }
+    }
+
+    private var tournamentBar: some View {
+        HStack(spacing: 14) {
+            Label(tr("Турнир · раунд \(lib.tournamentRound) из \(lib.tournamentAll.count - 1)"), systemImage: "trophy")
+                .font(.callout.weight(.semibold))
+            Text(tr("← лучше левый · → лучше правый · победитель остаётся слева · Esc — выйти"))
+                .font(.caption).foregroundStyle(.secondary)
+            Spacer()
+            Button(tr("← Левый")) { lib.pickTournament(left: true) }
+            Button(tr("Правый →")) { lib.pickTournament(left: false) }.buttonStyle(.borderedProminent)
+            Button(tr("Выйти")) { lib.cancelTournament() }
+        }
+        .controlSize(.small)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.black.opacity(0.25))
+    }
+
+    private func compareBar(_ photos: [Photo]) -> some View {
         HStack(spacing: 14) {
             Label(tr("Сравнение · \(photos.count)"), systemImage: "rectangle.split.2x1")
                 .font(.callout.weight(.semibold))

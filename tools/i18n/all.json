@@ -3098,5 +3098,115 @@
   "Grid / Photo (Space) / Culling (O)",
   "Cuadrícula / Foto (Espacio) / Selección (O)",
   "Griglia / Foto (Spazio) / Selezione (O)"
+ ],
+ "Турнир · раунд {} из {}": [
+  "Tournament · round {} of {}",
+  "Torneo · ronda {} de {}",
+  "Torneo · turno {} di {}"
+ ],
+ "← лучше левый · → лучше правый · победитель остаётся слева · Esc — выйти": [
+  "← left is better · → right is better · the winner stays on the left · Esc — exit",
+  "← mejor la izquierda · → mejor la derecha · la ganadora queda a la izquierda · Esc — salir",
+  "← meglio la sinistra · → meglio la destra · la vincitrice resta a sinistra · Esc — esci"
+ ],
+ "← Левый": [
+  "← Left",
+  "← Izquierda",
+  "← Sinistra"
+ ],
+ "Правый →": [
+  "Right →",
+  "Derecha →",
+  "Destra →"
+ ],
+ "Выйти": [
+  "Exit",
+  "Salir",
+  "Esci"
+ ],
+ "Турнир по серии или выделенным (T)": [
+  "Tournament for a series or selection (T)",
+  "Torneo de una serie o de las seleccionadas (T)",
+  "Torneo su una serie o sulle selezionate (T)"
+ ],
+ "Сцена {}": [
+  "Scene {}",
+  "Escena {}",
+  "Scena {}"
+ ],
+ "По сценам": [
+  "By scene",
+  "Por escenas",
+  "Per scena"
+ ],
+ "Турнир: выбрать лучший (T)": [
+  "Tournament: pick the best (T)",
+  "Torneo: elegir la mejor (T)",
+  "Torneo: scegli la migliore (T)"
+ ],
+ "Сцена {} · {}, {}": [
+  "Scene {} · {}, {}",
+  "Escena {} · {}, {}",
+  "Scena {} · {}, {}"
+ ],
+ "Турнир — для серии или 2+ выделенных кадров": [
+  "Tournament works on a series or 2+ selected photos",
+  "El torneo es para una serie o 2+ fotos seleccionadas",
+  "Il torneo è per una serie o 2+ foto selezionate"
+ ],
+ "Нужно хотя бы 2 кадра": [
+  "At least 2 photos are needed",
+  "Se necesitan al menos 2 fotos",
+  "Servono almeno 2 foto"
+ ],
+ "Победитель: {}": [
+  "Winner: {}",
+  "Ganadora: {}",
+  "Vincitrice: {}"
+ ],
+ "Отметить его ★ и отклонить остальные кадры турнира ({})? Отменить — ⌘Z.": [
+  "Mark it ★ and reject the other tournament photos ({})? Undo — ⌘Z.",
+  "¿Marcarla con ★ y rechazar las demás fotos del torneo ({})? Deshacer — ⌘Z.",
+  "Segnarla ★ e scartare le altre foto del torneo ({})? Annulla — ⌘Z."
+ ],
+ "Отклонить остальные": [
+  "Reject the rest",
+  "Rechazar el resto",
+  "Scarta le altre"
+ ],
+ "Только отметить победителя": [
+  "Only mark the winner",
+  "Solo marcar la ganadora",
+  "Segna solo la vincitrice"
+ ],
+ "Ничего не менять": [
+  "Change nothing",
+  "No cambiar nada",
+  "Non cambiare nulla"
+ ],
+ "Турнир: победил {}": [
+  "Tournament: {} won",
+  "Torneo: ganó {}",
+  "Torneo: ha vinto {}"
+ ],
+ "Новая сцена после паузы": [
+  "New scene after a pause of",
+  "Nueva escena tras una pausa de",
+  "Nuova scena dopo una pausa di"
+ ],
+ "{} мин": [
+  "{} min",
+  "{} min",
+  "{} min"
+ ],
+ "Сцены": [
+  "Scenes",
+  "Escenas",
+  "Scene"
+ ],
+ "Решено (оставлено или в браке) из всех кадров сцены": [
+  "Decided (kept or rejected) out of all photos in the scene",
+  "Decididas (conservadas o rechazadas) de todas las fotos de la escena",
+  "Decise (tenute o scartate) su tutte le foto della scena"
  ]
 }

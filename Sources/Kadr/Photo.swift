@@ -80,6 +80,7 @@ struct Photo: Identifiable, Equatable {
     var duplicateOf: URL?        // точная копия другого файла
     var indexed = false          // анализ есть (из индекса или посчитан сейчас)
     var cull: CullData?          // данные для отбора (CullAnalysis.swift)
+    var sceneID: Int?            // сцена — часть съёмки без долгих пауз (Scenes.swift)
 
     var lensName: String { exif.lens?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? tr("Объектив не указан") }
     var day: Date? { exif.date.map { Calendar.current.startOfDay(for: $0) } }
@@ -100,10 +101,11 @@ enum SortKey: String, CaseIterable {
 }
 
 enum GroupKey: String, CaseIterable {
-    case none, day, folder, lens, rating
+    case none, day, scene, folder, lens, rating
     var title: String {
         switch self {
         case .none: tr("Без группировки")
+        case .scene: tr("По сценам")
         case .day: tr("По дням")
         case .folder: tr("По папкам")
         case .lens: tr("По объективам")

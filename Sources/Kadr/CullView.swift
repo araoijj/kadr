@@ -79,6 +79,8 @@ struct CullTopBar: View {
                     Menu(tr("Действия")) {
                         Button(tr("Отклонить предложенный брак…")) { lib.acceptSuggestions() }
                         Button(tr("Оставить лучшие в сериях, остальные в брак…")) { lib.keepBestInSeries() }
+                        Divider()
+                        Button(tr("Турнир по серии или выделенным (T)")) { lib.startTournament() }
                     }
                     .fixedSize()
                 }

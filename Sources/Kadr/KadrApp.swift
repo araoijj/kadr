@@ -109,6 +109,14 @@ struct KeyHandler {
             }
             if ["r", "к"].contains(e.charactersIgnoringModifiers?.lowercased() ?? "") { lib.finishCrop(); return true }
         }
+        if lib.tournamentActive {
+            switch e.keyCode {
+            case 123: lib.pickTournament(left: true); return true    // ← лучше левый
+            case 124: lib.pickTournament(left: false); return true   // → лучше правый
+            case 53: lib.cancelTournament(); return true
+            default: break
+            }
+        }
         if lib.comparing {
             switch e.keyCode {
             case 123, 126: lib.compareMove(-1); return true
@@ -157,6 +165,7 @@ struct KeyHandler {
         case "c", "с": lib.startCompare()
         case "p", "з": lib.keep()
         case "o", "щ": lib.culling.toggle()
+        case "t", "е": lib.startTournament()
         case "u", "г": lib.unflag()
         case "y", "н": lib.splitCompare.toggle(); if lib.splitCompare { lib.loupe = true }
         case "r", "к": lib.startCrop()

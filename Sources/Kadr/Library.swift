@@ -10,6 +10,7 @@ enum PhotoFilter: Hashable {
     // Отбор
     case suspects, undecided, leaders
     case reason(CullReason)
+    case scene(Int)
 
     var title: String {
         switch self {
@@ -25,6 +26,7 @@ enum PhotoFilter: Hashable {
         case .undecided: tr("Без решения")
         case .leaders: tr("Быстрый проход")
         case .reason(let r): r.title
+        case .scene(let id): tr("Сцена \(id)")
         }
     }
 
@@ -42,6 +44,7 @@ enum PhotoFilter: Hashable {
         case .undecided: "questionmark.circle"
         case .leaders: "hare"
         case .reason(let r): r.icon
+        case .scene: "film.stack"
         }
     }
 }
@@ -129,6 +132,10 @@ final class Library {
     }
     var viewed: Set<URL> = []
     var showCullSummary = false
+    var scenes: [SceneInfo] = []
+    var tournamentAll: [URL] = []
+    var tournamentQueue: [URL] = []
+    var tournamentRound = 0
     static let cullFacePixels: CGFloat = 380   // лицо в колонке отбора: 190 pt на Retina
     var cullMedianSharpness = 0.0
     var cullMedianFaceSharpness = 0.0
@@ -536,6 +543,7 @@ final class Library {
             guard let d = p.day else { return tr("Без даты") }
             let t = d.formatted(.dateTime.weekday(.wide).day().month(.wide).year().locale(I18n.locale))
             return t.prefix(1).uppercased() + t.dropFirst()
+        case .scene: return scenes.first { $0.id == p.sceneID }.map { "\($0.title) · " + tr("\($0.count) кадров") } ?? tr("Без даты")
         case .folder: return relativeFolder(p)
         case .lens: return p.lensName
         case .rating: return p.rejected ? tr("Отклонённые") : p.rating == 0 ? tr("Без оценки") : String(repeating: "★", count: p.rating)
@@ -571,6 +579,7 @@ final class Library {
         case .day:
             let r = cmp(a.day ?? .distantPast, b.day ?? .distantPast)
             return sortDescending ? flip(r) : r
+        case .scene: return cmp(a.sceneID ?? 0, b.sceneID ?? 0)
         case .folder: return folderSortKey(a).localizedStandardCompare(folderSortKey(b))
         case .lens: return a.lensName.localizedStandardCompare(b.lensName)
         case .rating: return cmp(b.rejected ? -1 : b.rating, a.rejected ? -1 : a.rating)   // высокие сверху
@@ -609,6 +618,7 @@ final class Library {
         case .undecided: p.rating == 0 && !p.rejected
         case .leaders: !p.rejected && (p.seriesID == nil || p.isBestInSeries) && p.duplicateOf == nil
         case .reason(let r): verdict(p).reasons.contains(r)
+        case .scene(let id): p.sceneID == id
         }
     }
 
@@ -792,6 +802,7 @@ final class Library {
         groupSeries()
         findDuplicates()
         updateCullStats()
+        computeScenes()
     }
 
     /// Серия = подряд идущие кадры с похожей картинкой (расстояние Хэмминга ≤ 12)

@@ -24,6 +24,7 @@ struct GeneralSettings: View {
     @AppStorage("pref.reopenLast") private var reopenLast = true
     @AppStorage("pref.cardBanner") private var cardBanner = true
     @AppStorage("pref.cullDefault") private var cullDefault = false
+    @AppStorage("pref.sceneGap") private var sceneGap = 10
     @State private var startLanguage = Prefs.language
 
     var body: some View {
@@ -47,6 +48,9 @@ struct GeneralSettings: View {
             Section(tr("Работа")) {
                 Toggle(tr("Открывать последнюю папку при запуске"), isOn: $reopenLast)
                 Toggle(tr("Открывать папку сразу в режиме «Отбор»"), isOn: $cullDefault)
+                Picker(tr("Новая сцена после паузы"), selection: $sceneGap) {
+                    ForEach([5, 10, 20, 30, 60], id: \.self) { Text(tr("\($0) мин")).tag($0) }
+                }
                 Toggle(tr("Переходить к следующему кадру после оценки"), isOn: Binding(get: { lib.autoAdvance }, set: { lib.autoAdvance = $0 }))
                 Toggle(tr("Предлагать импорт при подключении карты памяти"), isOn: $cardBanner)
             }

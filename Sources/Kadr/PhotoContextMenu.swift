@@ -67,6 +67,9 @@ struct PhotoContextMenu: ViewModifier {
         if photo.seriesID != nil {
             Button(tr("Выделить всю серию"), systemImage: "square.stack.3d.up") { act { lib.selectSeries() } }
         }
+        if n > 1 || photo.seriesID != nil {
+            Button(tr("Турнир: выбрать лучший (T)"), systemImage: "trophy") { act { lib.startTournament() } }
+        }
     }
 
     private func act(_ f: () -> Void) {
