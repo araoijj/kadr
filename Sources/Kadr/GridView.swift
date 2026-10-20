@@ -66,8 +66,8 @@ struct GridView: View {
         }
         .overlay {
             if list.isEmpty && !lib.photos.isEmpty {
-                ContentUnavailableView("Ничего нет", systemImage: "line.3.horizontal.decrease.circle",
-                                       description: Text("В фильтре «\(lib.filter.title)» пока нет снимков"))
+                ContentUnavailableView(tr("Ничего нет"), systemImage: "line.3.horizontal.decrease.circle",
+                                       description: Text(tr("В фильтре «\(lib.filter.title)» пока нет снимков")))
             }
         }
     }
@@ -149,12 +149,12 @@ struct Thumbnail: View {
         VStack {
             HStack(spacing: 4) {
                 if photo.isBestInSeries {
-                    Badge(text: "Лучший", icon: "sparkles", tint: Theme.star)
+                    Badge(text: tr("Лучший"), icon: "sparkles", tint: Theme.star)
                 } else if photo.seriesID != nil {
-                    Badge(text: "Серия", icon: "square.stack.3d.up", tint: .white.opacity(0.7))
+                    Badge(text: tr("Серия"), icon: "square.stack.3d.up", tint: .white.opacity(0.7))
                 }
                 if photo.duplicateOf != nil {
-                    Badge(text: "Дубль", icon: "doc.on.doc", tint: .orange)
+                    Badge(text: tr("Дубль"), icon: "doc.on.doc", tint: .orange)
                 }
                 if !photo.adj.isIdentity {
                     Image(systemName: "slider.horizontal.3")
@@ -162,7 +162,7 @@ struct Thumbnail: View {
                         .foregroundStyle(.white.opacity(0.85))
                         .padding(4)
                         .background(.black.opacity(0.55), in: Circle())
-                        .help("Есть обработка")
+                        .help(tr("Есть обработка"))
                 }
                 Spacer()
                 if photo.rejected {
@@ -239,10 +239,10 @@ struct FilterChips: View {
                     chip(l, icon: "camera.aperture") { lib.lensFilter = nil }
                 }
                 if let d = lib.dayFilter {
-                    chip(d.formatted(.dateTime.day().month(.wide).year()), icon: "calendar") { lib.dayFilter = nil }
+                    chip(d.formatted(.dateTime.day().month(.wide).year().locale(I18n.locale)), icon: "calendar") { lib.dayFilter = nil }
                 }
                 Spacer()
-                Text("Показано \(lib.visible.count) из \(lib.photos.count)")
+                Text(tr("Показано \(lib.visible.count) из \(lib.photos.count)"))
                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
             .padding(.horizontal, 16)
@@ -262,6 +262,6 @@ struct FilterChips: View {
             .background(Color.accentColor.opacity(0.18), in: Capsule())
         }
         .buttonStyle(.plain)
-        .help("Снять фильтр")
+        .help(tr("Снять фильтр"))
     }
 }

@@ -35,7 +35,7 @@ struct SizeEstimate: View {
         HStack(spacing: 6) {
             Image(systemName: "internaldrive").foregroundStyle(.secondary)
             if busy { ProgressView().controlSize(.mini) }
-            Text(text.isEmpty ? "Считаю размер…" : text)
+            Text(text.isEmpty ? tr("Считаю размер…") : text)
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -83,12 +83,12 @@ enum SizeEstimator {
 
     @MainActor
     static func describe(_ lib: Library, _ list: [Photo], _ s: ExportSettings) async -> String? {
-        guard !list.isEmpty else { return "Нечего сохранять" }
+        guard !list.isEmpty else { return tr("Нечего сохранять") }
         guard let r = await estimate(lib, list, s) else { return nil }
         let total = r.perPhoto.reduce(0, +)
-        if r.exact { return "Оригиналы: \(bytes(Int64(total))) всего (\(list.count) шт.)" }
-        let one = list.count == 1 ? "" : " · ≈ \(bytes(Int64(total))) всего (\(list.count) шт.)"
-        return "≈ \(bytes(Int64(total / Double(list.count)))) на кадр" + one
+        if r.exact { return tr("Оригиналы: \(bytes(Int64(total))) всего (\(list.count) шт.)") }
+        let one = list.count == 1 ? "" : tr(" · ≈ \(bytes(Int64(total))) всего (\(list.count) шт.)")
+        return tr("≈ \(bytes(Int64(total / Double(list.count)))) на кадр") + one
     }
 
     /// Байт на пиксель при сжатии кадра в итоговом масштабе.

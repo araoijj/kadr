@@ -124,7 +124,7 @@ struct ZoomableLoupe: View {
         .overlay(alignment: .topTrailing) { Navigator(photo: photo, visible: visible, adj: adj).padding(12) }
         .overlay(alignment: .topLeading) {
             if rendering {
-                HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Детализация…").font(.caption) }
+                HStack(spacing: 6) { ProgressView().controlSize(.small); Text(tr("Детализация…")).font(.caption) }
                     .padding(.horizontal, 10).padding(.vertical, 5)
                     .background(.black.opacity(0.6), in: Capsule())
                     .padding(12)
@@ -206,7 +206,7 @@ struct Navigator: View {
             .gesture(DragGesture(minimumDistance: 0).onChanged { v in
                 lib.loupeCenter = CGPoint(x: min(max(v.location.x / w, 0), 1), y: min(max(v.location.y / h, 0), 1))
             })
-            .help("Навигатор: кликните или тяните, чтобы перейти к месту кадра")
+            .help(tr("Навигатор: кликните или тяните, чтобы перейти к месту кадра"))
         }
     }
 }
@@ -219,20 +219,20 @@ struct ZoomBar: View {
         let z = lib.loupeZoom
         HStack(spacing: 4) {
             Button { lib.zoomOut() } label: { Image(systemName: "minus.magnifyingglass") }
-                .disabled(z == nil).help("Уменьшить (⌘−)")
+                .disabled(z == nil).help(tr("Уменьшить (⌘−)"))
             Button { lib.splitCompare.toggle() } label: {
-                Label("До/после", systemImage: "rectangle.split.2x1")
+                Label(tr("До/после"), systemImage: "rectangle.split.2x1")
                     .font(.caption.weight(lib.splitCompare ? .semibold : .regular))
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(Capsule().fill(lib.splitCompare ? Color.accentColor.opacity(0.35) : .clear))
             }
-            .help("Шторка «до / после» (Y): тяните линию по кадру")
+            .help(tr("Шторка «до / после» (Y): тяните линию по кадру"))
             Divider().frame(height: 14)
-            level("Вписать", nil, active: z == nil, help: "⌘0 или двойной клик")
+            level(tr("Вписать"), nil, active: z == nil, help: tr("⌘0 или двойной клик"))
             level("50%", 0.5, active: z == 0.5)
-            level("100%", 1, active: z == 1, help: "⌘1 или Z")
+            level("100%", 1, active: z == 1, help: tr("⌘1 или Z"))
             level("200%", 2, active: z == 2)
-            Button { lib.zoomIn() } label: { Image(systemName: "plus.magnifyingglass") }.help("Увеличить (⌘+)")
+            Button { lib.zoomIn() } label: { Image(systemName: "plus.magnifyingglass") }.help(tr("Увеличить (⌘+)"))
             Text("\(Int(((z ?? lib.fitZoom) * 100).rounded()))%")
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
@@ -327,15 +327,15 @@ struct SplitHandle: View {
             Circle().fill(Color.white).frame(width: 30, height: 30)
                 .overlay(Image(systemName: "arrow.left.and.right").font(.caption.weight(.bold)).foregroundStyle(.black))
                 .offset(x: x - 15, y: height / 2 - 15)
-            tag("ДО").offset(x: max(8, x - 50), y: 10).opacity(lib.splitPos > 0.08 ? 1 : 0)
-            tag("ПОСЛЕ").offset(x: min(width - 70, x + 10), y: 10).opacity(lib.splitPos < 0.92 ? 1 : 0)
+            tag(tr("ДО")).offset(x: max(8, x - 50), y: 10).opacity(lib.splitPos > 0.08 ? 1 : 0)
+            tag(tr("ПОСЛЕ")).offset(x: min(width - 70, x + 10), y: 10).opacity(lib.splitPos < 0.92 ? 1 : 0)
         }
         .frame(width: width, height: height, alignment: .topLeading)
         .contentShape(Rectangle().offset(x: x - 20).size(width: 40, height: height))
         .gesture(DragGesture(minimumDistance: 0).onChanged { v in
             lib.splitPos = min(max(v.location.x / width, 0), 1)
         })
-        .help("Тяните, чтобы сравнить")
+        .help(tr("Тяните, чтобы сравнить"))
     }
 
     private func tag(_ t: String) -> some View {

@@ -36,8 +36,8 @@ enum HistoryStore {
     /// Сколько шагов храним. Замер (20.10): шаг для одного кадра ~1,1 КБ, запись/отмена ~0,1 мс;
     /// пакетный шаг на 1000 кадров ~0,7 МБ, и 100 таких — уже 70 МБ и 2,5 с на сохранение.
     /// Поэтому два предела: 100 шагов и не больше 20 000 изменений кадров всего (~14 МБ, ~0,5 с фоном).
-    static let limit = 100
-    static let maxPhotoChanges = 20_000
+    static var limit: Int { Prefs.historyLimit }
+    static var maxPhotoChanges: Int { limit * 200 }   // 100 шагов → 20 000 изменений кадров (~14 МБ)
 
     private struct File: Codable {
         var entries: [HistoryEntry]
@@ -52,11 +52,13 @@ enum HistoryStore {
     }
 
     static func load(_ folder: URL) -> ([HistoryEntry], Int) {
+        guard Prefs.historyKeep else { return ([], 0) }
         guard let d = try? Data(contentsOf: url(for: folder)), let f = try? JSONDecoder().decode(File.self, from: d) else { return ([], 0) }
         return (f.entries, min(f.position, f.entries.count))
     }
 
     static func save(_ entries: [HistoryEntry], _ position: Int, for folder: URL) {
+        guard Prefs.historyKeep else { return }
         if let d = try? JSONEncoder().encode(File(entries: entries, position: position)) { try? d.write(to: url(for: folder), options: .atomic) }
     }
 }
@@ -117,21 +119,21 @@ extension Library {
     var redoTitle: String? { canRedo ? history[historyPos].title : nil }
 
     func undo() {
-        guard canUndo else { flash("Нечего отменять"); return }
+        guard canUndo else { flash(tr("Нечего отменять")); return }
         let e = history[historyPos - 1]
         apply(e, forward: false)
         historyPos -= 1
         scheduleHistorySave()
-        flash("Отменено: \(e.title)")
+        flash(tr("Отменено: \(e.title)"))
     }
 
     func redo() {
-        guard canRedo else { flash("Нечего возвращать"); return }
+        guard canRedo else { flash(tr("Нечего возвращать")); return }
         let e = history[historyPos]
         apply(e, forward: true)
         historyPos += 1
         scheduleHistorySave()
-        flash("Возвращено: \(e.title)")
+        flash(tr("Возвращено: \(e.title)"))
     }
 
     /// Перейти к состоянию «после шага n» (0 — исходное, до всех шагов журнала).
@@ -169,33 +171,33 @@ extension Library {
     func describeChange(_ a: Adjustments, _ b: Adjustments, url: URL) -> (title: String, key: String) {
         let k = ImageStore.shared.asShotK(url)
         let fields: [(String, KeyPath<Adjustments, Double>, (Double) -> String)] = [
-            ("Экспозиция", \.exposure, { String(format: "%+.2f EV", $0) }),
-            ("Температура", \.wbShift, { "\(Int(k + $0)) K" }),
-            ("Оттенок", \.tint, { String(format: "%+.0f", $0) }),
-            ("Контраст", \.contrast, { String(format: "%+.0f", $0) }),
-            ("Света", \.highlights, { String(format: "%+.0f", $0) }),
-            ("Тени", \.shadows, { String(format: "%+.0f", $0) }),
-            ("Чёткость", \.clarity, { String(format: "%+.0f", $0) }),
-            ("Матовость", \.fade, { String(format: "%.0f", $0) }),
-            ("Красочность", \.vibrance, { String(format: "%+.0f", $0) }),
-            ("Насыщенность", \.saturation, { String(format: "%+.0f", $0) }),
-            ("Тонирование теней", \.shadowSat, { String(format: "%.0f", $0) }),
-            ("Оттенок теней", \.shadowHue, { String(format: "%.0f°", $0) }),
-            ("Тонирование светов", \.highlightSat, { String(format: "%.0f", $0) }),
-            ("Оттенок светов", \.highlightHue, { String(format: "%.0f°", $0) }),
-            ("Виньетка", \.vignette, { String(format: "%+.0f", $0) }),
-            ("Зерно", \.grain, { String(format: "%.0f", $0) }),
-            ("Сила LUT", \.lutAmount, { String(format: "%.0f%%", $0) }),
-            ("Горизонт", \.angle, { String(format: "%+.1f°", $0) }),
+            (tr("Экспозиция"), \.exposure, { String(format: "%+.2f EV", $0) }),
+            (tr("Температура"), \.wbShift, { "\(Int(k + $0)) K" }),
+            (tr("Оттенок"), \.tint, { String(format: "%+.0f", $0) }),
+            (tr("Контраст"), \.contrast, { String(format: "%+.0f", $0) }),
+            (tr("Света"), \.highlights, { String(format: "%+.0f", $0) }),
+            (tr("Тени"), \.shadows, { String(format: "%+.0f", $0) }),
+            (tr("Чёткость"), \.clarity, { String(format: "%+.0f", $0) }),
+            (tr("Матовость"), \.fade, { String(format: "%.0f", $0) }),
+            (tr("Красочность"), \.vibrance, { String(format: "%+.0f", $0) }),
+            (tr("Насыщенность"), \.saturation, { String(format: "%+.0f", $0) }),
+            (tr("Тонирование теней"), \.shadowSat, { String(format: "%.0f", $0) }),
+            (tr("Оттенок теней"), \.shadowHue, { String(format: "%.0f°", $0) }),
+            (tr("Тонирование светов"), \.highlightSat, { String(format: "%.0f", $0) }),
+            (tr("Оттенок светов"), \.highlightHue, { String(format: "%.0f°", $0) }),
+            (tr("Виньетка"), \.vignette, { String(format: "%+.0f", $0) }),
+            (tr("Зерно"), \.grain, { String(format: "%.0f", $0) }),
+            (tr("Сила LUT"), \.lutAmount, { String(format: "%.0f%%", $0) }),
+            (tr("Горизонт"), \.angle, { String(format: "%+.1f°", $0) }),
         ]
         for (name, kp, fmt) in fields where a[keyPath: kp] != b[keyPath: kp] {
             return ("\(name) \(fmt(b[keyPath: kp]))", name)
         }
-        if a.lut != b.lut { return ("LUT: " + (b.lut.map(LUTStore.displayName) ?? "убран"), "lut") }
-        if a.profile != b.profile { return ("Профиль: " + (b.profile == .camera ? "как в камере" : "стандартный macOS"), "profile") }
+        if a.lut != b.lut { return ("LUT: " + (b.lut.map(LUTStore.displayName) ?? tr("убран")), "lut") }
+        if a.profile != b.profile { return (tr("Профиль: ") + (b.profile == .camera ? tr("как в камере") : tr("стандартный macOS")), "profile") }
         if a.cropRect != b.cropRect || a.cropAspect != b.cropAspect {
-            return ("Кадрирование " + (CropFormat.byID(b.cropAspect)?.title ?? "свободное"), "crop")
+            return (tr("Кадрирование ") + (CropFormat.byID(b.cropAspect)?.title ?? tr("свободное")), "crop")
         }
-        return ("Обработка", "adj")
+        return (tr("Обработка"), "adj")
     }
 }

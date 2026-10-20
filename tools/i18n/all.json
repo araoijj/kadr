@@ -1,0 +1,2807 @@
+{
+ "Импортировано: {}": [
+  "Imported: {}",
+  "Importadas: {}",
+  "Importate: {}"
+ ],
+ ", уже были: {}": [
+  ", already there: {}",
+  ", ya existían: {}",
+  ", già presenti: {}"
+ ],
+ ", ошибок: {}": [
+  ", errors: {}",
+  ", errores: {}",
+  ", errori: {}"
+ ],
+ "Остановлено. ": [
+  "Stopped. ",
+  "Detenido. ",
+  "Interrotto. "
+ ],
+ "Плёнка: t3mujinpack": [
+  "Film: t3mujinpack",
+  "Película: t3mujinpack",
+  "Pellicola: t3mujinpack"
+ ],
+ "{}\nАвтор: {}\nЛицензия: {}\nИсточник: {}\n": [
+  "{}\nAuthor: {}\nLicense: {}\nSource: {}\n",
+  "{}\nAutor: {}\nLicencia: {}\nFuente: {}\n",
+  "{}\nAutore: {}\nLicenza: {}\nFonte: {}\n"
+ ],
+ "Скачано: {} LUT": [
+  "Downloaded: {} LUTs",
+  "Descargados: {} LUT",
+  "Scaricati: {} LUT"
+ ],
+ "Скачано {}, ошибок: {}": [
+  "Downloaded {}, errors: {}",
+  "Descargados {}, errores: {}",
+  "Scaricati {}, errori: {}"
+ ],
+ "Не удалось скачать: {}": [
+  "Download failed: {}",
+  "No se pudo descargar: {}",
+  "Download non riuscito: {}"
+ ],
+ "Сравнение · {}": [
+  "Compare · {}",
+  "Comparar · {}",
+  "Confronto · {}"
+ ],
+ "← → — выбрать кадр · 1–5, X — оценка · Z — зум 100% · тянуть мышью — сдвиг · Esc — выход": [
+  "← → — pick photo · 1–5, X — rating · Z — 100% zoom · drag — pan · Esc — exit",
+  "← → — elegir foto · 1–5, X — valoración · Z — zoom 100% · arrastrar — mover · Esc — salir",
+  "← → — scegli foto · 1–5, X — valutazione · Z — zoom 100% · trascina — sposta · Esc — esci"
+ ],
+ "Оставить выбранный, остальные отклонить": [
+  "Keep selected, reject the rest",
+  "Conservar la elegida, rechazar el resto",
+  "Tieni la scelta, scarta le altre"
+ ],
+ "Выбранный кадр остаётся, остальные помечаются отклонёнными (X)": [
+  "The selected photo stays, the others are marked rejected (X)",
+  "La foto elegida se queda, las demás se marcan como rechazadas (X)",
+  "La foto scelta resta, le altre vengono segnate come scartate (X)"
+ ],
+ "Готово": [
+  "Done",
+  "Listo",
+  "Fine"
+ ],
+ "Самый резкий": [
+  "Sharpest",
+  "La más nítida",
+  "La più nitida"
+ ],
+ "Отклонён": [
+  "Rejected",
+  "Rechazada",
+  "Scartata"
+ ],
+ "резкость {}%": [
+  "sharpness {}%",
+  "nitidez {}%",
+  "nitidezza {}%"
+ ],
+ "Открыть": [
+  "Open",
+  "Abrir",
+  "Apri"
+ ],
+ "Открыть папку (⌘O)": [
+  "Open folder (⌘O)",
+  "Abrir carpeta (⌘O)",
+  "Apri cartella (⌘O)"
+ ],
+ "Отменить": [
+  "Undo",
+  "Deshacer",
+  "Annulla"
+ ],
+ "Отменить: {} (⌘Z)": [
+  "Undo: {} (⌘Z)",
+  "Deshacer: {} (⌘Z)",
+  "Annulla: {} (⌘Z)"
+ ],
+ "Нечего отменять": [
+  "Nothing to undo",
+  "Nada que deshacer",
+  "Niente da annullare"
+ ],
+ "Вернуть": [
+  "Redo",
+  "Rehacer",
+  "Ripeti"
+ ],
+ "Вернуть: {} (⇧⌘Z)": [
+  "Redo: {} (⇧⌘Z)",
+  "Rehacer: {} (⇧⌘Z)",
+  "Ripeti: {} (⇧⌘Z)"
+ ],
+ "Нечего возвращать": [
+  "Nothing to redo",
+  "Nada que rehacer",
+  "Niente da ripetere"
+ ],
+ "Импорт": [
+  "Import",
+  "Importar",
+  "Importa"
+ ],
+ "Импорт с карты памяти (⌘I)": [
+  "Import from memory card (⌘I)",
+  "Importar desde tarjeta de memoria (⌘I)",
+  "Importa da scheda di memoria (⌘I)"
+ ],
+ "Анализ {}/{}": [
+  "Analyzing {}/{}",
+  "Analizando {}/{}",
+  "Analisi {}/{}"
+ ],
+ "Сортировать": [
+  "Sort by",
+  "Ordenar por",
+  "Ordina per"
+ ],
+ "По убыванию": [
+  "Descending",
+  "Descendente",
+  "Decrescente"
+ ],
+ "Группировать": [
+  "Group by",
+  "Agrupar por",
+  "Raggruppa per"
+ ],
+ "С вложенными папками": [
+  "Include subfolders",
+  "Incluir subcarpetas",
+  "Includi sottocartelle"
+ ],
+ "Сортировка": [
+  "Sorting",
+  "Orden",
+  "Ordinamento"
+ ],
+ "Сортировка и группировка: {}{}": [
+  "Sorting and grouping: {}{}",
+  "Orden y agrupación: {}{}",
+  "Ordinamento e raggruppamento: {}{}"
+ ],
+ "Размер превью": [
+  "Thumbnail size",
+  "Tamaño de miniaturas",
+  "Dimensione miniature"
+ ],
+ "Сохранить в папку": [
+  "Save to folder",
+  "Guardar en carpeta",
+  "Salva nella cartella"
+ ],
+ "Сохранить отобранные в папку (⌘S). S — текущий кадр сразу": [
+  "Save picks to a folder (⌘S). S — current photo right away",
+  "Guardar las elegidas en una carpeta (⌘S). S — la foto actual al instante",
+  "Salva le scelte in una cartella (⌘S). S — la foto corrente subito"
+ ],
+ "Перенести отклонённые в «_Отклонённые»": [
+  "Move rejected to “_Отклонённые”",
+  "Mover rechazadas a «_Отклонённые»",
+  "Sposta le scartate in «_Отклонённые»"
+ ],
+ "Сохранить в папку…": [
+  "Save to folder…",
+  "Guardar en carpeta…",
+  "Salva nella cartella…"
+ ],
+ "Открыть показанные в Capture One": [
+  "Open shown in Capture One",
+  "Abrir las mostradas en Capture One",
+  "Apri quelle mostrate in Capture One"
+ ],
+ "Показать в Finder": [
+  "Show in Finder",
+  "Mostrar en Finder",
+  "Mostra nel Finder"
+ ],
+ "Действия": [
+  "Actions",
+  "Acciones",
+  "Azioni"
+ ],
+ "Перетащите папку со съёмкой": [
+  "Drop a shoot folder here",
+  "Arrastra aquí una carpeta de sesión",
+  "Trascina qui una cartella di scatti"
+ ],
+ "RAW Sony, Canon, Nikon, Fuji и JPEG. Оценки сохраняются в XMP — их сразу видит Capture One.": [
+  "Sony, Canon, Nikon, Fuji RAW and JPEG. Ratings are saved to XMP — Capture One sees them right away.",
+  "RAW de Sony, Canon, Nikon, Fuji y JPEG. Las valoraciones se guardan en XMP y Capture One las ve al instante.",
+  "RAW Sony, Canon, Nikon, Fuji e JPEG. Le valutazioni vanno nei file XMP: Capture One le vede subito."
+ ],
+ "Выбрать папку…": [
+  "Choose folder…",
+  "Elegir carpeta…",
+  "Scegli cartella…"
+ ],
+ "листать": [
+  "browse",
+  "navegar",
+  "sfoglia"
+ ],
+ "звёзды": [
+  "stars",
+  "estrellas",
+  "stelle"
+ ],
+ "снять оценку": [
+  "clear rating",
+  "quitar valoración",
+  "togli valutazione"
+ ],
+ "отклонить": [
+  "reject",
+  "rechazar",
+  "scarta"
+ ],
+ "цвет": [
+  "color",
+  "color",
+  "colore"
+ ],
+ "Пробел": [
+  "Space",
+  "Espacio",
+  "Spazio"
+ ],
+ "сетка / кадр": [
+  "grid / photo",
+  "cuadrícula / foto",
+  "griglia / foto"
+ ],
+ "зум 100%": [
+  "100% zoom",
+  "zoom 100%",
+  "zoom 100%"
+ ],
+ "инфо": [
+  "info",
+  "info",
+  "info"
+ ],
+ "кадр в папку": [
+  "photo to folder",
+  "foto a la carpeta",
+  "foto nella cartella"
+ ],
+ "сохранить отобранные": [
+  "save picks",
+  "guardar elegidas",
+  "salva le scelte"
+ ],
+ "⌘ / ⇧ + клик": [
+  "⌘ / ⇧ + click",
+  "⌘ / ⇧ + clic",
+  "⌘ / ⇧ + clic"
+ ],
+ "выделить несколько": [
+  "select several",
+  "seleccionar varias",
+  "seleziona più foto"
+ ],
+ "выделить всё": [
+  "select all",
+  "seleccionar todo",
+  "seleziona tutto"
+ ],
+ "обработка": [
+  "editing",
+  "edición",
+  "modifica"
+ ],
+ "сравнить кадры": [
+  "compare photos",
+  "comparar fotos",
+  "confronta foto"
+ ],
+ "импорт с карты": [
+  "import from card",
+  "importar de tarjeta",
+  "importa da scheda"
+ ],
+ "до / после": [
+  "before / after",
+  "antes / después",
+  "prima / dopo"
+ ],
+ "Свободно": [
+  "Free",
+  "Libre",
+  "Libero"
+ ],
+ "Исходный": [
+  "Original",
+  "Original",
+  "Originale"
+ ],
+ "как снято": [
+  "as shot",
+  "como se tomó",
+  "come scattata"
+ ],
+ "пост Instagram": [
+  "Instagram post",
+  "publicación de Instagram",
+  "post Instagram"
+ ],
+ "квадрат": [
+  "square",
+  "cuadrado",
+  "quadrato"
+ ],
+ "сторис, Reels": [
+  "stories, Reels",
+  "historias, Reels",
+  "storie, Reels"
+ ],
+ "пост горизонт.": [
+  "landscape post",
+  "publicación horizontal",
+  "post orizzontale"
+ ],
+ "видео, обложка": [
+  "video, cover",
+  "vídeo, portada",
+  "video, copertina"
+ ],
+ "Кадрирование на {} кадров": [
+  "Crop on {} photos",
+  "Recorte en {} fotos",
+  "Ritaglio su {} foto"
+ ],
+ "Кадрирование применено к {} кадрам": [
+  "Crop applied to {} photos",
+  "Recorte aplicado a {} fotos",
+  "Ritaglio applicato a {} foto"
+ ],
+ "Повернуть рамку: вертикальная ↔ горизонтальная": [
+  "Rotate frame: portrait ↔ landscape",
+  "Girar el marco: vertical ↔ horizontal",
+  "Ruota la cornice: verticale ↔ orizzontale"
+ ],
+ "Горизонт": [
+  "Straighten",
+  "Enderezar",
+  "Raddrizza"
+ ],
+ "Сбросить": [
+  "Reset",
+  "Restablecer",
+  "Ripristina"
+ ],
+ "На все выделенные": [
+  "Apply to all selected",
+  "Aplicar a todas las seleccionadas",
+  "Applica a tutte le selezionate"
+ ],
+ "Отмена": [
+  "Cancel",
+  "Cancelar",
+  "Annulla"
+ ],
+ "Профиль": [
+  "Profile",
+  "Perfil",
+  "Profilo"
+ ],
+ "Свет": [
+  "Light",
+  "Luz",
+  "Luce"
+ ],
+ "Цвет": [
+  "Color",
+  "Color",
+  "Colore"
+ ],
+ "Тонирование": [
+  "Split toning",
+  "Virado",
+  "Viraggio"
+ ],
+ "Эффекты": [
+  "Effects",
+  "Efectos",
+  "Effetti"
+ ],
+ "негатив": [
+  "negative",
+  "negativo",
+  "negativo"
+ ],
+ "слайд": [
+  "slide",
+  "diapositiva",
+  "diapositiva"
+ ],
+ "ч/б": [
+  "B&W",
+  "B/N",
+  "B/N"
+ ],
+ "Мои LUT": [
+  "My LUTs",
+  "Mis LUT",
+  "I miei LUT"
+ ],
+ "Справа внизу": [
+  "Bottom right",
+  "Abajo a la derecha",
+  "In basso a destra"
+ ],
+ "Слева внизу": [
+  "Bottom left",
+  "Abajo a la izquierda",
+  "In basso a sinistra"
+ ],
+ "По центру": [
+  "Center",
+  "Centro",
+  "Al centro"
+ ],
+ "Инфо": [
+  "Info",
+  "Info",
+  "Info"
+ ],
+ "Обработка": [
+  "Edit",
+  "Edición",
+  "Modifica"
+ ],
+ "Журнал": [
+  "History",
+  "Historial",
+  "Cronologia"
+ ],
+ "Настройки": [
+  "Settings",
+  "Ajustes",
+  "Impostazioni"
+ ],
+ "Стили": [
+  "Styles",
+  "Estilos",
+  "Stili"
+ ],
+ "Стили, вставка и сброс — для {} выделенных. Ползунки — для текущего кадра.": [
+  "Styles, paste and reset — for {} selected. Sliders — for the current photo.",
+  "Estilos, pegar y restablecer: para {} seleccionadas. Los controles: para la foto actual.",
+  "Stili, incolla e ripristina: per {} selezionate. I cursori: per la foto corrente."
+ ],
+ "Нет выбранного снимка": [
+  "No photo selected",
+  "No hay ninguna foto seleccionada",
+  "Nessuna foto selezionata"
+ ],
+ "Переименовать стиль": [
+  "Rename style",
+  "Renombrar estilo",
+  "Rinomina stile"
+ ],
+ "Название": [
+  "Name",
+  "Nombre",
+  "Nome"
+ ],
+ "Кадр": [
+  "Frame",
+  "Encuadre",
+  "Inquadratura"
+ ],
+ "Готово (Enter)": [
+  "Done (Enter)",
+  "Listo (Enter)",
+  "Fine (Invio)"
+ ],
+ "Кадрировать и выровнять (R)": [
+  "Crop & straighten (R)",
+  "Recortar y enderezar (R)",
+  "Ritaglia e raddrizza (R)"
+ ],
+ "Формат: {}": [
+  "Format: {}",
+  "Formato: {}",
+  "Formato: {}"
+ ],
+ " · горизонт %+.1f°": [
+  " · horizon %+.1f°",
+  " · horizonte %+.1f°",
+  " · orizzonte %+.1f°"
+ ],
+ "Форматы Instagram: пост 4:5, квадрат, сторис 9:16, горизонтальный 1.91:1.": [
+  "Instagram formats: post 4:5, square, story 9:16, landscape 1.91:1.",
+  "Formatos de Instagram: publicación 4:5, cuadrado, historia 9:16, horizontal 1.91:1.",
+  "Formati Instagram: post 4:5, quadrato, storia 9:16, orizzontale 1.91:1."
+ ],
+ "Как в камере": [
+  "Camera matching",
+  "Como en la cámara",
+  "Come in fotocamera"
+ ],
+ "Стандартный macOS": [
+  "Standard macOS",
+  "Estándar de macOS",
+  "Standard macOS"
+ ],
+ "Цвета подобраны по JPEG камеры — правки начинаются с привычной картинки.": [
+  "Colors matched to the camera JPEG — edits start from the familiar look.",
+  "Colores ajustados al JPEG de la cámara: la edición parte del aspecto habitual.",
+  "Colori allineati al JPEG della fotocamera: le modifiche partono dall’aspetto abituale."
+ ],
+ "Проявление RAW движком macOS: свои цвета, могут отличаться от камеры.": [
+  "RAW developed by the macOS engine: its own colors, may differ from the camera.",
+  "RAW revelado por el motor de macOS: colores propios, pueden diferir de la cámara.",
+  "RAW sviluppato dal motore di macOS: colori propri, possono differire dalla fotocamera."
+ ],
+ "Экспозиция": [
+  "Exposure",
+  "Exposición",
+  "Esposizione"
+ ],
+ "Контраст": [
+  "Contrast",
+  "Contraste",
+  "Contrasto"
+ ],
+ "Света": [
+  "Highlights",
+  "Iluminaciones",
+  "Luci"
+ ],
+ "Тени": [
+  "Shadows",
+  "Sombras",
+  "Ombre"
+ ],
+ "Чёткость": [
+  "Clarity",
+  "Claridad",
+  "Chiarezza"
+ ],
+ "Матовость": [
+  "Fade",
+  "Desvanecer",
+  "Dissolvenza"
+ ],
+ "Оттенок": [
+  "Tint",
+  "Matiz",
+  "Tinta"
+ ],
+ "Красочность": [
+  "Vibrance",
+  "Intensidad",
+  "Vividezza"
+ ],
+ "Насыщенность": [
+  "Saturation",
+  "Saturación",
+  "Saturazione"
+ ],
+ "Виньетка": [
+  "Vignette",
+  "Viñeta",
+  "Vignettatura"
+ ],
+ "Зерно": [
+  "Grain",
+  "Granulado",
+  "Grana"
+ ],
+ "Новый стиль из текущих настроек…": [
+  "New style from current settings…",
+  "Nuevo estilo con los ajustes actuales…",
+  "Nuovo stile dalle impostazioni attuali…"
+ ],
+ "Сначала настройте кадр ползунками": [
+  "Adjust the photo with the sliders first",
+  "Primero ajusta la foto con los controles",
+  "Prima regola la foto con i cursori"
+ ],
+ "Сохранить настройки кадра как свой пресет": [
+  "Save the photo’s settings as your own preset",
+  "Guardar los ajustes de la foto como preajuste propio",
+  "Salva le impostazioni della foto come preset personale"
+ ],
+ "Экспорт своих…": [
+  "Export mine…",
+  "Exportar los míos…",
+  "Esporta i miei…"
+ ],
+ "Импорт…": [
+  "Import…",
+  "Importar…",
+  "Importa…"
+ ],
+ "Скачайте коллекцию плёнки": [
+  "Download the film collection",
+  "Descarga la colección de películas",
+  "Scarica la collezione di pellicole"
+ ],
+ "Меняет только: ": [
+  "Changes only: ",
+  "Solo cambia: ",
+  "Cambia solo: "
+ ],
+ "Применить к выделенным": [
+  "Apply to selected",
+  "Aplicar a las seleccionadas",
+  "Applica alle selezionate"
+ ],
+ "Применить": [
+  "Apply",
+  "Aplicar",
+  "Applica"
+ ],
+ "Обновить из текущего кадра": [
+  "Update from current photo",
+  "Actualizar desde la foto actual",
+  "Aggiorna dalla foto corrente"
+ ],
+ "Переименовать…": [
+  "Rename…",
+  "Renombrar…",
+  "Rinomina…"
+ ],
+ "Удалить стиль": [
+  "Delete style",
+  "Eliminar estilo",
+  "Elimina stile"
+ ],
+ "Убрать": [
+  "Remove",
+  "Quitar",
+  "Rimuovi"
+ ],
+ "Сила": [
+  "Amount",
+  "Cantidad",
+  "Intensità"
+ ],
+ "0 — без LUT, 100 — как задумано, 200 — усиленно": [
+  "0 — no LUT, 100 — as intended, 200 — boosted",
+  "0 — sin LUT, 100 — tal cual, 200 — reforzado",
+  "0 — senza LUT, 100 — come previsto, 200 — rafforzato"
+ ],
+ "Загрузить свои LUT…": [
+  "Load your LUTs…",
+  "Cargar tus LUT…",
+  "Carica i tuoi LUT…"
+ ],
+ "Папка LUT": [
+  "LUT folder",
+  "Carpeta de LUT",
+  "Cartella LUT"
+ ],
+ "Подходят .cube и HaldCLUT .png (например, коллекция RawTherapee Film Simulation).": [
+  ".cube and HaldCLUT .png work (e.g. the RawTherapee Film Simulation collection).",
+  "Sirven .cube y HaldCLUT .png (por ejemplo, la colección RawTherapee Film Simulation).",
+  "Vanno bene .cube e HaldCLUT .png (ad es. la collezione RawTherapee Film Simulation)."
+ ],
+ "51 эмуляция плёнки: Kodak Portra, Ektar, Gold, Fuji Pro 400H, Velvia, Provia, Ilford HP5, Tri-X… Автор {}, лицензия {} — бесплатно. ~65 МБ.": [
+  "51 film emulations: Kodak Portra, Ektar, Gold, Fuji Pro 400H, Velvia, Provia, Ilford HP5, Tri-X… By {}, {} license — free. ~65 MB.",
+  "51 emulaciones de película: Kodak Portra, Ektar, Gold, Fuji Pro 400H, Velvia, Provia, Ilford HP5, Tri-X… Autor: {}, licencia {} — gratis. ~65 MB.",
+  "51 emulazioni di pellicola: Kodak Portra, Ektar, Gold, Fuji Pro 400H, Velvia, Provia, Ilford HP5, Tri-X… Autore {}, licenza {} — gratis. ~65 MB."
+ ],
+ "Скачиваю {} из {}…": [
+  "Downloading {} of {}…",
+  "Descargando {} de {}…",
+  "Download {} di {}…"
+ ],
+ "Скачать": [
+  "Download",
+  "Descargar",
+  "Scarica"
+ ],
+ "Страница проекта": [
+  "Project page",
+  "Página del proyecto",
+  "Pagina del progetto"
+ ],
+ "Показать снимок камеры без обработки (клавиша \\)": [
+  "Show the camera photo without edits (\\ key)",
+  "Mostrar la foto de la cámara sin edición (tecla \\)",
+  "Mostra la foto della fotocamera senza modifiche (tasto \\)"
+ ],
+ "Копировать обработку (⌘⇧C)": [
+  "Copy edits (⌘⇧C)",
+  "Copiar edición (⌘⇧C)",
+  "Copia modifiche (⌘⇧C)"
+ ],
+ "Вставить обработку на выделенные (⌘⇧V)": [
+  "Paste edits to selected (⌘⇧V)",
+  "Pegar edición en las seleccionadas (⌘⇧V)",
+  "Incolla modifiche sulle selezionate (⌘⇧V)"
+ ],
+ "Сохранить как стиль": [
+  "Save as style",
+  "Guardar como estilo",
+  "Salva come stile"
+ ],
+ "Исходник": [
+  "Original",
+  "Original",
+  "Originale"
+ ],
+ "Вернуть кадр как снято: сбросить всю обработку и кадрирование (⌥⌘R)": [
+  "Return the photo to as shot: reset all edits and crop (⌥⌘R)",
+  "Volver a la foto tal como se tomó: restablecer toda la edición y el recorte (⌥⌘R)",
+  "Torna alla foto come scattata: ripristina tutte le modifiche e il ritaglio (⌥⌘R)"
+ ],
+ "В разделе есть правки": [
+  "This section has edits",
+  "Esta sección tiene cambios",
+  "Questa sezione ha modifiche"
+ ],
+ "Температура": [
+  "Temperature",
+  "Temperatura",
+  "Temperatura"
+ ],
+ "Как снято": [
+  "As shot",
+  "Como se tomó",
+  "Come scattata"
+ ],
+ "Как снято: {}": [
+  "As shot: {}",
+  "Como se tomó: {}",
+  "Come scattata: {}"
+ ],
+ "Не RAW: сдвиг от 5500 K": [
+  "Not RAW: shift from 5500 K",
+  "No es RAW: desplazamiento desde 5500 K",
+  "Non RAW: spostamento da 5500 K"
+ ],
+ "выкл": [
+  "off",
+  "no",
+  "off"
+ ],
+ "{}° · сила {}": [
+  "{}° · amount {}",
+  "{}° · cantidad {}",
+  "{}° · intensità {}"
+ ],
+ "Новый стиль": [
+  "New style",
+  "Nuevo estilo",
+  "Nuovo stile"
+ ],
+ "Например, «Мой свадебный»": [
+  "e.g. “My wedding”",
+  "por ejemplo, «Mi boda»",
+  "ad es. «Il mio matrimonio»"
+ ],
+ "Коллекция": [
+  "Collection",
+  "Colección",
+  "Collezione"
+ ],
+ "Мои стили": [
+  "My styles",
+  "Mis estilos",
+  "I miei stili"
+ ],
+ "Выбрать": [
+  "Choose",
+  "Elegir",
+  "Scegli"
+ ],
+ "Что сохранить в стиль": [
+  "What to save in the style",
+  "Qué guardar en el estilo",
+  "Cosa salvare nello stile"
+ ],
+ "изменено": [
+  "changed",
+  "cambiado",
+  "modificato"
+ ],
+ "Невыбранные разделы стиль не трогает: например, стиль только с «Цвет» сохранит вашу экспозицию.": [
+  "Unselected sections are left alone: e.g. a style with only “Color” keeps your exposure.",
+  "Las secciones no marcadas no se tocan: por ejemplo, un estilo solo con «Color» conserva tu exposición.",
+  "Le sezioni non selezionate restano invariate: ad es. uno stile solo con «Colore» mantiene la tua esposizione."
+ ],
+ "Сохранить стиль": [
+  "Save style",
+  "Guardar estilo",
+  "Salva stile"
+ ],
+ "Сравнить": [
+  "Compare",
+  "Comparar",
+  "Confronta"
+ ],
+ "Зажмите — без LUT": [
+  "Hold — without LUT",
+  "Mantén pulsado: sin LUT",
+  "Tieni premuto: senza LUT"
+ ],
+ "Что сохранить": [
+  "What to save",
+  "Qué guardar",
+  "Cosa salvare"
+ ],
+ "Отобранные — с оценкой или цветом ({})": [
+  "Picks — rated or color-labeled ({})",
+  "Elegidas: con valoración o color ({})",
+  "Scelte: con valutazione o colore ({})"
+ ],
+ "Показанные сейчас: «{}» ({})": [
+  "Shown now: “{}” ({})",
+  "Mostradas ahora: «{}» ({})",
+  "Mostrate ora: «{}» ({})"
+ ],
+ "Выделенные ({})": [
+  "Selected ({})",
+  "Seleccionadas ({})",
+  "Selezionate ({})"
+ ],
+ "Только текущий снимок": [
+  "Current photo only",
+  "Solo la foto actual",
+  "Solo la foto corrente"
+ ],
+ "Формат файла": [
+  "File format",
+  "Formato de archivo",
+  "Formato del file"
+ ],
+ "Оригиналы RAW + XMP": [
+  "RAW originals + XMP",
+  "Originales RAW + XMP",
+  "Originali RAW + XMP"
+ ],
+ "JPEG (проявить RAW)": [
+  "JPEG (develop RAW)",
+  "JPEG (revelar RAW)",
+  "JPEG (sviluppa RAW)"
+ ],
+ "Перенести, а не копировать": [
+  "Move instead of copy",
+  "Mover en lugar de copiar",
+  "Sposta invece di copiare"
+ ],
+ "Файлы исчезнут из текущей папки": [
+  "Files will leave the current folder",
+  "Los archivos saldrán de la carpeta actual",
+  "I file lasceranno la cartella corrente"
+ ],
+ "Размер": [
+  "Size",
+  "Tamaño",
+  "Dimensione"
+ ],
+ "Кадры не 9:16 — обрезать по центру (иначе вписать без обрезки)": [
+  "Not 9:16 — crop to center (otherwise fit without cropping)",
+  "No 9:16: recortar al centro (si no, encajar sin recortar)",
+  "Non 9:16: ritaglia al centro (altrimenti adatta senza ritagliare)"
+ ],
+ "Качество": [
+  "Quality",
+  "Calidad",
+  "Qualità"
+ ],
+ "С обработкой, стилями и кадрированием из «Кадра»": [
+  "With Kadr edits, styles and crop",
+  "Con la edición, estilos y recorte de Kadr",
+  "Con modifiche, stili e ritaglio di Kadr"
+ ],
+ "Проявление движком macOS; правки Capture One не переносятся. ~1–2 с на кадр.": [
+  "Developed by the macOS engine; Capture One edits are not carried over. ~1–2 s per photo.",
+  "Revelado por el motor de macOS; la edición de Capture One no se traslada. ~1–2 s por foto.",
+  "Sviluppo con il motore di macOS; le modifiche di Capture One non vengono trasferite. ~1–2 s per foto."
+ ],
+ "Имя файла": [
+  "File name",
+  "Nombre de archivo",
+  "Nome del file"
+ ],
+ "Вставить": [
+  "Insert",
+  "Insertar",
+  "Inserisci"
+ ],
+ "{name} — исходное имя": [
+  "{name} — original name",
+  "{name} — nombre original",
+  "{name} — nome originale"
+ ],
+ "{folder} — имя съёмки": [
+  "{folder} — shoot name",
+  "{folder} — nombre de la sesión",
+  "{folder} — nome dello scatto"
+ ],
+ "{date} — дата съёмки": [
+  "{date} — capture date",
+  "{date} — fecha de captura",
+  "{date} — data di scatto"
+ ],
+ "{n} — номер 001, 002…": [
+  "{n} — number 001, 002…",
+  "{n} — número 001, 002…",
+  "{n} — numero 001, 002…"
+ ],
+ "Съёмка_номер": [
+  "Shoot_number",
+  "Sesión_número",
+  "Scatto_numero"
+ ],
+ "Дата_номер": [
+  "Date_number",
+  "Fecha_número",
+  "Data_numero"
+ ],
+ "Пример: {}": [
+  "Example: {}",
+  "Ejemplo: {}",
+  "Esempio: {}"
+ ],
+ "Водяной знак": [
+  "Watermark",
+  "Marca de agua",
+  "Filigrana"
+ ],
+ "Добавить текст на фото": [
+  "Add text to the photo",
+  "Añadir texto a la foto",
+  "Aggiungi testo alla foto"
+ ],
+ "© Ваше имя": [
+  "© Your name",
+  "© Tu nombre",
+  "© Il tuo nome"
+ ],
+ "Величина текста": [
+  "Text size",
+  "Tamaño del texto",
+  "Dimensione del testo"
+ ],
+ "%.0f%% кадра": [
+  "%.0f%% of frame",
+  "%.0f%% del encuadre",
+  "%.0f%% dell’inquadratura"
+ ],
+ "Непрозрачность": [
+  "Opacity",
+  "Opacidad",
+  "Opacità"
+ ],
+ "Куда": [
+  "Destination",
+  "Destino",
+  "Destinazione"
+ ],
+ "Выбрать…": [
+  "Choose…",
+  "Elegir…",
+  "Scegli…"
+ ],
+ "Создать подпапку «{}»": [
+  "Create subfolder “{}”",
+  "Crear subcarpeta «{}»",
+  "Crea sottocartella «{}»"
+ ],
+ "Совет: клавиша S отправляет текущий кадр в эту папку сразу, без окна.": [
+  "Tip: the S key sends the current photo to this folder right away, no dialog.",
+  "Consejo: la tecla S envía la foto actual a esta carpeta al instante, sin ventana.",
+  "Suggerimento: il tasto S invia subito la foto corrente in questa cartella, senza finestra."
+ ],
+ "Сохраняю {} из {}…": [
+  "Saving {} of {}…",
+  "Guardando {} de {}…",
+  "Salvataggio {} di {}…"
+ ],
+ "Остановить": [
+  "Stop",
+  "Detener",
+  "Ferma"
+ ],
+ "Сохранить {}": [
+  "Save {}",
+  "Guardar {}",
+  "Salva {}"
+ ],
+ "экономно": [
+  "compact",
+  "ligero",
+  "leggero"
+ ],
+ "хорошо": [
+  "good",
+  "bueno",
+  "buono"
+ ],
+ "максимум": [
+  "maximum",
+  "máximo",
+  "massimo"
+ ],
+ "Почти без потерь — файлы крупные.": [
+  "Almost lossless — large files.",
+  "Casi sin pérdida: archivos grandes.",
+  "Quasi senza perdita: file grandi."
+ ],
+ "Без видимых потерь — обычный выбор.": [
+  "No visible loss — the usual choice.",
+  "Sin pérdida visible: la opción habitual.",
+  "Nessuna perdita visibile: la scelta abituale."
+ ],
+ "Чуть заметно на градиентах неба и кожи.": [
+  "Slightly visible on sky and skin gradients.",
+  "Algo visible en degradados de cielo y piel.",
+  "Appena visibile sulle sfumature di cielo e pelle."
+ ],
+ "Заметные артефакты — только для превью.": [
+  "Visible artifacts — for previews only.",
+  "Artefactos visibles: solo para vistas previas.",
+  "Artefatti visibili: solo per anteprime."
+ ],
+ "Папка не выбрана": [
+  "No folder chosen",
+  "No se ha elegido carpeta",
+  "Nessuna cartella scelta"
+ ],
+ "Что получится ({} кадров)": [
+  "What you’ll get ({} photos)",
+  "Qué saldrá ({} fotos)",
+  "Cosa otterrai ({} foto)"
+ ],
+ "Чтобы выбрать, что останется в кадре, кадрируйте эти снимки сами (R) — пресет возьмёт вашу рамку.": [
+  "To choose what stays in the frame, crop these photos yourself (R) — the preset will use your crop.",
+  "Para elegir qué queda en el encuadre, recorta tú estas fotos (R): el preajuste usará tu recorte.",
+  "Per scegliere cosa resta nell’inquadratura, ritaglia tu queste foto (R): il preset userà il tuo ritaglio."
+ ],
+ "Instagram лента": [
+  "Instagram feed",
+  "Feed de Instagram",
+  "Feed di Instagram"
+ ],
+ "Сторис / Reels": [
+  "Stories / Reels",
+  "Historias / Reels",
+  "Storie / Reels"
+ ],
+ "Полный размер": [
+  "Full size",
+  "Tamaño completo",
+  "Dimensione piena"
+ ],
+ "1080 по ширине; формат — из вашего кадрирования (4:5, 1:1, 1.91:1)": [
+  "1080 wide; format — from your crop (4:5, 1:1, 1.91:1)",
+  "1080 de ancho; formato: según tu recorte (4:5, 1:1, 1.91:1)",
+  "1080 di larghezza; formato: dal tuo ritaglio (4:5, 1:1, 1.91:1)"
+ ],
+ "по длинной стороне — сайт, Telegram, ВКонтакте": [
+  "long edge — website, Telegram, VK",
+  "lado largo: web, Telegram, VK",
+  "lato lungo: sito, Telegram, VK"
+ ],
+ "по длинной стороне — мессенджеры, почта": [
+  "long edge — messengers, email",
+  "lado largo: mensajería, correo",
+  "lato lungo: messaggistica, email"
+ ],
+ "как снято — для печати и архива": [
+  "as shot — for print and archive",
+  "como se tomó: para imprimir y archivar",
+  "come scattata: per stampa e archivio"
+ ],
+ "Свои настройки": [
+  "Custom settings",
+  "Ajustes propios",
+  "Impostazioni personalizzate"
+ ],
+ "Сайт / Telegram": [
+  "Website / Telegram",
+  "Web / Telegram",
+  "Sito / Telegram"
+ ],
+ "формат, размер и качество — вручную": [
+  "format, size and quality — manual",
+  "formato, tamaño y calidad: manual",
+  "formato, dimensione e qualità: manuali"
+ ],
+ "1080 по ширине, формат — из вашего кадрирования": [
+  "1080 wide, format — from your crop",
+  "1080 de ancho, formato según tu recorte",
+  "1080 di larghezza, formato dal tuo ritaglio"
+ ],
+ "2560 px по длинной стороне": [
+  "2560 px long edge",
+  "2560 px de lado largo",
+  "2560 px sul lato lungo"
+ ],
+ "без обрезки": [
+  "no cropping",
+  "sin recorte",
+  "senza ritaglio"
+ ],
+ "по вашему кадрированию": [
+  "from your crop",
+  "según tu recorte",
+  "dal tuo ritaglio"
+ ],
+ "как снято, формат подходит Instagram": [
+  "as shot, format fits Instagram",
+  "como se tomó, el formato encaja en Instagram",
+  "come scattata, il formato va bene per Instagram"
+ ],
+ "выше 4:5 — обрезка по центру до 4:5 (Instagram больше не принимает)": [
+  "taller than 4:5 — center crop to 4:5 (Instagram won’t accept more)",
+  "más alta que 4:5: recorte al centro a 4:5 (Instagram no admite más)",
+  "più alta di 4:5: ritaglio al centro a 4:5 (Instagram non accetta di più)"
+ ],
+ "шире 1.91:1 — обрезка по центру до 1.91:1": [
+  "wider than 1.91:1 — center crop to 1.91:1",
+  "más ancha que 1.91:1: recorte al centro a 1.91:1",
+  "più larga di 1.91:1: ritaglio al centro a 1.91:1"
+ ],
+ "по вашему кадрированию 9:16": [
+  "from your 9:16 crop",
+  "según tu recorte 9:16",
+  "dal tuo ritaglio 9:16"
+ ],
+ "уже 9:16": [
+  "already 9:16",
+  "ya es 9:16",
+  "già 9:16"
+ ],
+ "обрезка по центру до 9:16": [
+  "center crop to 9:16",
+  "recorte al centro a 9:16",
+  "ritaglio al centro a 9:16"
+ ],
+ "вписано в 9:16 без обрезки": [
+  "fitted into 9:16 without cropping",
+  "encajada en 9:16 sin recorte",
+  "adattata a 9:16 senza ritaglio"
+ ],
+ "Домой": [
+  "Home",
+  "Inicio",
+  "Inizio"
+ ],
+ "Убрать из избранного": [
+  "Remove from favorites",
+  "Quitar de favoritos",
+  "Rimuovi dai preferiti"
+ ],
+ "Добавить в избранное": [
+  "Add to favorites",
+  "Añadir a favoritos",
+  "Aggiungi ai preferiti"
+ ],
+ "Ничего нет": [
+  "Nothing here",
+  "No hay nada",
+  "Niente qui"
+ ],
+ "В фильтре «{}» пока нет снимков": [
+  "No photos in “{}” yet",
+  "Aún no hay fotos en «{}»",
+  "Ancora nessuna foto in «{}»"
+ ],
+ "Лучший": [
+  "Best",
+  "Mejor",
+  "Migliore"
+ ],
+ "Серия": [
+  "Series",
+  "Serie",
+  "Serie"
+ ],
+ "Дубль": [
+  "Duplicate",
+  "Duplicado",
+  "Duplicato"
+ ],
+ "Есть обработка": [
+  "Has edits",
+  "Con edición",
+  "Modificata"
+ ],
+ "Показано {} из {}": [
+  "Showing {} of {}",
+  "Mostrando {} de {}",
+  "Mostrate {} di {}"
+ ],
+ "Снять фильтр": [
+  "Clear filter",
+  "Quitar filtro",
+  "Rimuovi filtro"
+ ],
+ "Провалы в тенях": [
+  "Clipped shadows",
+  "Sombras recortadas",
+  "Ombre bruciate"
+ ],
+ "Пересветы": [
+  "Clipped highlights",
+  "Iluminaciones recortadas",
+  "Luci bruciate"
+ ],
+ "тени: {} в ноль": [
+  "shadows: {} clipped",
+  "sombras: {} recortadas",
+  "ombre: {} bruciate"
+ ],
+ "тени в норме": [
+  "shadows OK",
+  "sombras bien",
+  "ombre ok"
+ ],
+ "света: {} пересвет": [
+  "highlights: {} clipped",
+  "iluminaciones: {} recortadas",
+  "luci: {} bruciate"
+ ],
+ "света в норме": [
+  "highlights OK",
+  "iluminaciones bien",
+  "luci ok"
+ ],
+ "Отменено: {}": [
+  "Undone: {}",
+  "Deshecho: {}",
+  "Annullato: {}"
+ ],
+ "Возвращено: {}": [
+  "Redone: {}",
+  "Rehecho: {}",
+  "Ripetuto: {}"
+ ],
+ "Тонирование теней": [
+  "Shadow toning",
+  "Virado de sombras",
+  "Viraggio ombre"
+ ],
+ "Оттенок теней": [
+  "Shadow hue",
+  "Tono de sombras",
+  "Tonalità ombre"
+ ],
+ "Тонирование светов": [
+  "Highlight toning",
+  "Virado de iluminaciones",
+  "Viraggio luci"
+ ],
+ "Оттенок светов": [
+  "Highlight hue",
+  "Tono de iluminaciones",
+  "Tonalità luci"
+ ],
+ "Сила LUT": [
+  "LUT amount",
+  "Cantidad de LUT",
+  "Intensità LUT"
+ ],
+ "убран": [
+  "removed",
+  "quitado",
+  "rimosso"
+ ],
+ "Профиль: ": [
+  "Profile: ",
+  "Perfil: ",
+  "Profilo: "
+ ],
+ "как в камере": [
+  "camera matching",
+  "como en la cámara",
+  "come in fotocamera"
+ ],
+ "стандартный macOS": [
+  "standard macOS",
+  "estándar de macOS",
+  "standard macOS"
+ ],
+ "Кадрирование ": [
+  "Crop ",
+  "Recorte ",
+  "Ritaglio "
+ ],
+ "свободное": [
+  "free",
+  "libre",
+  "libero"
+ ],
+ "Только текущий кадр": [
+  "Current photo only",
+  "Solo la foto actual",
+  "Solo la foto corrente"
+ ],
+ "Изменений пока нет. Здесь появится каждое действие: ползунки, стили, кадрирование, оценки.": [
+  "No changes yet. Every action will appear here: sliders, styles, crop, ratings.",
+  "Aún no hay cambios. Aquí aparecerá cada acción: controles, estilos, recorte, valoraciones.",
+  "Ancora nessuna modifica. Qui apparirà ogni azione: cursori, stili, ritaglio, valutazioni."
+ ],
+ "У этого кадра изменений нет.": [
+  "This photo has no changes.",
+  "Esta foto no tiene cambios.",
+  "Questa foto non ha modifiche."
+ ],
+ "Исходное состояние": [
+  "Original state",
+  "Estado original",
+  "Stato originale"
+ ],
+ "Хранится {} из {} шагов · журнал папки сохраняется между запусками": [
+  "Keeping {} of {} steps · folder history is kept between launches",
+  "Se guardan {} de {} pasos · el historial de la carpeta se conserva entre sesiones",
+  "Conservati {} di {} passaggi · la cronologia della cartella resta tra un avvio e l’altro"
+ ],
+ "Вернуться к состоянию после этого шага": [
+  "Go back to the state after this step",
+  "Volver al estado tras este paso",
+  "Torna allo stato dopo questo passaggio"
+ ],
+ "Отменённый шаг — клик вернёт его": [
+  "Undone step — click to bring it back",
+  "Paso deshecho: haz clic para recuperarlo",
+  "Passaggio annullato: clic per ripristinarlo"
+ ],
+ "{} кадров": [
+  "{} photos",
+  "{} fotos",
+  "{} foto"
+ ],
+ "Импорт с карты памяти": [
+  "Import from memory card",
+  "Importar desde tarjeta de memoria",
+  "Importa da scheda di memoria"
+ ],
+ "Откуда": [
+  "From",
+  "Desde",
+  "Da"
+ ],
+ "Выберите карту": [
+  "Choose a card",
+  "Elige una tarjeta",
+  "Scegli una scheda"
+ ],
+ "  — карта камеры": [
+  "  — camera card",
+  "  — tarjeta de cámara",
+  "  — scheda della fotocamera"
+ ],
+ "Другая папка…": [
+  "Other folder…",
+  "Otra carpeta…",
+  "Altra cartella…"
+ ],
+ "Название съёмки, например «Свадьба Ивановых»": [
+  "Shoot name, e.g. “Smith wedding”",
+  "Nombre de la sesión, p. ej. «Boda García»",
+  "Nome dello scatto, ad es. «Matrimonio Rossi»"
+ ],
+ "Раскладывать по дням съёмки": [
+  "Sort into folders by capture day",
+  "Separar en carpetas por día de captura",
+  "Dividi in cartelle per giorno di scatto"
+ ],
+ "…и ещё {}": [
+  "…and {} more",
+  "…y {} más",
+  "…e altre {}"
+ ],
+ "Параметры": [
+  "Options",
+  "Opciones",
+  "Opzioni"
+ ],
+ "Только новые — пропустить уже импортированные": [
+  "New only — skip already imported",
+  "Solo nuevas: omitir las ya importadas",
+  "Solo nuove: salta quelle già importate"
+ ],
+ "Извлечь карту после импорта": [
+  "Eject card after import",
+  "Expulsar la tarjeta tras importar",
+  "Espelli la scheda dopo l’importazione"
+ ],
+ "{} из {}": [
+  "{} of {}",
+  "{} de {}",
+  "{} di {}"
+ ],
+ "Файлы копируются, карта не меняется. Размер каждой копии сверяется.": [
+  "Files are copied, the card is not changed. Every copy’s size is verified.",
+  "Los archivos se copian, la tarjeta no cambia. Se verifica el tamaño de cada copia.",
+  "I file vengono copiati, la scheda non cambia. Si verifica la dimensione di ogni copia."
+ ],
+ "Закрыть": [
+  "Close",
+  "Cerrar",
+  "Chiudi"
+ ],
+ "Импортировать {}": [
+  "Import {}",
+  "Importar {}",
+  "Importa {}"
+ ],
+ "Читаю карту…": [
+  "Reading card…",
+  "Leyendo la tarjeta…",
+  "Lettura della scheda…"
+ ],
+ "Снимков не найдено": [
+  "No photos found",
+  "No se encontraron fotos",
+  "Nessuna foto trovata"
+ ],
+ "{} файлов · {} · {}": [
+  "{} files · {} · {}",
+  "{} archivos · {} · {}",
+  "{} file · {} · {}"
+ ],
+ "Все новые": [
+  "All new",
+  "Todas nuevas",
+  "Tutte nuove"
+ ],
+ "Всё уже импортировано раньше": [
+  "Everything was imported before",
+  "Todo se importó antes",
+  "Tutto è già stato importato"
+ ],
+ "Новых: {}, уже импортировано: {}": [
+  "New: {}, already imported: {}",
+  "Nuevas: {}, ya importadas: {}",
+  "Nuove: {}, già importate: {}"
+ ],
+ "Папка или карта, откуда импортировать": [
+  "Folder or card to import from",
+  "Carpeta o tarjeta desde la que importar",
+  "Cartella o scheda da cui importare"
+ ],
+ "Куда складывать съёмки": [
+  "Where to put shoots",
+  "Dónde guardar las sesiones",
+  "Dove mettere gli scatti"
+ ],
+ "Подключена карта «{}»": [
+  "Card “{}” connected",
+  "Tarjeta «{}» conectada",
+  "Scheda «{}» collegata"
+ ],
+ "Импортировать…": [
+  "Import…",
+  "Importar…",
+  "Importa…"
+ ],
+ "Выделено {} — оценка и цвет применятся ко всем": [
+  "{} selected — rating and color apply to all",
+  "{} seleccionadas: la valoración y el color se aplican a todas",
+  "{} selezionate: valutazione e colore si applicano a tutte"
+ ],
+ "Камера": [
+  "Camera",
+  "Cámara",
+  "Fotocamera"
+ ],
+ "Объектив": [
+  "Lens",
+  "Objetivo",
+  "Obiettivo"
+ ],
+ "{} × {}  ·  {} Мп": [
+  "{} × {}  ·  {} MP",
+  "{} × {}  ·  {} MP",
+  "{} × {}  ·  {} MP"
+ ],
+ "Файл": [
+  "File",
+  "Archivo",
+  "File"
+ ],
+ "Анализ": [
+  "Analysis",
+  "Análisis",
+  "Analisi"
+ ],
+ "Самый резкий кадр в серии из {}": [
+  "Sharpest photo in a series of {}",
+  "La foto más nítida de una serie de {}",
+  "La foto più nitida in una serie di {}"
+ ],
+ "Серия из {} похожих кадров": [
+  "Series of {} similar photos",
+  "Serie de {} fotos parecidas",
+  "Serie di {} foto simili"
+ ],
+ "Точная копия {}": [
+  "Exact copy of {}",
+  "Copia exacta de {}",
+  "Copia esatta di {}"
+ ],
+ "Отклонить (X)": [
+  "Reject (X)",
+  "Rechazar (X)",
+  "Scarta (X)"
+ ],
+ "Резкость": [
+  "Sharpness",
+  "Nitidez",
+  "Nitidezza"
+ ],
+ "относительно самого резкого кадра в папке": [
+  "relative to the sharpest photo in the folder",
+  "respecto a la foto más nítida de la carpeta",
+  "rispetto alla foto più nitida della cartella"
+ ],
+ "Отменить: {}": [
+  "Undo: {}",
+  "Deshacer: {}",
+  "Annulla: {}"
+ ],
+ "Вернуть: {}": [
+  "Redo: {}",
+  "Rehacer: {}",
+  "Ripeti: {}"
+ ],
+ "Журнал изменений": [
+  "Edit history",
+  "Historial de cambios",
+  "Cronologia modifiche"
+ ],
+ "Открыть папку…": [
+  "Open folder…",
+  "Abrir carpeta…",
+  "Apri cartella…"
+ ],
+ "Импорт с карты памяти…": [
+  "Import from memory card…",
+  "Importar desde tarjeta de memoria…",
+  "Importa da scheda di memoria…"
+ ],
+ "Увеличить": [
+  "Zoom in",
+  "Acercar",
+  "Ingrandisci"
+ ],
+ "Уменьшить": [
+  "Zoom out",
+  "Alejar",
+  "Riduci"
+ ],
+ "Вписать в окно": [
+  "Fit to window",
+  "Ajustar a la ventana",
+  "Adatta alla finestra"
+ ],
+ "Масштаб 100%": [
+  "Zoom 100%",
+  "Zoom 100%",
+  "Zoom 100%"
+ ],
+ "Копировать обработку": [
+  "Copy edits",
+  "Copiar edición",
+  "Copia modifiche"
+ ],
+ "Вставить обработку": [
+  "Paste edits",
+  "Pegar edición",
+  "Incolla modifiche"
+ ],
+ "Сбросить обработку": [
+  "Reset edits",
+  "Restablecer edición",
+  "Ripristina modifiche"
+ ],
+ "Применить стиль": [
+  "Apply style",
+  "Aplicar estilo",
+  "Applica stile"
+ ],
+ "Загрузить LUT (.cube)…": [
+  "Load LUT (.cube)…",
+  "Cargar LUT (.cube)…",
+  "Carica LUT (.cube)…"
+ ],
+ "Показать до обработки": [
+  "Show before edits",
+  "Mostrar antes de la edición",
+  "Mostra prima delle modifiche"
+ ],
+ "Отбор": [
+  "Culling",
+  "Selección",
+  "Selezione"
+ ],
+ "Открыть в Capture One": [
+  "Open in Capture One",
+  "Abrir en Capture One",
+  "Apri in Capture One"
+ ],
+ "Выделить всё": [
+  "Select all",
+  "Seleccionar todo",
+  "Seleziona tutto"
+ ],
+ "Выделить серию": [
+  "Select series",
+  "Seleccionar serie",
+  "Seleziona serie"
+ ],
+ "Пересчитать анализ папки": [
+  "Re-analyze folder",
+  "Volver a analizar la carpeta",
+  "Rianalizza la cartella"
+ ],
+ "Переходить дальше после оценки": [
+  "Advance after rating",
+  "Avanzar tras valorar",
+  "Avanza dopo la valutazione"
+ ],
+ "Все снимки": [
+  "All photos",
+  "Todas las fotos",
+  "Tutte le foto"
+ ],
+ "Без оценки": [
+  "Unrated",
+  "Sin valorar",
+  "Senza valutazione"
+ ],
+ "С оценкой": [
+  "Rated",
+  "Valoradas",
+  "Valutate"
+ ],
+ "Отклонённые": [
+  "Rejected",
+  "Rechazadas",
+  "Scartate"
+ ],
+ "Лучшие в сериях": [
+  "Best in series",
+  "Mejores de las series",
+  "Migliori delle serie"
+ ],
+ " и выше": [
+  " and up",
+  " o más",
+  " e oltre"
+ ],
+ "Точные дубли": [
+  "Exact duplicates",
+  "Duplicados exactos",
+  "Duplicati esatti"
+ ],
+ "Стиль «{}»": [
+  "Style “{}”",
+  "Estilo «{}»",
+  "Stile «{}»"
+ ],
+ "Стиль «{}» сохранён": [
+  "Style “{}” saved",
+  "Estilo «{}» guardado",
+  "Stile «{}» salvato"
+ ],
+ "Стиль «{}» обновлён": [
+  "Style “{}” updated",
+  "Estilo «{}» actualizado",
+  "Stile «{}» aggiornato"
+ ],
+ "Своих стилей пока нет": [
+  "No styles of your own yet",
+  "Aún no tienes estilos propios",
+  "Ancora nessuno stile personale"
+ ],
+ "Мои стили.kadrstyles": [
+  "My styles.kadrstyles",
+  "Mis estilos.kadrstyles",
+  "I miei stili.kadrstyles"
+ ],
+ "Экспорт своих стилей ({})": [
+  "Export your styles ({})",
+  "Exportar tus estilos ({})",
+  "Esporta i tuoi stili ({})"
+ ],
+ "Экспортировано стилей: {}": [
+  "Styles exported: {}",
+  "Estilos exportados: {}",
+  "Stili esportati: {}"
+ ],
+ "Файл со стилями .kadrstyles": [
+  "Styles file .kadrstyles",
+  "Archivo de estilos .kadrstyles",
+  "File di stili .kadrstyles"
+ ],
+ "Импортировано стилей: {}": [
+  "Styles imported: {}",
+  "Estilos importados: {}",
+  "Stili importati: {}"
+ ],
+ "Обработка скопирована": [
+  "Edits copied",
+  "Edición copiada",
+  "Modifiche copiate"
+ ],
+ "Сначала скопируйте обработку (⌘⇧C)": [
+  "Copy edits first (⌘⇧C)",
+  "Primero copia la edición (⌘⇧C)",
+  "Prima copia le modifiche (⌘⇧C)"
+ ],
+ "Вставка обработки": [
+  "Paste edits",
+  "Pegar edición",
+  "Incolla modifiche"
+ ],
+ "Обработка вставлена": [
+  "Edits pasted",
+  "Edición pegada",
+  "Modifiche incollate"
+ ],
+ "Сброс к исходнику": [
+  "Reset to original",
+  "Restablecer al original",
+  "Ripristina l’originale"
+ ],
+ "Обработка сброшена": [
+  "Edits reset",
+  "Edición restablecida",
+  "Modifiche ripristinate"
+ ],
+ "Нечего сохранять: кадр без обработки": [
+  "Nothing to save: the photo has no edits",
+  "Nada que guardar: la foto no tiene edición",
+  "Niente da salvare: la foto non ha modifiche"
+ ],
+ "Выберите LUT-файлы .cube": [
+  "Choose .cube LUT files",
+  "Elige archivos LUT .cube",
+  "Scegli file LUT .cube"
+ ],
+ "Не удалось прочитать LUT": [
+  "Couldn’t read the LUT",
+  "No se pudo leer el LUT",
+  "Impossibile leggere il LUT"
+ ],
+ "Добавлено LUT: {}": [
+  "LUTs added: {}",
+  "LUT añadidos: {}",
+  "LUT aggiunti: {}"
+ ],
+ "Сравниваю первые 4 из {}": [
+  "Comparing the first 4 of {}",
+  "Comparando las 4 primeras de {}",
+  "Confronto delle prime 4 di {}"
+ ],
+ "Выделите 2–4 кадра: ⌘-клик или рамкой": [
+  "Select 2–4 photos: ⌘-click or drag a box",
+  "Selecciona 2–4 fotos: ⌘-clic o arrastrando un recuadro",
+  "Seleziona 2–4 foto: ⌘-clic o trascinando un riquadro"
+ ],
+ "Оставлен {}": [
+  "Kept {}",
+  "Conservada {}",
+  "Tenuta {}"
+ ],
+ "Оставлен {}, отклонено: {}": [
+  "Kept {}, rejected: {}",
+  "Conservada {}, rechazadas: {}",
+  "Tenuta {}, scartate: {}"
+ ],
+ "Без даты": [
+  "No date",
+  "Sin fecha",
+  "Senza data"
+ ],
+ "Выберите папку со съёмкой": [
+  "Choose the shoot folder",
+  "Elige la carpeta de la sesión",
+  "Scegli la cartella dello scatto"
+ ],
+ "Выделено: {}": [
+  "Selected: {}",
+  "Seleccionadas: {}",
+  "Selezionate: {}"
+ ],
+ "Оценка снята": [
+  "Rating cleared",
+  "Valoración quitada",
+  "Valutazione rimossa"
+ ],
+ "Отклонено": [
+  "Rejected",
+  "Rechazada",
+  "Scartata"
+ ],
+ "Возвращено": [
+  "Restored",
+  "Recuperada",
+  "Ripristinata"
+ ],
+ "Метка снята": [
+  "Label cleared",
+  "Etiqueta quitada",
+  "Etichetta rimossa"
+ ],
+ "Метка: {}": [
+  "Label: {}",
+  "Etiqueta: {}",
+  "Etichetta: {}"
+ ],
+ " · {} шт.": [
+  " · {} pcs",
+  " · {} uds.",
+  " · {} pz."
+ ],
+ "Не удалось записать XMP: {} шт.": [
+  "Couldn’t write XMP: {} pcs",
+  "No se pudo escribir XMP: {} uds.",
+  "Impossibile scrivere XMP: {} pz."
+ ],
+ "Нет отклонённых": [
+  "No rejected photos",
+  "No hay fotos rechazadas",
+  "Nessuna foto scartata"
+ ],
+ "Перенести {} отклонённых в папку «_Отклонённые»?": [
+  "Move {} rejected photos to “_Отклонённые”?",
+  "¿Mover {} fotos rechazadas a «_Отклонённые»?",
+  "Spostare {} foto scartate in «_Отклонённые»?"
+ ],
+ "Файлы не удаляются — их можно вернуть обратно вручную.": [
+  "Files aren’t deleted — you can move them back by hand.",
+  "Los archivos no se borran: puedes devolverlos a mano.",
+  "I file non vengono eliminati: puoi riportarli indietro a mano."
+ ],
+ "Перенести": [
+  "Move",
+  "Mover",
+  "Sposta"
+ ],
+ "Перенесено: {}": [
+  "Moved: {}",
+  "Movidas: {}",
+  "Spostate: {}"
+ ],
+ "Папка, куда сохранять отобранные снимки": [
+  "Folder to save picks to",
+  "Carpeta donde guardar las elegidas",
+  "Cartella in cui salvare le scelte"
+ ],
+ "Нечего сохранять": [
+  "Nothing to save",
+  "Nada que guardar",
+  "Niente da salvare"
+ ],
+ "Сохранено: {} → {}": [
+  "Saved: {} → {}",
+  "Guardadas: {} → {}",
+  "Salvate: {} → {}"
+ ],
+ "→ {}: {} шт.": [
+  "→ {}: {} pcs",
+  "→ {}: {} uds.",
+  "→ {}: {} pz."
+ ],
+ "Уже есть в {}": [
+  "Already in {}",
+  "Ya está en {}",
+  "Già presente in {}"
+ ],
+ "Путь скопирован": [
+  "Path copied",
+  "Ruta copiada",
+  "Percorso copiato"
+ ],
+ "Серия: {} из {}": [
+  "Series: {} of {}",
+  "Serie: {} de {}",
+  "Serie: {} di {}"
+ ],
+ " · самый резкий": [
+  " · sharpest",
+  " · la más nítida",
+  " · la più nitida"
+ ],
+ "Проявляю RAW…": [
+  "Developing RAW…",
+  "Revelando RAW…",
+  "Sviluppo RAW…"
+ ],
+ "Красный": [
+  "Red",
+  "Rojo",
+  "Rosso"
+ ],
+ "Жёлтый": [
+  "Yellow",
+  "Amarillo",
+  "Giallo"
+ ],
+ "Зелёный": [
+  "Green",
+  "Verde",
+  "Verde"
+ ],
+ "Синий": [
+  "Blue",
+  "Azul",
+  "Blu"
+ ],
+ "Фиолетовый": [
+  "Purple",
+  "Morado",
+  "Viola"
+ ],
+ "{} мм": [
+  "{} mm",
+  "{} mm",
+  "{} mm"
+ ],
+ "%.1f с": [
+  "%.1f s",
+  "%.1f s",
+  "%.1f s"
+ ],
+ "1/{} с": [
+  "1/{} s",
+  "1/{} s",
+  "1/{} s"
+ ],
+ "Объектив не указан": [
+  "Lens not specified",
+  "Objetivo no indicado",
+  "Obiettivo non indicato"
+ ],
+ "Время съёмки": [
+  "Capture time",
+  "Hora de captura",
+  "Ora di scatto"
+ ],
+ "Оценка": [
+  "Rating",
+  "Valoración",
+  "Valutazione"
+ ],
+ "Папка": [
+  "Folder",
+  "Carpeta",
+  "Cartella"
+ ],
+ "Размер файла": [
+  "File size",
+  "Tamaño de archivo",
+  "Dimensione del file"
+ ],
+ "Без группировки": [
+  "No grouping",
+  "Sin agrupar",
+  "Nessun raggruppamento"
+ ],
+ "По дням": [
+  "By day",
+  "Por días",
+  "Per giorno"
+ ],
+ "По папкам": [
+  "By folder",
+  "Por carpetas",
+  "Per cartella"
+ ],
+ "По объективам": [
+  "By lens",
+  "Por objetivos",
+  "Per obiettivo"
+ ],
+ "По оценке": [
+  "By rating",
+  "Por valoración",
+  "Per valutazione"
+ ],
+ "Снять оценку": [
+  "Clear rating",
+  "Quitar valoración",
+  "Togli valutazione"
+ ],
+ "Цветная метка": [
+  "Color label",
+  "Etiqueta de color",
+  "Etichetta colore"
+ ],
+ "Отклонить": [
+  "Reject",
+  "Rechazar",
+  "Scarta"
+ ],
+ "Открыть в просмотре": [
+  "Open in viewer",
+  "Abrir en el visor",
+  "Apri nel visore"
+ ],
+ "Открыть в программе по умолчанию": [
+  "Open in default app",
+  "Abrir en la app predeterminada",
+  "Apri nell’app predefinita"
+ ],
+ "Скопировать пути": [
+  "Copy paths",
+  "Copiar rutas",
+  "Copia percorsi"
+ ],
+ "Скопировать путь": [
+  "Copy path",
+  "Copiar ruta",
+  "Copia percorso"
+ ],
+ "Отправить в папку сохранения": [
+  "Send to save folder",
+  "Enviar a la carpeta de guardado",
+  "Invia alla cartella di salvataggio"
+ ],
+ "Сохранить как JPEG…": [
+  "Save as JPEG…",
+  "Guardar como JPEG…",
+  "Salva come JPEG…"
+ ],
+ "Сохранить оригиналы в папку…": [
+  "Save originals to folder…",
+  "Guardar originales en carpeta…",
+  "Salva gli originali in una cartella…"
+ ],
+ "Сравнить ({})": [
+  "Compare ({})",
+  "Comparar ({})",
+  "Confronta ({})"
+ ],
+ "Сравнить кадры серии": [
+  "Compare series photos",
+  "Comparar fotos de la serie",
+  "Confronta le foto della serie"
+ ],
+ "Выделить всю серию": [
+  "Select the whole series",
+  "Seleccionar toda la serie",
+  "Seleziona tutta la serie"
+ ],
+ "Тёплый свет": [
+  "Warm light",
+  "Luz cálida",
+  "Luce calda"
+ ],
+ "Холодный": [
+  "Cool",
+  "Frío",
+  "Freddo"
+ ],
+ "Сочный": [
+  "Juicy",
+  "Vivo",
+  "Vivace"
+ ],
+ "Яркий день": [
+  "Bright day",
+  "Día luminoso",
+  "Giornata luminosa"
+ ],
+ "Мягкий": [
+  "Soft",
+  "Suave",
+  "Morbido"
+ ],
+ "Матовый": [
+  "Matte",
+  "Mate",
+  "Opaco"
+ ],
+ "Нежная кожа": [
+  "Soft skin",
+  "Piel suave",
+  "Pelle morbida"
+ ],
+ "Тёплый вечер": [
+  "Warm evening",
+  "Tarde cálida",
+  "Sera calda"
+ ],
+ "Пастель": [
+  "Pastel",
+  "Pastel",
+  "Pastello"
+ ],
+ "Глянец": [
+  "Gloss",
+  "Brillo",
+  "Lucido"
+ ],
+ "Свадебный светлый": [
+  "Bright wedding",
+  "Boda luminosa",
+  "Matrimonio luminoso"
+ ],
+ "Сочный пейзаж": [
+  "Lush landscape",
+  "Paisaje vivo",
+  "Paesaggio vivace"
+ ],
+ "Драматичное небо": [
+  "Dramatic sky",
+  "Cielo dramático",
+  "Cielo drammatico"
+ ],
+ "Золотой час": [
+  "Golden hour",
+  "Hora dorada",
+  "Ora d’oro"
+ ],
+ "Туманное утро": [
+  "Misty morning",
+  "Mañana brumosa",
+  "Mattina nebbiosa"
+ ],
+ "Ночной неон": [
+  "Night neon",
+  "Neón nocturno",
+  "Neon notturno"
+ ],
+ "Выцветший фильм": [
+  "Faded film",
+  "Película desvaída",
+  "Pellicola sbiadita"
+ ],
+ "Ч/Б контраст": [
+  "B&W contrast",
+  "B/N contraste",
+  "B/N contrasto"
+ ],
+ "Ч/Б мягкий": [
+  "B&W soft",
+  "B/N suave",
+  "B/N morbido"
+ ],
+ "Ч/Б драма": [
+  "B&W drama",
+  "B/N drama",
+  "B/N drammatico"
+ ],
+ "Ч/Б нуар": [
+  "B&W noir",
+  "B/N noir",
+  "B/N noir"
+ ],
+ "Ч/Б селен": [
+  "B&W selenium",
+  "B/N selenio",
+  "B/N selenio"
+ ],
+ "Выделено {}": [
+  "{} selected",
+  "{} seleccionadas",
+  "{} selezionate"
+ ],
+ "{} ★ всем": [
+  "{} ★ to all",
+  "{} ★ a todas",
+  "{} ★ a tutte"
+ ],
+ "Снять выделение (Esc)": [
+  "Clear selection (Esc)",
+  "Quitar selección (Esc)",
+  "Togli selezione (Esc)"
+ ],
+ "Общие": [
+  "General",
+  "General",
+  "Generali"
+ ],
+ "Хранилище": [
+  "Storage",
+  "Almacenamiento",
+  "Archiviazione"
+ ],
+ "Память и скорость": [
+  "Memory & speed",
+  "Memoria y velocidad",
+  "Memoria e velocità"
+ ],
+ "Стили и LUT": [
+  "Styles & LUTs",
+  "Estilos y LUT",
+  "Stili e LUT"
+ ],
+ "Резервная копия": [
+  "Backup",
+  "Copia de seguridad",
+  "Backup"
+ ],
+ "Язык интерфейса": [
+  "Interface language",
+  "Idioma de la interfaz",
+  "Lingua dell’interfaccia"
+ ],
+ "Как в системе": [
+  "System default",
+  "Como el sistema",
+  "Come il sistema"
+ ],
+ "Русский": [
+  "Русский",
+  "Русский",
+  "Русский"
+ ],
+ "Язык сменится после перезапуска.": [
+  "The language changes after a restart.",
+  "El idioma cambiará tras reiniciar.",
+  "La lingua cambierà dopo il riavvio."
+ ],
+ "Перезапустить": [
+  "Restart",
+  "Reiniciar",
+  "Riavvia"
+ ],
+ "Работа": [
+  "Workflow",
+  "Trabajo",
+  "Lavoro"
+ ],
+ "Открывать последнюю папку при запуске": [
+  "Open the last folder at launch",
+  "Abrir la última carpeta al iniciar",
+  "Apri l’ultima cartella all’avvio"
+ ],
+ "Переходить к следующему кадру после оценки": [
+  "Go to the next photo after rating",
+  "Pasar a la siguiente foto tras valorar",
+  "Passa alla foto successiva dopo la valutazione"
+ ],
+ "Предлагать импорт при подключении карты памяти": [
+  "Offer import when a memory card is connected",
+  "Ofrecer importar al conectar una tarjeta de memoria",
+  "Proponi l’importazione quando si collega una scheda"
+ ],
+ "Сбросить все настройки…": [
+  "Reset all settings…",
+  "Restablecer todos los ajustes…",
+  "Ripristina tutte le impostazioni…"
+ ],
+ "Стили, LUT, журналы и обработка снимков не удаляются — только настройки окон и экспорта.": [
+  "Styles, LUTs, histories and photo edits are not deleted — only window and export settings.",
+  "No se borran estilos, LUT, historiales ni la edición de las fotos: solo los ajustes de ventanas y exportación.",
+  "Stili, LUT, cronologie e modifiche alle foto non vengono eliminati: solo le impostazioni di finestre ed esportazione."
+ ],
+ "Папка данных «Кадра»": [
+  "Kadr data folder",
+  "Carpeta de datos de Kadr",
+  "Cartella dati di Kadr"
+ ],
+ "Показать": [
+  "Show",
+  "Mostrar",
+  "Mostra"
+ ],
+ "Перенести в другую папку…": [
+  "Move to another folder…",
+  "Mover a otra carpeta…",
+  "Sposta in un’altra cartella…"
+ ],
+ "Вернуть стандартную": [
+  "Back to default",
+  "Volver a la predeterminada",
+  "Torna a quella predefinita"
+ ],
+ "Здесь индексы, журналы, стили и LUT. Обработка снимков и оценки хранятся рядом со снимками (.kadr и XMP) — они переезжают вместе с папкой съёмки.": [
+  "Indexes, histories, styles and LUTs live here. Photo edits and ratings are stored next to the photos (.kadr and XMP) — they move with the shoot folder.",
+  "Aquí están índices, historiales, estilos y LUT. La edición y las valoraciones se guardan junto a las fotos (.kadr y XMP) y se mueven con la carpeta de la sesión.",
+  "Qui ci sono indici, cronologie, stili e LUT. Modifiche e valutazioni stanno accanto alle foto (.kadr e XMP) e si spostano con la cartella dello scatto."
+ ],
+ "Что занимает место": [
+  "What takes space",
+  "Qué ocupa espacio",
+  "Cosa occupa spazio"
+ ],
+ "Индекс анализа": [
+  "Analysis index",
+  "Índice de análisis",
+  "Indice di analisi"
+ ],
+ "{} папок": [
+  "{} folders",
+  "{} carpetas",
+  "{} cartelle"
+ ],
+ "Журналы изменений": [
+  "Edit histories",
+  "Historiales de cambios",
+  "Cronologie modifiche"
+ ],
+ "{} файлов": [
+  "{} files",
+  "{} archivos",
+  "{} file"
+ ],
+ "Свои стили": [
+  "My styles",
+  "Mis estilos",
+  "I miei stili"
+ ],
+ "{} шт.": [
+  "{} pcs",
+  "{} uds.",
+  "{} pz."
+ ],
+ "Временных файлов на диске «Кадр» не создаёт: превью и проявленные кадры держатся в памяти и освобождаются сами. Индекс пересоздаётся при следующем открытии папки.": [
+  "Kadr creates no temporary files on disk: previews and developed photos live in memory and are freed automatically. The index is rebuilt the next time a folder is opened.",
+  "Kadr no crea archivos temporales en disco: las vistas previas y las fotos reveladas viven en memoria y se liberan solas. El índice se reconstruye la próxima vez que se abre la carpeta.",
+  "Kadr non crea file temporanei su disco: anteprime e foto sviluppate restano in memoria e vengono liberate da sole. L’indice si ricrea alla prossima apertura della cartella."
+ ],
+ "Очистить": [
+  "Clear",
+  "Vaciar",
+  "Svuota"
+ ],
+ "Сейчас «Кадр» использует": [
+  "Kadr is using now",
+  "Kadr usa ahora",
+  "Kadr usa ora"
+ ],
+ "Ядер процессора": [
+  "CPU cores",
+  "Núcleos de CPU",
+  "Core della CPU"
+ ],
+ "Анализ папки": [
+  "Folder analysis",
+  "Análisis de carpeta",
+  "Analisi della cartella"
+ ],
+ "Потоков анализа": [
+  "Analysis threads",
+  "Hilos de análisis",
+  "Thread di analisi"
+ ],
+ "1 — тише всего": [
+  "1 — quietest",
+  "1 — el más silencioso",
+  "1 — il più silenzioso"
+ ],
+ "2 — щадяще (по умолчанию)": [
+  "2 — gentle (default)",
+  "2 — moderado (predeterminado)",
+  "2 — leggero (predefinito)"
+ ],
+ "4 — быстрее всего": [
+  "4 — fastest",
+  "4 — el más rápido",
+  "4 — il più veloce"
+ ],
+ "Хранить индекс анализа (повторное открытие папки — мгновенно)": [
+  "Keep an analysis index (reopening a folder is instant)",
+  "Guardar índice de análisis (reabrir una carpeta es instantáneo)",
+  "Conserva l’indice di analisi (riaprire una cartella è immediato)"
+ ],
+ "Память": [
+  "Memory",
+  "Memoria",
+  "Memoria"
+ ],
+ "Превью в памяти": [
+  "Previews in memory",
+  "Vistas previas en memoria",
+  "Anteprime in memoria"
+ ],
+ "1000 — экономно": [
+  "1000 — economical",
+  "1000 — económico",
+  "1000 — economico"
+ ],
+ "4000 — по умолчанию": [
+  "4000 — default",
+  "4000 — predeterminado",
+  "4000 — predefinito"
+ ],
+ "8000 — большие съёмки": [
+  "8000 — large shoots",
+  "8000 — sesiones grandes",
+  "8000 — scatti numerosi"
+ ],
+ "Проявленных кадров в памяти": [
+  "Developed photos in memory",
+  "Fotos reveladas en memoria",
+  "Foto sviluppate in memoria"
+ ],
+ "2 — экономно": [
+  "2 — economical",
+  "2 — económico",
+  "2 — economico"
+ ],
+ "4 — по умолчанию": [
+  "4 — default",
+  "4 — predeterminado",
+  "4 — predefinito"
+ ],
+ "6 — быстрее листать": [
+  "6 — faster browsing",
+  "6 — navegar más rápido",
+  "6 — navigazione più veloce"
+ ],
+ "Превью ~0,3–1 МБ каждое, проявленный кадр ~60–80 МБ. Меньше — экономнее память, больше — быстрее листать назад. Применяется после перезапуска.": [
+  "A preview is ~0.3–1 MB, a developed photo ~60–80 MB. Less saves memory, more makes going back faster. Applies after a restart.",
+  "Una vista previa ocupa ~0,3–1 MB y una foto revelada ~60–80 MB. Menos ahorra memoria, más agiliza volver atrás. Se aplica tras reiniciar.",
+  "Un’anteprima occupa ~0,3–1 MB, una foto sviluppata ~60–80 MB. Meno risparmia memoria, più rende più veloce tornare indietro. Si applica dopo il riavvio."
+ ],
+ "Шагов на папку": [
+  "Steps per folder",
+  "Pasos por carpeta",
+  "Passaggi per cartella"
+ ],
+ "100 — по умолчанию": [
+  "100 — default",
+  "100 — predeterminado",
+  "100 — predefinito"
+ ],
+ "Сохранять журнал между запусками": [
+  "Keep history between launches",
+  "Conservar el historial entre sesiones",
+  "Conserva la cronologia tra un avvio e l’altro"
+ ],
+ "Шаг для одного кадра ~1 КБ, запись и отмена ~0,1 мс. Предел по объёму — {} изменений кадров (~{} МБ).": [
+  "A step for one photo is ~1 KB, record and undo take ~0.1 ms. Size limit — {} photo changes (~{} MB).",
+  "Un paso de una foto ocupa ~1 KB; guardar y deshacer tardan ~0,1 ms. Límite de tamaño: {} cambios de fotos (~{} MB).",
+  "Un passaggio per una foto occupa ~1 KB; registrare e annullare richiedono ~0,1 ms. Limite: {} modifiche di foto (~{} MB)."
+ ],
+ "Куда импортировать": [
+  "Import to",
+  "Importar a",
+  "Importa in"
+ ],
+ "Карта памяти": [
+  "Memory card",
+  "Tarjeta de memoria",
+  "Scheda di memoria"
+ ],
+ "Только новые — пропускать уже импортированные": [
+  "New only — skip already imported",
+  "Solo nuevas: omitir las ya importadas",
+  "Solo nuove: salta quelle già importate"
+ ],
+ "Извлекать карту после импорта": [
+  "Eject the card after import",
+  "Expulsar la tarjeta tras importar",
+  "Espelli la scheda dopo l’importazione"
+ ],
+ "Забыть, что уже импортировано": [
+  "Forget what was already imported",
+  "Olvidar lo ya importado",
+  "Dimentica ciò che è già stato importato"
+ ],
+ "После этого следующий импорт той же карты скопирует все снимки заново (уже существующие файлы не перезапишутся).": [
+  "After this, the next import of the same card copies all photos again (existing files are not overwritten).",
+  "Después, la siguiente importación de la misma tarjeta copiará todas las fotos de nuevo (los archivos existentes no se sobrescriben).",
+  "Dopo, la prossima importazione della stessa scheda copierà di nuovo tutte le foto (i file esistenti non vengono sovrascritti)."
+ ],
+ "Сохранено": [
+  "Saved",
+  "Guardados",
+  "Salvati"
+ ],
+ "Экспорт стилей…": [
+  "Export styles…",
+  "Exportar estilos…",
+  "Esporta stili…"
+ ],
+ "Импорт стилей…": [
+  "Import styles…",
+  "Importar estilos…",
+  "Importa stili…"
+ ],
+ "Файл .kadrstyles переносит стили на другой Mac или к коллеге.": [
+  "A .kadrstyles file moves styles to another Mac or to a colleague.",
+  "Un archivo .kadrstyles lleva los estilos a otro Mac o a un colega.",
+  "Un file .kadrstyles porta gli stili su un altro Mac o a un collega."
+ ],
+ "Установлено": [
+  "Installed",
+  "Instalados",
+  "Installati"
+ ],
+ "Загрузить .cube / HaldCLUT…": [
+  "Load .cube / HaldCLUT…",
+  "Cargar .cube / HaldCLUT…",
+  "Carica .cube / HaldCLUT…"
+ ],
+ "Открыть папку LUT": [
+  "Open LUT folder",
+  "Abrir carpeta de LUT",
+  "Apri cartella LUT"
+ ],
+ "Установлено: {}": [
+  "Installed: {}",
+  "Instalados: {}",
+  "Installati: {}"
+ ],
+ "Резервная копия «Кадра»": [
+  "Kadr backup",
+  "Copia de seguridad de Kadr",
+  "Backup di Kadr"
+ ],
+ "Один файл .zip: свои стили, LUT, настройки (экспорт, импорт, избранные папки) и журналы изменений. Индекс в копию не входит — он пересчитывается сам.": [
+  "One .zip file: your styles, LUTs, settings (export, import, favorite folders) and edit histories. The index is not included — it rebuilds itself.",
+  "Un único archivo .zip: tus estilos, LUT, ajustes (exportación, importación, carpetas favoritas) e historiales de cambios. El índice no se incluye: se reconstruye solo.",
+  "Un unico file .zip: i tuoi stili, LUT, impostazioni (esportazione, importazione, cartelle preferite) e cronologie. L’indice non è incluso: si ricrea da solo."
+ ],
+ "Последняя копия": [
+  "Last backup",
+  "Última copia",
+  "Ultimo backup"
+ ],
+ "ещё не делали": [
+  "not made yet",
+  "aún no se ha hecho",
+  "non ancora fatto"
+ ],
+ "Создать копию…": [
+  "Create backup…",
+  "Crear copia…",
+  "Crea backup…"
+ ],
+ "Восстановить из копии…": [
+  "Restore from backup…",
+  "Restaurar desde una copia…",
+  "Ripristina da backup…"
+ ],
+ "Что ещё стоит беречь": [
+  "What else to protect",
+  "Qué más conviene proteger",
+  "Cos’altro proteggere"
+ ],
+ "Обработка и оценки хранятся рядом со снимками: папка .kadr и файлы .xmp в каждой съёмке. Делайте копию самих папок со съёмками (Time Machine, внешний диск) — тогда сохранится и обработка.": [
+  "Edits and ratings live next to the photos: the .kadr folder and .xmp files in every shoot. Back up the shoot folders themselves (Time Machine, external drive) — the edits will be kept too.",
+  "La edición y las valoraciones están junto a las fotos: la carpeta .kadr y los archivos .xmp de cada sesión. Haz copia de las propias carpetas de sesiones (Time Machine, disco externo) y la edición se conservará.",
+  "Modifiche e valutazioni stanno accanto alle foto: la cartella .kadr e i file .xmp in ogni scatto. Fai il backup delle cartelle degli scatti (Time Machine, disco esterno): si salveranno anche le modifiche."
+ ],
+ "Сбросить все настройки «Кадра»?": [
+  "Reset all Kadr settings?",
+  "¿Restablecer todos los ajustes de Kadr?",
+  "Ripristinare tutte le impostazioni di Kadr?"
+ ],
+ "Вернутся язык, кэши, параметры экспорта и импорта по умолчанию. Стили, LUT, журналы и обработка снимков останутся.": [
+  "Language, caches, export and import options return to defaults. Styles, LUTs, histories and photo edits stay.",
+  "El idioma, las cachés y las opciones de exportación e importación vuelven a los valores predeterminados. Estilos, LUT, historiales y edición de fotos se conservan.",
+  "Lingua, cache e opzioni di esportazione e importazione tornano ai valori predefiniti. Stili, LUT, cronologie e modifiche restano."
+ ],
+ "Куда перенести данные «Кадра» (индексы, журналы, стили, LUT)": [
+  "Where to move Kadr data (indexes, histories, styles, LUTs)",
+  "Dónde mover los datos de Kadr (índices, historiales, estilos, LUT)",
+  "Dove spostare i dati di Kadr (indici, cronologie, stili, LUT)"
+ ],
+ "Кадр-копия-{}.zip": [
+  "Kadr-backup-{}.zip",
+  "Kadr-copia-{}.zip",
+  "Kadr-backup-{}.zip"
+ ],
+ "Не удалось создать копию": [
+  "Couldn’t create the backup",
+  "No se pudo crear la copia",
+  "Impossibile creare il backup"
+ ],
+ "Копия сохранена: {} ({})": [
+  "Backup saved: {} ({})",
+  "Copia guardada: {} ({})",
+  "Backup salvato: {} ({})"
+ ],
+ "Файл резервной копии «Кадра» (.zip)": [
+  "Kadr backup file (.zip)",
+  "Archivo de copia de Kadr (.zip)",
+  "File di backup di Kadr (.zip)"
+ ],
+ "Это не копия «Кадра»": [
+  "This isn’t a Kadr backup",
+  "No es una copia de Kadr",
+  "Non è un backup di Kadr"
+ ],
+ "Копия восстановлена": [
+  "Backup restored",
+  "Copia restaurada",
+  "Backup ripristinato"
+ ],
+ "Перезапустить «Кадр», чтобы применить настройки?": [
+  "Restart Kadr to apply the settings?",
+  "¿Reiniciar Kadr para aplicar los ajustes?",
+  "Riavviare Kadr per applicare le impostazioni?"
+ ],
+ "Позже": [
+  "Later",
+  "Más tarde",
+  "Più tardi"
+ ],
+ "Восстановлено из {}": [
+  "Restored from {}",
+  "Restaurado desde {}",
+  "Ripristinato da {}"
+ ],
+ "Папки": [
+  "Folders",
+  "Carpetas",
+  "Cartelle"
+ ],
+ "Недавние": [
+  "Recent",
+  "Recientes",
+  "Recenti"
+ ],
+ "Импорт с карты…": [
+  "Import from card…",
+  "Importar de tarjeta…",
+  "Importa da scheda…"
+ ],
+ "Показывать снимки из всех подпапок открытой папки": [
+  "Show photos from all subfolders of the open folder",
+  "Mostrar fotos de todas las subcarpetas de la carpeta abierta",
+  "Mostra le foto di tutte le sottocartelle della cartella aperta"
+ ],
+ "Съёмка": [
+  "Shoot",
+  "Sesión",
+  "Scatto"
+ ],
+ "Объективы": [
+  "Lenses",
+  "Objetivos",
+  "Obiettivi"
+ ],
+ "Даты": [
+  "Dates",
+  "Fechas",
+  "Date"
+ ],
+ "Серий похожих: {}": [
+  "Similar series: {}",
+  "Series parecidas: {}",
+  "Serie simili: {}"
+ ],
+ "Считаю размер…": [
+  "Estimating size…",
+  "Calculando tamaño…",
+  "Calcolo dimensione…"
+ ],
+ "Оригиналы: {} всего ({} шт.)": [
+  "Originals: {} total ({} pcs)",
+  "Originales: {} en total ({} uds.)",
+  "Originali: {} in totale ({} pz.)"
+ ],
+ " · ≈ {} всего ({} шт.)": [
+  " · ≈ {} total ({} pcs)",
+  " · ≈ {} en total ({} uds.)",
+  " · ≈ {} in totale ({} pz.)"
+ ],
+ "≈ {} на кадр": [
+  "≈ {} per photo",
+  "≈ {} por foto",
+  "≈ {} per foto"
+ ],
+ "Вид": [
+  "View",
+  "Vista",
+  "Vista"
+ ],
+ "Сетка / Кадр (пробел)": [
+  "Grid / Photo (Space)",
+  "Cuadrícula / Foto (Espacio)",
+  "Griglia / Foto (Spazio)"
+ ],
+ "Кадрирование": [
+  "Crop",
+  "Recortar",
+  "Ritaglio"
+ ],
+ "До/после": [
+  "Before/after",
+  "Antes/después",
+  "Prima/dopo"
+ ],
+ "У кадра нет обработки — сравнивать не с чем": [
+  "The photo has no edits — nothing to compare",
+  "La foto no tiene edición: no hay nada que comparar",
+  "La foto non ha modifiche: niente da confrontare"
+ ],
+ "Выделите 2–4 кадра (⌘-клик или рамкой) или встаньте на кадр серии": [
+  "Select 2–4 photos (⌘-click or drag a box) or stand on a series photo",
+  "Selecciona 2–4 fotos (⌘-clic o recuadro) o sitúate en una foto de una serie",
+  "Seleziona 2–4 foto (⌘-clic o riquadro) o posizionati su una foto di una serie"
+ ],
+ "Детализация…": [
+  "Detailing…",
+  "Detallando…",
+  "Dettaglio…"
+ ],
+ "Навигатор: кликните или тяните, чтобы перейти к месту кадра": [
+  "Navigator: click or drag to jump to a spot in the photo",
+  "Navegador: haz clic o arrastra para ir a un punto de la foto",
+  "Navigatore: clic o trascina per andare a un punto della foto"
+ ],
+ "Уменьшить (⌘−)": [
+  "Zoom out (⌘−)",
+  "Alejar (⌘−)",
+  "Riduci (⌘−)"
+ ],
+ "Шторка «до / после» (Y): тяните линию по кадру": [
+  "Before/after split (Y): drag the line across the photo",
+  "Cortina antes/después (Y): arrastra la línea por la foto",
+  "Tendina prima/dopo (Y): trascina la linea sulla foto"
+ ],
+ "Вписать": [
+  "Fit",
+  "Ajustar",
+  "Adatta"
+ ],
+ "⌘0 или двойной клик": [
+  "⌘0 or double-click",
+  "⌘0 o doble clic",
+  "⌘0 o doppio clic"
+ ],
+ "⌘1 или Z": [
+  "⌘1 or Z",
+  "⌘1 o Z",
+  "⌘1 o Z"
+ ],
+ "Увеличить (⌘+)": [
+  "Zoom in (⌘+)",
+  "Acercar (⌘+)",
+  "Ingrandisci (⌘+)"
+ ],
+ "ДО": [
+  "BEFORE",
+  "ANTES",
+  "PRIMA"
+ ],
+ "ПОСЛЕ": [
+  "AFTER",
+  "DESPUÉS",
+  "DOPO"
+ ],
+ "Тяните, чтобы сравнить": [
+  "Drag to compare",
+  "Arrastra para comparar",
+  "Trascina per confrontare"
+ ],
+ "Базовые": [
+  "Basic",
+  "Básicos",
+  "Base"
+ ],
+ "Портрет": [
+  "Portrait",
+  "Retrato",
+  "Ritratto"
+ ],
+ "Пейзаж": [
+  "Landscape",
+  "Paisaje",
+  "Paesaggio"
+ ],
+ "Кино": [
+  "Cinema",
+  "Cine",
+  "Cinema"
+ ],
+ "Чёрно-белые": [
+  "Black & white",
+  "Blanco y negro",
+  "Bianco e nero"
+ ],
+ "Плёнка": [
+  "Film",
+  "Película",
+  "Pellicola"
+ ]
+}

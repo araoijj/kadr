@@ -17,11 +17,11 @@ enum ColorLabel: String, CaseIterable, Identifiable, Codable {
 
     var title: String {
         switch self {
-        case .red: "Красный"
-        case .yellow: "Жёлтый"
-        case .green: "Зелёный"
-        case .blue: "Синий"
-        case .purple: "Фиолетовый"
+        case .red: tr("Красный")
+        case .yellow: tr("Жёлтый")
+        case .green: tr("Зелёный")
+        case .blue: tr("Синий")
+        case .purple: tr("Фиолетовый")
         }
     }
 
@@ -50,10 +50,10 @@ struct ExifInfo: Equatable, Codable, Sendable {
 
     var exposureLine: String {
         var parts: [String] = []
-        if let focal { parts.append("\(Int(focal.rounded())) мм") }
+        if let focal { parts.append(tr("\(Int(focal.rounded())) мм")) }
         if let aperture { parts.append(String(format: "f/%.1f", aperture)) }
         if let shutter {
-            parts.append(shutter >= 1 ? String(format: "%.1f с", shutter) : "1/\(Int((1 / shutter).rounded())) с")
+            parts.append(shutter >= 1 ? String(format: tr("%.1f с"), shutter) : tr("1/\(Int((1 / shutter).rounded())) с"))
         }
         if let iso { parts.append("ISO \(iso)") }
         return parts.joined(separator: "  ·  ")
@@ -80,7 +80,7 @@ struct Photo: Identifiable, Equatable {
     var duplicateOf: URL?        // точная копия другого файла
     var indexed = false          // анализ есть (из индекса или посчитан сейчас)
 
-    var lensName: String { exif.lens?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? "Объектив не указан" }
+    var lensName: String { exif.lens?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? tr("Объектив не указан") }
     var day: Date? { exif.date.map { Calendar.current.startOfDay(for: $0) } }
 }
 
@@ -88,12 +88,12 @@ enum SortKey: String, CaseIterable {
     case date, name, rating, lens, folder, size
     var title: String {
         switch self {
-        case .date: "Время съёмки"
-        case .name: "Имя файла"
-        case .rating: "Оценка"
-        case .lens: "Объектив"
-        case .folder: "Папка"
-        case .size: "Размер файла"
+        case .date: tr("Время съёмки")
+        case .name: tr("Имя файла")
+        case .rating: tr("Оценка")
+        case .lens: tr("Объектив")
+        case .folder: tr("Папка")
+        case .size: tr("Размер файла")
         }
     }
 }
@@ -102,11 +102,11 @@ enum GroupKey: String, CaseIterable {
     case none, day, folder, lens, rating
     var title: String {
         switch self {
-        case .none: "Без группировки"
-        case .day: "По дням"
-        case .folder: "По папкам"
-        case .lens: "По объективам"
-        case .rating: "По оценке"
+        case .none: tr("Без группировки")
+        case .day: tr("По дням")
+        case .folder: tr("По папкам")
+        case .lens: tr("По объективам")
+        case .rating: tr("По оценке")
         }
     }
 }

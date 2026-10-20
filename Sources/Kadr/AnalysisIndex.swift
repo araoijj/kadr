@@ -34,12 +34,14 @@ enum AnalysisIndex {
     }
 
     static func load(_ dir: URL) -> [String: IndexEntry] {
+        guard Prefs.indexEnabled else { return [:] }
         guard let d = try? Data(contentsOf: file(for: dir)),
               let f = try? JSONDecoder().decode(File.self, from: d), f.version == version else { return [:] }
         return f.entries
     }
 
     static func save(_ entries: [String: IndexEntry], for dir: URL) {
+        guard Prefs.indexEnabled else { return }
         let f = File(version: version, folder: dir.standardizedFileURL.path, entries: entries)
         if let d = try? JSONEncoder().encode(f) { try? d.write(to: file(for: dir), options: .atomic) }
     }

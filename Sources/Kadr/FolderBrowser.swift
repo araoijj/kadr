@@ -67,7 +67,7 @@ final class FolderBrowser {
     }
 
     static func displayName(_ u: URL) -> String {
-        if u.path == FileManager.default.homeDirectoryForCurrentUser.path { return "Домой" }
+        if u.path == FileManager.default.homeDirectoryForCurrentUser.path { return tr("Домой") }
         return (try? u.resourceValues(forKeys: [.localizedNameKey]).localizedName) ?? u.lastPathComponent
     }
 
@@ -140,10 +140,10 @@ struct FolderRow: View {
         .buttonStyle(.plain)
         .help(url.path)
         .contextMenu {
-            Button("Открыть") { lib.open(url) }
-            Button("Показать в Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+            Button(tr("Открыть")) { lib.open(url) }
+            Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
             Divider()
-            Button(lib.browser.isFavorite(url) ? "Убрать из избранного" : "Добавить в избранное") { lib.browser.toggleFavorite(url) }
+            Button(lib.browser.isFavorite(url) ? tr("Убрать из избранного") : tr("Добавить в избранное")) { lib.browser.toggleFavorite(url) }
         }
     }
 }

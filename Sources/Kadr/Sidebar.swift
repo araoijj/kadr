@@ -13,12 +13,12 @@ struct Sidebar: View {
     var body: some View {
         @Bindable var lib = lib
         List(selection: Binding(get: { lib.filter }, set: { if let f = $0 { lib.filter = f; lib.move(0) } })) {
-            Section("Папки", isExpanded: $showFolders) {
+            Section(tr("Папки"), isExpanded: $showFolders) {
                 if !lib.browser.recent.isEmpty {
                     DisclosureGroup {
                         ForEach(lib.browser.recent, id: \.self) { FolderRow(url: $0, icon: "clock") }
                     } label: {
-                        Label("Недавние", systemImage: "clock.arrow.circlepath").foregroundStyle(.secondary)
+                        Label(tr("Недавние"), systemImage: "clock.arrow.circlepath").foregroundStyle(.secondary)
                     }
                 }
                 ForEach(lib.browser.favorites, id: \.self) { u in
@@ -30,32 +30,32 @@ struct Sidebar: View {
                 Button {
                     lib.showImport = true
                 } label: {
-                    Label("Импорт с карты…", systemImage: "square.and.arrow.down")
+                    Label(tr("Импорт с карты…"), systemImage: "square.and.arrow.down")
                         .foregroundStyle(Color.accentColor)
                 }
                 .buttonStyle(.plain)
                 .selectionDisabled()
-                Toggle("С вложенными папками", isOn: $lib.includeSubfolders)
+                Toggle(tr("С вложенными папками"), isOn: $lib.includeSubfolders)
                     .toggleStyle(.checkbox)
                     .font(.callout)
-                    .help("Показывать снимки из всех подпапок открытой папки")
+                    .help(tr("Показывать снимки из всех подпапок открытой папки"))
             }
 
             if lib.folder != nil {
-                Section("Съёмка", isExpanded: $showShoot) {
+                Section(tr("Съёмка"), isExpanded: $showShoot) {
                     row(.all)
                     row(.unrated)
                     row(.picked)
                     row(.rejected, tint: Theme.reject)
                 }
-                Section("Оценка", isExpanded: $showRating) {
+                Section(tr("Оценка"), isExpanded: $showRating) {
                     ForEach((1...5).reversed(), id: \.self) { n in starRow(n) }
                 }
-                Section("Цвет", isExpanded: $showColor) {
+                Section(tr("Цвет"), isExpanded: $showColor) {
                     ForEach(ColorLabel.allCases) { l in row(.label(l), tint: l.color) }
                 }
                 if lib.lenses.count > 1 {
-                    Section("Объективы", isExpanded: $showLens) {
+                    Section(tr("Объективы"), isExpanded: $showLens) {
                         ForEach(lib.lenses, id: \.name) { l in
                             toggleRow(l.name, icon: "camera.aperture", count: l.count, on: lib.lensFilter == l.name) {
                                 lib.lensFilter = lib.lensFilter == l.name ? nil : l.name
@@ -65,9 +65,9 @@ struct Sidebar: View {
                     }
                 }
                 if lib.days.count > 1 {
-                    Section("Даты", isExpanded: $showDays) {
+                    Section(tr("Даты"), isExpanded: $showDays) {
                         ForEach(lib.days, id: \.day) { d in
-                            toggleRow(d.day.formatted(.dateTime.day().month(.abbreviated).year()), icon: "calendar",
+                            toggleRow(d.day.formatted(.dateTime.day().month(.abbreviated).year().locale(I18n.locale)), icon: "calendar",
                                       count: d.count, on: lib.dayFilter == d.day) {
                                 lib.dayFilter = lib.dayFilter == d.day ? nil : d.day
                                 lib.move(0)
@@ -75,11 +75,11 @@ struct Sidebar: View {
                         }
                     }
                 }
-                Section("Анализ", isExpanded: $showAnalysis) {
+                Section(tr("Анализ"), isExpanded: $showAnalysis) {
                     row(.best, tint: Theme.star)
                     row(.duplicates)
                     if lib.seriesCount > 0 {
-                        Label("Серий похожих: \(lib.seriesCount)", systemImage: "square.stack.3d.up")
+                        Label(tr("Серий похожих: \(lib.seriesCount)"), systemImage: "square.stack.3d.up")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .selectionDisabled()

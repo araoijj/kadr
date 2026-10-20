@@ -34,7 +34,7 @@ struct LoupeView: View {
                 if p.seriesID != nil {
                     let s = lib.series(of: p)
                     let pos = (s.firstIndex { $0.id == p.id } ?? 0) + 1
-                    Badge(text: "Серия: \(pos) из \(s.count)" + (p.isBestInSeries ? " · самый резкий" : ""),
+                    Badge(text: tr("Серия: \(pos) из \(s.count)") + (p.isBestInSeries ? tr(" · самый резкий") : ""),
                           icon: p.isBestInSeries ? "sparkles" : "square.stack.3d.up",
                           tint: p.isBestInSeries ? Theme.star : .white.opacity(0.8))
                 }
@@ -44,7 +44,7 @@ struct LoupeView: View {
             Spacer()
             HStack {
                 if p.rejected {
-                    Label("Отклонён", systemImage: "xmark.circle.fill")
+                    Label(tr("Отклонён"), systemImage: "xmark.circle.fill")
                         .font(.headline)
                         .foregroundStyle(Theme.reject)
                 }
@@ -110,7 +110,7 @@ struct EditedImage: View {
             if rendering && !exact {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.small)
-                    Text("Проявляю RAW…").font(.caption)
+                    Text(tr("Проявляю RAW…")).font(.caption)
                 }
                 .padding(.horizontal, 10).padding(.vertical, 5)
                 .background(.black.opacity(0.6), in: Capsule())

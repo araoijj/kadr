@@ -9,7 +9,7 @@ struct ToolsBar: View {
         @Bindable var lib = lib
         let hasPhoto = lib.current != nil
         HStack(spacing: 2) {
-            Picker("Вид", selection: Binding(get: { lib.loupe }, set: { v in
+            Picker(tr("Вид"), selection: Binding(get: { lib.loupe }, set: { v in
                 if lib.cropMode { lib.finishCrop() }
                 if lib.comparing { lib.stopCompare() }
                 lib.loupe = v
@@ -19,22 +19,22 @@ struct ToolsBar: View {
             }
             .pickerStyle(.segmented)
             .frame(width: 76)
-            .help("Сетка / Кадр (пробел)")
+            .help(tr("Сетка / Кадр (пробел)"))
 
             Divider().frame(height: 18).padding(.horizontal, 6)
 
-            tool("Кадрирование", "crop", on: lib.cropMode, key: "R", enabled: hasPhoto) {
+            tool(tr("Кадрирование"), "crop", on: lib.cropMode, key: "R", enabled: hasPhoto) {
                 lib.cropMode ? lib.finishCrop() : lib.startCrop()
             }
-            tool("До/после", "rectangle.split.2x1", on: lib.splitCompare, key: "Y",
+            tool(tr("До/после"), "rectangle.split.2x1", on: lib.splitCompare, key: "Y",
                  enabled: hasPhoto && !(lib.current?.adj.isIdentity ?? true),
-                 disabledHelp: "У кадра нет обработки — сравнивать не с чем") {
+                 disabledHelp: tr("У кадра нет обработки — сравнивать не с чем")) {
                 lib.splitCompare.toggle()
                 if lib.splitCompare { lib.loupe = true }
             }
-            tool("Сравнить", "rectangle.on.rectangle", on: lib.comparing, key: "C",
+            tool(tr("Сравнить"), "rectangle.on.rectangle", on: lib.comparing, key: "C",
                  enabled: lib.comparing || lib.canCompare,
-                 disabledHelp: "Выделите 2–4 кадра (⌘-клик или рамкой) или встаньте на кадр серии") {
+                 disabledHelp: tr("Выделите 2–4 кадра (⌘-клик или рамкой) или встаньте на кадр серии")) {
                 lib.comparing ? lib.stopCompare() : lib.startCompare()
             }
             tool("100%", "plus.magnifyingglass", on: lib.zoom100, key: "Z", enabled: hasPhoto && !lib.cropMode) {
@@ -44,13 +44,13 @@ struct ToolsBar: View {
 
             Divider().frame(height: 18).padding(.horizontal, 6)
 
-            tool("Обработка", "slider.horizontal.3", on: lib.showInfo && lib.inspectorTab == .edit, key: "E", enabled: hasPhoto) {
+            tool(tr("Обработка"), "slider.horizontal.3", on: lib.showInfo && lib.inspectorTab == .edit, key: "E", enabled: hasPhoto) {
                 if lib.showInfo && lib.inspectorTab == .edit { lib.showInfo = false } else {
                     lib.showInfo = true
                     lib.inspectorTab = .edit
                 }
             }
-            tool("Журнал", "clock.arrow.circlepath", on: lib.showInfo && lib.inspectorTab == .history, key: "⌘Y", enabled: true) {
+            tool(tr("Журнал"), "clock.arrow.circlepath", on: lib.showInfo && lib.inspectorTab == .history, key: "⌘Y", enabled: true) {
                 if lib.showInfo && lib.inspectorTab == .history { lib.showInfo = false } else {
                     lib.showInfo = true
                     lib.inspectorTab = .history

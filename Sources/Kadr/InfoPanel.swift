@@ -8,14 +8,14 @@ struct InfoPanel: View {
             if let p = lib.current {
                 VStack(alignment: .leading, spacing: 18) {
                     if lib.multiSelected {
-                        Label("Выделено \(lib.targets.count) — оценка и цвет применятся ко всем", systemImage: "checkmark.circle.fill")
+                        Label(tr("Выделено \(lib.targets.count) — оценка и цвет применятся ко всем"), systemImage: "checkmark.circle.fill")
                             .font(.callout)
                             .foregroundStyle(Color.accentColor)
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         Text(p.name).font(.headline)
                         if let d = p.exif.date {
-                            Text(d.formatted(date: .abbreviated, time: .standard))
+                            Text(d.formatted(Date.FormatStyle(date: .abbreviated, time: .standard).locale(I18n.locale)))
                                 .font(.callout).foregroundStyle(.secondary)
                         }
                     }
@@ -30,28 +30,28 @@ struct InfoPanel: View {
                             .font(.callout.monospacedDigit())
                     }
                     VStack(alignment: .leading, spacing: 8) {
-                        row("Камера", p.exif.camera)
-                        row("Объектив", p.exif.lens)
+                        row(tr("Камера"), p.exif.camera)
+                        row(tr("Объектив"), p.exif.lens)
                         if let w = p.exif.width, let h = p.exif.height {
-                            row("Размер", "\(w) × \(h)  ·  \(String(format: "%.0f", Double(w * h) / 1_000_000)) Мп")
+                            row(tr("Размер"), tr("\(w) × \(h)  ·  \(String(format: "%.0f", Double(w * h) / 1_000_000)) Мп"))
                         }
-                        row("Файл", ByteCountFormatter.string(fromByteCount: p.fileSize, countStyle: .file))
+                        row(tr("Файл"), ByteCountFormatter.string(fromByteCount: p.fileSize, countStyle: .file))
                     }
 
                     Divider()
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Анализ").font(.subheadline.weight(.semibold))
+                        Text(tr("Анализ")).font(.subheadline.weight(.semibold))
                         if let s = p.sharpness {
                             SharpnessBar(value: s, max: maxSharpness)
                         }
                         if p.seriesID != nil {
                             let s = lib.series(of: p)
-                            Text(p.isBestInSeries ? "Самый резкий кадр в серии из \(s.count)" : "Серия из \(s.count) похожих кадров")
+                            Text(p.isBestInSeries ? tr("Самый резкий кадр в серии из \(s.count)") : tr("Серия из \(s.count) похожих кадров"))
                                 .font(.callout).foregroundStyle(.secondary)
                         }
                         if let d = p.duplicateOf {
-                            Text("Точная копия \(d.lastPathComponent)")
+                            Text(tr("Точная копия \(d.lastPathComponent)"))
                                 .font(.callout).foregroundStyle(.orange)
                         }
                     }
@@ -59,7 +59,7 @@ struct InfoPanel: View {
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Text("Нет выбранного снимка").foregroundStyle(.secondary).padding()
+                Text(tr("Нет выбранного снимка")).foregroundStyle(.secondary).padding()
             }
         }
     }
@@ -85,7 +85,7 @@ struct InfoPanel: View {
                     .foregroundStyle(p.rejected ? Theme.reject : .secondary)
             }
             .buttonStyle(.plain)
-            .help("Отклонить (X)")
+            .help(tr("Отклонить (X)"))
         }
     }
 
@@ -125,7 +125,7 @@ struct SharpnessBar: View {
         let k = min(1, value / Swift.max(max, 1))
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Резкость").font(.callout)
+                Text(tr("Резкость")).font(.callout)
                 Spacer()
                 Text("\(Int(k * 100))%").font(.callout.monospacedDigit()).foregroundStyle(.secondary)
             }
@@ -137,7 +137,7 @@ struct SharpnessBar: View {
                 }
             }
             .frame(height: 5)
-            Text("относительно самого резкого кадра в папке")
+            Text(tr("относительно самого резкого кадра в папке"))
                 .font(.caption2).foregroundStyle(.tertiary)
         }
     }

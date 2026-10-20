@@ -124,7 +124,7 @@ final class Renderer: @unchecked Sendable {
         }
         bases[key] = b
         baseOrder.append(key)
-        while baseOrder.count > 4 { bases[baseOrder.removeFirst()] = nil }
+        while baseOrder.count > max(2, Prefs.renderCache) { bases[baseOrder.removeFirst()] = nil }
         return b
     }
 }

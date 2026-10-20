@@ -11,19 +11,19 @@ enum ExportPreset: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .custom: "Свои настройки"
-        case .instagram: "Instagram лента"
-        case .story: "Сторис / Reels"
-        case .web: "Сайт / Telegram"
+        case .custom: tr("Свои настройки")
+        case .instagram: tr("Instagram лента")
+        case .story: tr("Сторис / Reels")
+        case .web: tr("Сайт / Telegram")
         }
     }
 
     var subtitle: String {
         switch self {
-        case .custom: "формат, размер и качество — вручную"
-        case .instagram: "1080 по ширине, формат — из вашего кадрирования"
+        case .custom: tr("формат, размер и качество — вручную")
+        case .instagram: tr("1080 по ширине, формат — из вашего кадрирования")
         case .story: "1080 × 1920"
-        case .web: "2560 px по длинной стороне"
+        case .web: tr("2560 px по длинной стороне")
         }
     }
 
@@ -52,28 +52,28 @@ struct ExportPlan: Hashable {
         case .custom: return nil
         case .web:
             let w = a >= 1 ? 2560 : Int((2560 * a).rounded()), h = a >= 1 ? Int((2560 / a).rounded()) : 2560
-            return ExportPlan(width: w, height: h, crop: nil, note: "без обрезки")
+            return ExportPlan(width: w, height: h, crop: nil, note: tr("без обрезки"))
         case .instagram:
             // Свои 4:5, 1:1, 1.91:1 после округления пикселей бывают 0,802 — защёлкиваем на точный формат.
             for (ratio, h) in [(igMin, 1350), (1.0, 1080), (igMax, 566)] where abs(a - ratio) / ratio < 0.015 {
                 return ExportPlan(width: 1080, height: h, crop: a == ratio ? nil : ratio,
-                                  note: userCropped ? "по вашему кадрированию" : "как снято, формат подходит Instagram")
+                                  note: userCropped ? tr("по вашему кадрированию") : tr("как снято, формат подходит Instagram"))
             }
             if a < igMin * 0.995 {
-                return ExportPlan(width: 1080, height: 1350, crop: igMin, note: "выше 4:5 — обрезка по центру до 4:5 (Instagram больше не принимает)")
+                return ExportPlan(width: 1080, height: 1350, crop: igMin, note: tr("выше 4:5 — обрезка по центру до 4:5 (Instagram больше не принимает)"))
             }
             if a > igMax * 1.005 {
-                return ExportPlan(width: 1080, height: 566, crop: igMax, note: "шире 1.91:1 — обрезка по центру до 1.91:1")
+                return ExportPlan(width: 1080, height: 566, crop: igMax, note: tr("шире 1.91:1 — обрезка по центру до 1.91:1"))
             }
             let h = abs(a - igMax) / igMax < 0.01 ? 566 : Int((1080 / a).rounded())
-            return ExportPlan(width: 1080, height: h, crop: nil, note: userCropped ? "по вашему кадрированию" : "как снято, формат подходит Instagram")
+            return ExportPlan(width: 1080, height: h, crop: nil, note: userCropped ? tr("по вашему кадрированию") : tr("как снято, формат подходит Instagram"))
         case .story:
             if abs(a - story) / story < 0.015 {
-                return ExportPlan(width: 1080, height: 1920, crop: a == story ? nil : story, note: userCropped ? "по вашему кадрированию 9:16" : "уже 9:16")
+                return ExportPlan(width: 1080, height: 1920, crop: a == story ? nil : story, note: userCropped ? tr("по вашему кадрированию 9:16") : tr("уже 9:16"))
             }
-            if s.presetCrop { return ExportPlan(width: 1080, height: 1920, crop: story, note: "обрезка по центру до 9:16") }
+            if s.presetCrop { return ExportPlan(width: 1080, height: 1920, crop: story, note: tr("обрезка по центру до 9:16")) }
             let w = a < story ? Int((1920 * a).rounded()) : 1080, h = a < story ? 1920 : Int((1080 / a).rounded())
-            return ExportPlan(width: w, height: h, crop: nil, note: "вписано в 9:16 без обрезки")
+            return ExportPlan(width: w, height: h, crop: nil, note: tr("вписано в 9:16 без обрезки"))
         }
     }
 }

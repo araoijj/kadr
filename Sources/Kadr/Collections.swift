@@ -15,7 +15,7 @@ struct LUTCollection: Sendable {
     /// 51 эмуляция плёнки João Almeida — MIT. https://github.com/t3mujin/t3mujinpack
     static let t3mujin = LUTCollection(
         folder: "t3mujinpack",
-        title: "Плёнка: t3mujinpack",
+        title: tr("Плёнка: t3mujinpack"),
         author: "João Almeida",
         license: "MIT",
         page: URL(string: "https://github.com/t3mujin/t3mujinpack")!,
@@ -73,11 +73,11 @@ final class CollectionDownloader {
                 if let (lic, _) = try? await URLSession.shared.data(from: c.licenseRaw) {
                     try? lic.write(to: c.localFolder.appendingPathComponent("LICENSE.txt"))
                 }
-                let about = "\(c.title)\nАвтор: \(c.author)\nЛицензия: \(c.license)\nИсточник: \(c.page.absoluteString)\n"
+                let about = tr("\(c.title)\nАвтор: \(c.author)\nЛицензия: \(c.license)\nИсточник: \(c.page.absoluteString)\n")
                 try? about.write(to: c.localFolder.appendingPathComponent("README.txt"), atomically: true, encoding: .utf8)
-                message = failed == 0 ? "Скачано: \(done) LUT" : "Скачано \(done - failed), ошибок: \(failed)"
+                message = failed == 0 ? tr("Скачано: \(done) LUT") : tr("Скачано \(done - failed), ошибок: \(failed)")
             } catch {
-                message = "Не удалось скачать: \(error.localizedDescription)"
+                message = tr("Не удалось скачать: \(error.localizedDescription)")
             }
             busy = false
             finish()

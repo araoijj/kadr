@@ -130,10 +130,10 @@ final class CardImporter {
             }
             CardImporter.saveRegistry(imported)
             copying = false
-            var msg = "Импортировано: \(copied)"
-            if skipped > 0 { msg += ", уже были: \(skipped)" }
-            if failed > 0 { msg += ", ошибок: \(failed)" }
-            if Task.isCancelled { msg = "Остановлено. " + msg }
+            var msg = tr("Импортировано: \(copied)")
+            if skipped > 0 { msg += tr(", уже были: \(skipped)") }
+            if failed > 0 { msg += tr(", ошибок: \(failed)") }
+            if Task.isCancelled { msg = tr("Остановлено. ") + msg }
             result = msg
             if copied + skipped > 0 { done(openFolder) }
             if eject, failed == 0, !Task.isCancelled, let volume {

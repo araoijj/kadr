@@ -8,15 +8,15 @@ struct HistoryPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Button { lib.undo() } label: { Label("Отменить", systemImage: "arrow.uturn.backward") }
-                    .disabled(!lib.canUndo).help(lib.undoTitle.map { "Отменить: \($0) (⌘Z)" } ?? "Нечего отменять")
-                Button { lib.redo() } label: { Label("Вернуть", systemImage: "arrow.uturn.forward") }
-                    .disabled(!lib.canRedo).help(lib.redoTitle.map { "Вернуть: \($0) (⇧⌘Z)" } ?? "Нечего возвращать")
+                Button { lib.undo() } label: { Label(tr("Отменить"), systemImage: "arrow.uturn.backward") }
+                    .disabled(!lib.canUndo).help(lib.undoTitle.map { tr("Отменить: \($0) (⌘Z)") } ?? tr("Нечего отменять"))
+                Button { lib.redo() } label: { Label(tr("Вернуть"), systemImage: "arrow.uturn.forward") }
+                    .disabled(!lib.canRedo).help(lib.redoTitle.map { tr("Вернуть: \($0) (⇧⌘Z)") } ?? tr("Нечего возвращать"))
                 Spacer()
             }
             .controlSize(.small)
             .padding(.horizontal, 16).padding(.vertical, 8)
-            Toggle("Только текущий кадр", isOn: $onlyCurrent)
+            Toggle(tr("Только текущий кадр"), isOn: $onlyCurrent)
                 .toggleStyle(.checkbox).font(.caption)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16).padding(.bottom, 6)
@@ -27,7 +27,7 @@ struct HistoryPanel: View {
                     let rows = Array(lib.history.enumerated()).reversed()
                         .filter { item in !onlyCurrent || (cur.map { item.element.changes[$0] != nil } ?? false) }
                     if rows.isEmpty {
-                        Text(lib.history.isEmpty ? "Изменений пока нет. Здесь появится каждое действие: ползунки, стили, кадрирование, оценки." : "У этого кадра изменений нет.")
+                        Text(lib.history.isEmpty ? tr("Изменений пока нет. Здесь появится каждое действие: ползунки, стили, кадрирование, оценки.") : tr("У этого кадра изменений нет."))
                             .font(.caption).foregroundStyle(.secondary).padding(16)
                     }
                     ForEach(rows, id: \.element.id) { i, e in row(i, e) }
@@ -36,7 +36,7 @@ struct HistoryPanel: View {
                         HStack {
                             Image(systemName: lib.historyPos == 0 ? "largecircle.fill.circle" : "circle")
                                 .foregroundStyle(lib.historyPos == 0 ? Color.accentColor : .secondary)
-                            Text("Исходное состояние").font(.callout)
+                            Text(tr("Исходное состояние")).font(.callout)
                             Spacer()
                         }
                         .padding(.horizontal, 16).padding(.vertical, 6)
@@ -48,7 +48,7 @@ struct HistoryPanel: View {
                 .padding(.vertical, 6)
             }
             Divider()
-            Text("Хранится \(lib.history.count) из \(HistoryStore.limit) шагов · журнал папки сохраняется между запусками")
+            Text(tr("Хранится \(lib.history.count) из \(HistoryStore.limit) шагов · журнал папки сохраняется между запусками"))
                 .font(.caption2).foregroundStyle(.secondary)
                 .padding(8)
         }
@@ -75,13 +75,13 @@ struct HistoryPanel: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(applied ? "Вернуться к состоянию после этого шага" : "Отменённый шаг — клик вернёт его")
+        .help(applied ? tr("Вернуться к состоянию после этого шага") : tr("Отменённый шаг — клик вернёт его"))
     }
 
     private func subtitle(_ e: HistoryEntry) -> String {
-        let time = e.date.formatted(date: Calendar.current.isDateInToday(e.date) ? .omitted : .abbreviated, time: .shortened)
+        let time = e.date.formatted(Date.FormatStyle(date: Calendar.current.isDateInToday(e.date) ? .omitted : .abbreviated, time: .shortened).locale(I18n.locale))
         let names = e.photoNames
-        let who = names.count == 1 ? names[0] : "\(names.count) кадров"
+        let who = names.count == 1 ? names[0] : tr("\(names.count) кадров")
         return "\(time) · \(who)"
     }
 }

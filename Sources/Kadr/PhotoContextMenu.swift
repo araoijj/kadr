@@ -14,58 +14,58 @@ struct PhotoContextMenu: ViewModifier {
         let n = lib.contextCount(photo)
         let suffix = n > 1 ? " (\(n))" : ""
 
-        Menu("Оценка" + suffix) {
+        Menu(tr("Оценка") + suffix) {
             ForEach((1...5).reversed(), id: \.self) { r in
                 Button(String(repeating: "★", count: r)) { act { lib.setRating(r) } }
             }
             Divider()
-            Button("Снять оценку") { act { lib.setRating(0) } }
+            Button(tr("Снять оценку")) { act { lib.setRating(0) } }
         }
-        Menu("Цветная метка" + suffix) {
+        Menu(tr("Цветная метка") + suffix) {
             ForEach(ColorLabel.allCases) { l in
                 Button { act { lib.toggleLabel(l) } } label: {
                     Label { Text(l.title) } icon: { Image(systemName: "circle.fill").foregroundStyle(l.color) }
                 }
             }
         }
-        Button(photo.rejected ? "Вернуть" + suffix : "Отклонить" + suffix,
+        Button(photo.rejected ? tr("Вернуть") + suffix : tr("Отклонить") + suffix,
                systemImage: photo.rejected ? "arrow.uturn.backward" : "xmark.circle") { act { lib.toggleReject() } }
 
-        Menu("Применить стиль" + suffix) {
+        Menu(tr("Применить стиль") + suffix) {
             ForEach(lib.styles) { st in
                 Button(st.name) { act { lib.applyStyle(st) } }
             }
         }
         if n == 1 {
-            Button("Копировать обработку", systemImage: "doc.on.doc") { act { lib.copyAdjustments() } }
+            Button(tr("Копировать обработку"), systemImage: "doc.on.doc") { act { lib.copyAdjustments() } }
                 .disabled(photo.adj.isIdentity)
         }
-        Button("Вставить обработку" + suffix, systemImage: "doc.on.clipboard") { act { lib.pasteAdjustments() } }
+        Button(tr("Вставить обработку") + suffix, systemImage: "doc.on.clipboard") { act { lib.pasteAdjustments() } }
             .disabled(lib.copiedAdj == nil)
-        Button("Сбросить обработку" + suffix, systemImage: "arrow.counterclockwise") { act { lib.resetAdjustments() } }
+        Button(tr("Сбросить обработку") + suffix, systemImage: "arrow.counterclockwise") { act { lib.resetAdjustments() } }
 
         Divider()
 
         if n == 1 && !lib.loupe {
-            Button("Открыть в просмотре", systemImage: "rectangle") { act { lib.loupe = true } }
+            Button(tr("Открыть в просмотре"), systemImage: "rectangle") { act { lib.loupe = true } }
         }
-        Button("Открыть в Capture One" + suffix, systemImage: "camera.aperture") { act { lib.openTargetsInCaptureOne() } }
-        Button("Открыть в программе по умолчанию" + suffix, systemImage: "arrow.up.forward.app") { act { lib.openTargetsInDefaultApp() } }
-        Button("Показать в Finder" + suffix, systemImage: "folder") { act { lib.revealCurrent() } }
-        Button(n > 1 ? "Скопировать пути" + suffix : "Скопировать путь", systemImage: "doc.on.clipboard") { act { lib.copyTargetPaths() } }
+        Button(tr("Открыть в Capture One") + suffix, systemImage: "camera.aperture") { act { lib.openTargetsInCaptureOne() } }
+        Button(tr("Открыть в программе по умолчанию") + suffix, systemImage: "arrow.up.forward.app") { act { lib.openTargetsInDefaultApp() } }
+        Button(tr("Показать в Finder") + suffix, systemImage: "folder") { act { lib.revealCurrent() } }
+        Button(n > 1 ? tr("Скопировать пути") + suffix : tr("Скопировать путь"), systemImage: "doc.on.clipboard") { act { lib.copyTargetPaths() } }
 
         Divider()
 
-        Button("Отправить в папку сохранения" + suffix, systemImage: "paperplane") { act { lib.quickSend() } }
-        Button("Сохранить как JPEG…" + suffix, systemImage: "photo") { act { lib.exportTargets(as: .jpeg) } }
-        Button("Сохранить оригиналы в папку…" + suffix, systemImage: "square.and.arrow.down.on.square") { act { lib.exportTargets(as: .original) } }
+        Button(tr("Отправить в папку сохранения") + suffix, systemImage: "paperplane") { act { lib.quickSend() } }
+        Button(tr("Сохранить как JPEG…") + suffix, systemImage: "photo") { act { lib.exportTargets(as: .jpeg) } }
+        Button(tr("Сохранить оригиналы в папку…") + suffix, systemImage: "square.and.arrow.down.on.square") { act { lib.exportTargets(as: .original) } }
 
         if n > 1 || photo.seriesID != nil {
             Divider()
-            Button(n > 1 ? "Сравнить (\(min(n, 4)))" : "Сравнить кадры серии", systemImage: "rectangle.split.2x1") { act { lib.startCompare() } }
+            Button(n > 1 ? tr("Сравнить (\(min(n, 4)))") : tr("Сравнить кадры серии"), systemImage: "rectangle.split.2x1") { act { lib.startCompare() } }
         }
         if photo.seriesID != nil {
-            Button("Выделить всю серию", systemImage: "square.stack.3d.up") { act { lib.selectSeries() } }
+            Button(tr("Выделить всю серию"), systemImage: "square.stack.3d.up") { act { lib.selectSeries() } }
         }
     }
 

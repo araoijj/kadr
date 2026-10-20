@@ -98,11 +98,11 @@ enum StyleGroup: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .profile: "Профиль"
-        case .light: "Свет"
-        case .color: "Цвет"
-        case .toning: "Тонирование"
-        case .effects: "Эффекты"
+        case .profile: tr("Профиль")
+        case .light: tr("Свет")
+        case .color: tr("Цвет")
+        case .toning: tr("Тонирование")
+        case .effects: tr("Эффекты")
         case .lut: "LUT"
         }
     }
@@ -178,9 +178,13 @@ struct Style: Codable, Identifiable, Hashable {
 // MARK: - Хранилища
 
 enum AppFolders {
+    /// Стандартное место данных и выбранное в настройках («Хранилище → Папка данных»).
+    static var defaultSupport: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Kadr", isDirectory: true)
+    }
+
     static var support: URL {
-        let u = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Kadr", isDirectory: true)
+        let u = Prefs.dataFolder.map { URL(fileURLWithPath: $0, isDirectory: true) } ?? defaultSupport
         try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
         return u
     }
@@ -263,8 +267,8 @@ final class LUTStore: @unchecked Sendable {
     static func group(_ path: String) -> String {
         let folder = (path as NSString).deletingLastPathComponent
         let n = (path as NSString).lastPathComponent
-        let cat = n.contains("Color Negative") ? "негатив" : n.contains("Color Slide") ? "слайд" : n.contains("Black and White") ? "ч/б" : nil
-        let base = folder.isEmpty ? "Мои LUT" : folder
+        let cat = n.contains("Color Negative") ? tr("негатив") : n.contains("Color Slide") ? tr("слайд") : n.contains("Black and White") ? tr("ч/б") : nil
+        let base = folder.isEmpty ? tr("Мои LUT") : folder
         return cat.map { "\(base) · \($0)" } ?? base
     }
 
@@ -580,9 +584,9 @@ enum Watermark {
     enum Position: String, Codable, CaseIterable { case bottomRight, bottomLeft, center
         var title: String {
             switch self {
-            case .bottomRight: "Справа внизу"
-            case .bottomLeft: "Слева внизу"
-            case .center: "По центру"
+            case .bottomRight: tr("Справа внизу")
+            case .bottomLeft: tr("Слева внизу")
+            case .center: tr("По центру")
             }
         }
     }

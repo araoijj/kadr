@@ -9,16 +9,16 @@ struct CropFormat: Identifiable, Hashable {
     let ratio: Double?        // ширина / высота; nil — свободно, 0 — как у исходника
 
     static let all: [CropFormat] = [
-        .init(id: "free", title: "Свободно", hint: "", ratio: nil),
-        .init(id: "original", title: "Исходный", hint: "как снято", ratio: 0),
-        .init(id: "4:5", title: "4:5", hint: "пост Instagram", ratio: 4.0 / 5),
-        .init(id: "1:1", title: "1:1", hint: "квадрат", ratio: 1),
-        .init(id: "9:16", title: "9:16", hint: "сторис, Reels", ratio: 9.0 / 16),
-        .init(id: "1.91:1", title: "1.91:1", hint: "пост горизонт.", ratio: 1.91),
+        .init(id: "free", title: tr("Свободно"), hint: "", ratio: nil),
+        .init(id: "original", title: tr("Исходный"), hint: tr("как снято"), ratio: 0),
+        .init(id: "4:5", title: "4:5", hint: tr("пост Instagram"), ratio: 4.0 / 5),
+        .init(id: "1:1", title: "1:1", hint: tr("квадрат"), ratio: 1),
+        .init(id: "9:16", title: "9:16", hint: tr("сторис, Reels"), ratio: 9.0 / 16),
+        .init(id: "1.91:1", title: "1.91:1", hint: tr("пост горизонт."), ratio: 1.91),
         .init(id: "3:2", title: "3:2", hint: "", ratio: 3.0 / 2),
         .init(id: "2:3", title: "2:3", hint: "", ratio: 2.0 / 3),
         .init(id: "4:3", title: "4:3", hint: "", ratio: 4.0 / 3),
-        .init(id: "16:9", title: "16:9", hint: "видео, обложка", ratio: 16.0 / 9),
+        .init(id: "16:9", title: "16:9", hint: tr("видео, обложка"), ratio: 16.0 / 9),
     ]
 
     static func byID(_ id: String?) -> CropFormat? { all.first { $0.id == id } }
@@ -78,7 +78,7 @@ extension Library {
     func applyCropToTargets() {
         guard let src = current?.adj else { return }
         let before = snapshot(targets.map(\.id))
-        defer { record("Кадрирование на \(targets.count) кадров", before: before) }
+        defer { record(tr("Кадрирование на \(targets.count) кадров"), before: before) }
         for t in targets where t.id != currentID {
             guard let i = photos.firstIndex(where: { $0.id == t.id }) else { continue }
             var a = photos[i].adj
@@ -93,7 +93,7 @@ extension Library {
             photos[i].adj = a
             setAdjustmentsRaw(i, a)
         }
-        flash("Кадрирование применено к \(targets.count) кадрам")
+        flash(tr("Кадрирование применено к \(targets.count) кадрам"))
     }
 }
 
@@ -260,11 +260,11 @@ struct CropBar: View {
                     .buttonStyle(.plain)
                 }
                 Button { lib.flipCropOrientation() } label: { Image(systemName: "rotate.right") }
-                    .buttonStyle(.plain).help("Повернуть рамку: вертикальная ↔ горизонтальная")
+                    .buttonStyle(.plain).help(tr("Повернуть рамку: вертикальная ↔ горизонтальная"))
             }
             HStack(spacing: 10) {
                 Image(systemName: "level").foregroundStyle(.secondary)
-                Text("Горизонт").font(.caption)
+                Text(tr("Горизонт")).font(.caption)
                 Slider(value: Binding(get: { adj.angle }, set: { v in
                     guard var a = lib.current?.adj else { return }
                     a.angle = (v * 10).rounded() / 10
@@ -273,10 +273,10 @@ struct CropBar: View {
                 .frame(width: 220)
                 Text(String(format: "%+.1f°", adj.angle)).font(.caption.monospacedDigit()).frame(width: 46)
                 Divider().frame(height: 16)
-                Button("Сбросить") { lib.resetCrop() }
-                if lib.multiSelected { Button("На все выделенные") { lib.applyCropToTargets() } }
-                Button("Отмена") { lib.cancelCrop() }
-                Button("Готово") { lib.finishCrop() }.buttonStyle(.borderedProminent)
+                Button(tr("Сбросить")) { lib.resetCrop() }
+                if lib.multiSelected { Button(tr("На все выделенные")) { lib.applyCropToTargets() } }
+                Button(tr("Отмена")) { lib.cancelCrop() }
+                Button(tr("Готово")) { lib.finishCrop() }.buttonStyle(.borderedProminent)
             }
             .controlSize(.small)
         }

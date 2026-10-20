@@ -8,7 +8,7 @@ struct SelectionBar: View {
         VStack {
             Spacer()
             HStack(spacing: 14) {
-                Text("Выделено \(lib.targets.count)")
+                Text(tr("Выделено \(lib.targets.count)"))
                     .font(.callout.weight(.semibold))
                     .monospacedDigit()
 
@@ -21,10 +21,10 @@ struct SelectionBar: View {
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(Theme.star.opacity(0.35 + Double(n) * 0.13))
-                        .help("\(n) ★ всем")
+                        .help(tr("\(n) ★ всем"))
                     }
                     Button { lib.setRating(0) } label: { Image(systemName: "star.slash").font(.callout) }
-                        .buttonStyle(.plain).foregroundStyle(.secondary).help("Снять оценку")
+                        .buttonStyle(.plain).foregroundStyle(.secondary).help(tr("Снять оценку"))
                 }
 
                 HStack(spacing: 6) {
@@ -34,24 +34,24 @@ struct SelectionBar: View {
                     }
                 }
 
-                Button { lib.toggleReject() } label: { Label("Отклонить", systemImage: "xmark.circle") }
+                Button { lib.toggleReject() } label: { Label(tr("Отклонить"), systemImage: "xmark.circle") }
                     .buttonStyle(.plain).foregroundStyle(Theme.reject)
 
                 divider
 
                 Button { lib.startCompare() } label: {
-                    Label("Сравнить", systemImage: "rectangle.split.2x1")
+                    Label(tr("Сравнить"), systemImage: "rectangle.split.2x1")
                 }
                 .buttonStyle(.plain)
                 .help("C")
 
                 Button { lib.export.scope = .selected; lib.showExport = true } label: {
-                    Label("Сохранить в папку", systemImage: "square.and.arrow.down.on.square")
+                    Label(tr("Сохранить в папку"), systemImage: "square.and.arrow.down.on.square")
                 }
                 .buttonStyle(.plain)
 
                 Button { lib.clearSelection() } label: { Image(systemName: "xmark") }
-                    .buttonStyle(.plain).foregroundStyle(.secondary).help("Снять выделение (Esc)")
+                    .buttonStyle(.plain).foregroundStyle(.secondary).help(tr("Снять выделение (Esc)"))
             }
             .padding(.horizontal, 18).padding(.vertical, 10)
             .background(.ultraThinMaterial, in: Capsule())

@@ -10,14 +10,14 @@ enum PhotoFilter: Hashable {
 
     var title: String {
         switch self {
-        case .all: "Все снимки"
-        case .unrated: "Без оценки"
-        case .picked: "С оценкой"
-        case .rejected: "Отклонённые"
-        case .best: "Лучшие в сериях"
-        case .stars(let n): String(repeating: "★", count: n) + (n < 5 ? " и выше" : "")
+        case .all: tr("Все снимки")
+        case .unrated: tr("Без оценки")
+        case .picked: tr("С оценкой")
+        case .rejected: tr("Отклонённые")
+        case .best: tr("Лучшие в сериях")
+        case .stars(let n): String(repeating: "★", count: n) + (n < 5 ? tr(" и выше") : "")
         case .label(let l): l.title
-        case .duplicates: "Точные дубли"
+        case .duplicates: tr("Точные дубли")
         }
     }
 
@@ -94,7 +94,9 @@ final class Library {
         loupeCenter = CGPoint(x: loupeCenter.x - dx / loupeDisplay.width, y: loupeCenter.y - dy / loupeDisplay.height)
     }
     var thumbSize: CGFloat = 220
-    var autoAdvance = true
+    var autoAdvance = Prefs.autoAdvance {
+        didSet { Prefs.d.set(autoAdvance, forKey: "pref.autoAdvance") }
+    }
     var showInfo = true
     var columns = 4
 
@@ -187,7 +189,7 @@ final class Library {
             var s = PhotoState(p); s.adj = b
             cropMode = false
             let d = describeChange(b, p.adj, url: id)
-            record(d.key == "angle" || d.key == "Горизонт" ? d.title : "Кадрирование " + (CropFormat.byID(p.adj.cropAspect)?.title ?? "свободное"),
+            record(d.key == "angle" || d.key == tr("Горизонт") ? d.title : tr("Кадрирование ") + (CropFormat.byID(p.adj.cropAspect)?.title ?? tr("свободное")),
                    before: [id: s])
         }
         cropMode = false
@@ -229,8 +231,8 @@ final class Library {
     }
 
     func applyStyle(_ st: Style) {
-        setAdjustmentsForTargets("Стиль «\(st.name)»") { $0.merge(st.adj, groups: st.groups) }
-        flash("Стиль «\(st.name)»" + countSuffix)
+        setAdjustmentsForTargets(tr("Стиль «\(st.name)»")) { $0.merge(st.adj, groups: st.groups) }
+        flash(tr("Стиль «\(st.name)»") + countSuffix)
     }
 
     /// Новый стиль из текущего кадра: только выбранные разделы.
@@ -242,7 +244,7 @@ final class Library {
         styles.removeAll { !$0.builtIn && $0.name == n && $0.collection == col }
         styles.append(Style(name: n, adj: p.adj, groups: groups, collection: col))
         StyleStore.save(styles)
-        flash("Стиль «\(n)» сохранён")
+        flash(tr("Стиль «\(n)» сохранён"))
     }
 
     /// Перезаписать свой стиль текущими настройками кадра (разделы стиля сохраняются).
@@ -250,7 +252,7 @@ final class Library {
         guard let p = current, let i = styles.firstIndex(where: { $0.id == st.id }), !st.builtIn else { return }
         styles[i].adj = p.adj
         StyleStore.save(styles)
-        flash("Стиль «\(st.name)» обновлён")
+        flash(tr("Стиль «\(st.name)» обновлён"))
     }
 
     func renameStyle(_ st: Style, to name: String) {
@@ -268,19 +270,19 @@ final class Library {
     /// Свои стили в файл .kadrstyles — чтобы перенести на другой Mac или поделиться.
     func exportStyles() {
         let mine = styles.filter { !$0.builtIn }
-        guard !mine.isEmpty else { flash("Своих стилей пока нет"); return }
+        guard !mine.isEmpty else { flash(tr("Своих стилей пока нет")); return }
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "Мои стили.kadrstyles"
-        panel.message = "Экспорт своих стилей (\(mine.count))"
+        panel.nameFieldStringValue = tr("Мои стили.kadrstyles")
+        panel.message = tr("Экспорт своих стилей (\(mine.count))")
         guard panel.runModal() == .OK, let u = panel.url, let d = try? JSONEncoder().encode(mine) else { return }
         try? d.write(to: u, options: .atomic)
-        flash("Экспортировано стилей: \(mine.count)")
+        flash(tr("Экспортировано стилей: \(mine.count)"))
     }
 
     func importStyles() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.init(filenameExtension: "kadrstyles") ?? .json, .json]
-        panel.message = "Файл со стилями .kadrstyles"
+        panel.message = tr("Файл со стилями .kadrstyles")
         guard panel.runModal() == .OK, let u = panel.url, let d = try? Data(contentsOf: u),
               let list = try? JSONDecoder().decode([Style].self, from: d) else { return }
         var added = 0
@@ -291,34 +293,34 @@ final class Library {
             added += 1
         }
         StyleStore.save(styles)
-        flash("Импортировано стилей: \(added)")
+        flash(tr("Импортировано стилей: \(added)"))
     }
 
     func copyAdjustments() {
         guard let p = current else { return }
         copiedAdj = p.adj
-        flash("Обработка скопирована")
+        flash(tr("Обработка скопирована"))
     }
 
     func pasteAdjustments() {
-        guard let a = copiedAdj else { flash("Сначала скопируйте обработку (⌘⇧C)"); return }
-        setAdjustmentsForTargets("Вставка обработки") { $0 = a }
-        flash("Обработка вставлена" + countSuffix)
+        guard let a = copiedAdj else { flash(tr("Сначала скопируйте обработку (⌘⇧C)")); return }
+        setAdjustmentsForTargets(tr("Вставка обработки")) { $0 = a }
+        flash(tr("Обработка вставлена") + countSuffix)
     }
 
     func resetAdjustments() {
-        setAdjustmentsForTargets("Сброс к исходнику") { $0 = .none }
-        flash("Обработка сброшена" + countSuffix)
+        setAdjustmentsForTargets(tr("Сброс к исходнику")) { $0 = .none }
+        flash(tr("Обработка сброшена") + countSuffix)
     }
 
     func saveStyle(named name: String) {
-        guard let p = current, !p.adj.isIdentity else { flash("Нечего сохранять: кадр без обработки"); return }
+        guard let p = current, !p.adj.isIdentity else { flash(tr("Нечего сохранять: кадр без обработки")); return }
         let n = name.trimmingCharacters(in: .whitespaces)
         guard !n.isEmpty else { return }
         styles.removeAll { !$0.builtIn && $0.name == n }
         styles.append(Style(name: n, adj: p.adj))
         StyleStore.save(styles)
-        flash("Стиль «\(n)» сохранён")
+        flash(tr("Стиль «\(n)» сохранён"))
     }
 
     func deleteStyle(_ st: Style) {
@@ -331,7 +333,7 @@ final class Library {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.allowedContentTypes = [.init(filenameExtension: "cube")!]
-        panel.message = "Выберите LUT-файлы .cube"
+        panel.message = tr("Выберите LUT-файлы .cube")
         guard panel.runModal() == .OK else { return }
         let ok = LUTStore.shared.importFiles(panel.urls)
         luts = LUTStore.shared.list()
@@ -339,7 +341,7 @@ final class Library {
             a.lut = first
             setAdjustments(a)
         }
-        flash(ok.isEmpty ? "Не удалось прочитать LUT" : "Добавлено LUT: \(ok.count)")
+        flash(ok.isEmpty ? tr("Не удалось прочитать LUT") : tr("Добавлено LUT: \(ok.count)"))
     }
 
     func revealLUTFolder() { NSWorkspace.shared.open(AppFolders.luts) }
@@ -377,7 +379,7 @@ final class Library {
 
     init() {
         browser.onCardMounted = { [weak self] card in
-            guard let self, !self.showImport else { return }
+            guard let self, !self.showImport, Prefs.cardBanner else { return }
             self.cardBanner = card
         }
     }
@@ -401,17 +403,17 @@ final class Library {
         var ids: [URL]
         if multiSelected {
             ids = targets.map(\.id)
-            if ids.count > 4 { flash("Сравниваю первые 4 из \(ids.count)") }
+            if ids.count > 4 { flash(tr("Сравниваю первые 4 из \(ids.count)")) }
         } else if let p = current, p.seriesID != nil {
             let s = series(of: p).map(\.id)
             let i = s.firstIndex(of: p.id) ?? 0
             ids = Array(s[max(0, min(i, s.count - 4))...])
         } else {
-            flash("Выделите 2–4 кадра: ⌘-клик или рамкой")
+            flash(tr("Выделите 2–4 кадра: ⌘-клик или рамкой"))
             return
         }
         ids = Array(ids.prefix(4))
-        guard ids.count >= 2 else { flash("Выделите 2–4 кадра: ⌘-клик или рамкой"); return }
+        guard ids.count >= 2 else { flash(tr("Выделите 2–4 кадра: ⌘-клик или рамкой")); return }
         compareIDs = ids
         let focusID = ids.contains(currentID ?? ids[0]) ? (currentID ?? ids[0]) : ids[0]
         focus(focusID)
@@ -447,7 +449,7 @@ final class Library {
     func rejectOthersInCompare() {
         guard let keep = currentID else { return }
         let before = snapshot(compareIDs)
-        defer { record("Оставлен \(keep.lastPathComponent)", before: before) }
+        defer { record(tr("Оставлен \(keep.lastPathComponent)"), before: before) }
         var n = 0
         for id in compareIDs {
             guard let i = index[id] else { continue }
@@ -457,7 +459,7 @@ final class Library {
             try? Sidecar.write(.init(rating: p.rating, rejected: p.rejected, label: p.label), for: p.url)
         }
         stopCompare()
-        flash("Оставлен \(keep.lastPathComponent), отклонено: \(n)")
+        flash(tr("Оставлен \(keep.lastPathComponent), отклонено: \(n)"))
     }
 
     var sortKey: SortKey = SortKey(rawValue: UserDefaults.standard.string(forKey: "sortKey") ?? "") ?? .date {
@@ -503,12 +505,12 @@ final class Library {
         switch groupKey {
         case .none: return ""
         case .day:
-            guard let d = p.day else { return "Без даты" }
-            let t = d.formatted(.dateTime.weekday(.wide).day().month(.wide).year())
+            guard let d = p.day else { return tr("Без даты") }
+            let t = d.formatted(.dateTime.weekday(.wide).day().month(.wide).year().locale(I18n.locale))
             return t.prefix(1).uppercased() + t.dropFirst()
         case .folder: return relativeFolder(p)
         case .lens: return p.lensName
-        case .rating: return p.rejected ? "Отклонённые" : p.rating == 0 ? "Без оценки" : String(repeating: "★", count: p.rating)
+        case .rating: return p.rejected ? tr("Отклонённые") : p.rating == 0 ? tr("Без оценки") : String(repeating: "★", count: p.rating)
         }
     }
 
@@ -596,8 +598,8 @@ final class Library {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
-        panel.prompt = "Открыть"
-        panel.message = "Выберите папку со съёмкой"
+        panel.prompt = tr("Открыть")
+        panel.message = tr("Выберите папку со съёмкой")
         if panel.runModal() == .OK, let url = panel.url { open(url) }
     }
 
@@ -693,7 +695,7 @@ final class Library {
         guard !urls.isEmpty else { finishAnalysis(); return }
         analysisTask = Task { [weak self] in
             let store = ImageStore.shared
-            let workers = max(1, min(3, ProcessInfo.processInfo.activeProcessorCount / 3))
+            let workers = min(max(1, Prefs.analysisThreads), 4)
             var sinceSave = 0
             await withTaskGroup(of: (URL, ExifInfo, UInt64?, Double?).self) { group in
                 var it = urls.makeIterator()
@@ -881,7 +883,7 @@ final class Library {
         selection = Set(ids)
         if currentID == nil || !selection.contains(currentID!) { currentID = ids.first }
         anchorID = ids.first
-        flash("Выделено: \(ids.count)")
+        flash(tr("Выделено: \(ids.count)"))
     }
 
     func clearSelection() { focus(currentID) }
@@ -896,26 +898,26 @@ final class Library {
 
     func setRating(_ r: Int) {
         let many = multiSelected
-        update(r == 0 ? "Оценка снята" : String(repeating: "★", count: r)) { $0.rating = r; $0.rejected = false }
-        flash((r == 0 ? "Оценка снята" : String(repeating: "★", count: r)) + countSuffix)
+        update(r == 0 ? tr("Оценка снята") : String(repeating: "★", count: r)) { $0.rating = r; $0.rejected = false }
+        flash((r == 0 ? tr("Оценка снята") : String(repeating: "★", count: r)) + countSuffix)
         if !many { advanceIfNeeded() }
     }
 
     func toggleReject() {
         let many = multiSelected
         let reject = !targets.allSatisfy(\.rejected)
-        update(reject ? "Отклонено" : "Возвращено") { $0.rejected = reject }
-        flash((reject ? "Отклонено" : "Возвращено") + countSuffix)
+        update(reject ? tr("Отклонено") : tr("Возвращено")) { $0.rejected = reject }
+        flash((reject ? tr("Отклонено") : tr("Возвращено")) + countSuffix)
         if reject && !many { advanceIfNeeded() }
     }
 
     func toggleLabel(_ l: ColorLabel) {
         let clear = targets.allSatisfy { $0.label == l }
-        update(clear ? "Метка снята" : "Метка: \(l.title)") { $0.label = clear ? nil : l }
-        flash((clear ? "Метка снята" : l.title) + countSuffix)
+        update(clear ? tr("Метка снята") : tr("Метка: \(l.title)")) { $0.label = clear ? nil : l }
+        flash((clear ? tr("Метка снята") : l.title) + countSuffix)
     }
 
-    private var countSuffix: String { multiSelected ? " · \(targets.count) шт." : "" }
+    private var countSuffix: String { multiSelected ? tr(" · \(targets.count) шт.") : "" }
 
     private func update(_ title: String? = nil, _ change: (inout Photo) -> Void) {
         let before = snapshot(targets.map(\.id))
@@ -927,7 +929,7 @@ final class Library {
             let p = photos[i]
             if (try? Sidecar.write(.init(rating: p.rating, rejected: p.rejected, label: p.label), for: p.url)) == nil { failed += 1 }
         }
-        if failed > 0 { flash("Не удалось записать XMP: \(failed) шт.") }
+        if failed > 0 { flash(tr("Не удалось записать XMP: \(failed) шт.")) }
     }
 
     private func advanceIfNeeded() {
@@ -958,12 +960,12 @@ final class Library {
     /// Переносит отклонённые в подпапку «_Отклонённые» (вместе с XMP и парным JPEG). Удаления нет.
     func moveRejected() {
         let rejected = photos.filter(\.rejected)
-        guard !rejected.isEmpty else { flash("Нет отклонённых"); return }
+        guard !rejected.isEmpty else { flash(tr("Нет отклонённых")); return }
         let alert = NSAlert()
-        alert.messageText = "Перенести \(rejected.count) отклонённых в папку «_Отклонённые»?"
-        alert.informativeText = "Файлы не удаляются — их можно вернуть обратно вручную."
-        alert.addButton(withTitle: "Перенести")
-        alert.addButton(withTitle: "Отмена")
+        alert.messageText = tr("Перенести \(rejected.count) отклонённых в папку «_Отклонённые»?")
+        alert.informativeText = tr("Файлы не удаляются — их можно вернуть обратно вручную.")
+        alert.addButton(withTitle: tr("Перенести"))
+        alert.addButton(withTitle: tr("Отмена"))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
 
         let fm = FileManager.default
@@ -979,7 +981,7 @@ final class Library {
         photos.removeAll { !fm.fileExists(atPath: $0.url.path) }
         reindex()
         if currentID.map({ index[$0] == nil }) ?? true { focus(visible.first?.id) }
-        flash("Перенесено: \(moved)")
+        flash(tr("Перенесено: \(moved)"))
     }
 
     // MARK: - Сохранение в папку
@@ -1004,15 +1006,15 @@ final class Library {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
-        panel.prompt = "Выбрать"
-        panel.message = "Папка, куда сохранять отобранные снимки"
+        panel.prompt = tr("Выбрать")
+        panel.message = tr("Папка, куда сохранять отобранные снимки")
         if let d = export.destination { panel.directoryURL = d }
         if panel.runModal() == .OK, let u = panel.url { export.destination = u; export.save() }
     }
 
     func runExport() {
         let list = photos(for: export.scope)
-        guard !list.isEmpty else { flash("Нечего сохранять"); return }
+        guard !list.isEmpty else { flash(tr("Нечего сохранять")); return }
         guard let target = Exporter.targetFolder(export, shoot: folder) else { chooseExportFolder(); return }
         export.save()
         let settings = export
@@ -1057,7 +1059,7 @@ final class Library {
             reindex()
             if currentID.map({ index[$0] == nil }) ?? true { focus(visible.first?.id) }
         }
-        flash("Сохранено: \(ok) → \(target.lastPathComponent)")
+        flash(tr("Сохранено: \(ok) → \(target.lastPathComponent)"))
     }
 
     /// Клавиша S: текущий кадр сразу в папку сохранения (копия оригинала + XMP).
@@ -1073,7 +1075,7 @@ final class Library {
         let shoot = folder?.lastPathComponent
         Task {
             let ok = await Task.detached { items.filter { Exporter.export($0, to: target, s, shootName: shoot) }.count }.value
-            flash(ok > 0 ? "→ \(target.lastPathComponent): \(ok) шт." : "Уже есть в \(target.lastPathComponent)")
+            flash(ok > 0 ? tr("→ \(target.lastPathComponent): \(ok) шт.") : tr("Уже есть в \(target.lastPathComponent)"))
         }
     }
 
@@ -1116,7 +1118,7 @@ final class Library {
         let text = targets.map(\.url.path).joined(separator: "\n")
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
-        flash("Путь скопирован" + countSuffix)
+        flash(tr("Путь скопирован") + countSuffix)
     }
 
     /// Окно сохранения с уже выбранными «Выделенные» и нужным форматом.

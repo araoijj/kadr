@@ -69,17 +69,17 @@ struct HistogramView: View {
                 .padding(.horizontal, 4)
                 .padding(.vertical, 3)
                 HStack {
-                    clipMark(data.clippedShadows, "Провалы в тенях")
+                    clipMark(data.clippedShadows, tr("Провалы в тенях"))
                     Spacer()
-                    clipMark(data.clippedHighlights, "Пересветы")
+                    clipMark(data.clippedHighlights, tr("Пересветы"))
                 }
                 .padding(4)
             }
             .frame(height: 90)
             HStack {
-                Text(data.clippedShadows > 0.005 ? "тени: \(pct(data.clippedShadows)) в ноль" : "тени в норме")
+                Text(data.clippedShadows > 0.005 ? tr("тени: \(pct(data.clippedShadows)) в ноль") : tr("тени в норме"))
                 Spacer()
-                Text(data.clippedHighlights > 0.005 ? "света: \(pct(data.clippedHighlights)) пересвет" : "света в норме")
+                Text(data.clippedHighlights > 0.005 ? tr("света: \(pct(data.clippedHighlights)) пересвет") : tr("света в норме"))
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
@@ -100,7 +100,7 @@ struct HistogramView: View {
     private func clipMark(_ v: Double, _ help: String) -> some View {
         Image(systemName: "triangle.fill")
             .font(.system(size: 7))
-            .foregroundStyle(v > 0.005 ? (help == "Пересветы" ? Color.white : Color.blue) : .white.opacity(0.15))
+            .foregroundStyle(v > 0.005 ? (help == tr("Пересветы") ? Color.white : Color.blue) : .white.opacity(0.15))
             .help("\(help): \(pct(v))")
     }
 

@@ -34,7 +34,7 @@ struct ContentView: View {
         .toolbar { toolbar }
         .sheet(isPresented: $lib.showExport) { ExportSheet().environment(lib) }
         .sheet(isPresented: $lib.showImport) { ImportSheet().environment(lib) }
-        .navigationTitle(lib.folder?.lastPathComponent ?? "Кадр")
+        .navigationTitle(lib.folder?.lastPathComponent ?? I18n.appName)
         .dropDestination(for: URL.self) { urls, _ in
             guard let u = urls.first else { return false }
             var isDir: ObjCBool = false
@@ -47,6 +47,9 @@ struct ContentView: View {
             if lib.folder == nil, CommandLine.arguments.count > 1 {
                 let u = URL(fileURLWithPath: CommandLine.arguments[1])
                 if FileManager.default.fileExists(atPath: u.path) { lib.open(u) }
+            }
+            if lib.folder == nil, Prefs.reopenLastFolder, let last = lib.browser.recent.first {
+                lib.open(last)
             }
             monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown, .scrollWheel]) { e in
                 MainActor.assumeIsolated {
@@ -63,20 +66,20 @@ struct ContentView: View {
     private var toolbar: some ToolbarContent {
         @Bindable var lib = lib
         ToolbarItem(placement: .navigation) {
-            Button { lib.chooseFolder() } label: { Label("Открыть", systemImage: "folder") }
-                .help("Открыть папку (⌘O)")
+            Button { lib.chooseFolder() } label: { Label(tr("Открыть"), systemImage: "folder") }
+                .help(tr("Открыть папку (⌘O)"))
         }
         ToolbarItemGroup(placement: .navigation) {
-            Button { lib.undo() } label: { Label("Отменить", systemImage: "arrow.uturn.backward") }
+            Button { lib.undo() } label: { Label(tr("Отменить"), systemImage: "arrow.uturn.backward") }
                 .disabled(!lib.canUndo)
-                .help(lib.undoTitle.map { "Отменить: \($0) (⌘Z)" } ?? "Нечего отменять")
-            Button { lib.redo() } label: { Label("Вернуть", systemImage: "arrow.uturn.forward") }
+                .help(lib.undoTitle.map { tr("Отменить: \($0) (⌘Z)") } ?? tr("Нечего отменять"))
+            Button { lib.redo() } label: { Label(tr("Вернуть"), systemImage: "arrow.uturn.forward") }
                 .disabled(!lib.canRedo)
-                .help(lib.redoTitle.map { "Вернуть: \($0) (⇧⌘Z)" } ?? "Нечего возвращать")
+                .help(lib.redoTitle.map { tr("Вернуть: \($0) (⇧⌘Z)") } ?? tr("Нечего возвращать"))
         }
         ToolbarItem(placement: .navigation) {
-            Button { lib.showImport = true } label: { Label("Импорт", systemImage: "sdcard") }
-                .help("Импорт с карты памяти (⌘I)")
+            Button { lib.showImport = true } label: { Label(tr("Импорт"), systemImage: "sdcard") }
+                .help(tr("Импорт с карты памяти (⌘I)"))
         }
         ToolbarItem(placement: .principal) {
             ToolsBar()
@@ -86,44 +89,44 @@ struct ContentView: View {
                 if lib.analyzed < lib.photos.count {
                     HStack(spacing: 6) {
                         ProgressView().controlSize(.small)
-                        Text("Анализ \(lib.analyzed)/\(lib.photos.count)")
+                        Text(tr("Анализ \(lib.analyzed)/\(lib.photos.count)"))
                             .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                     }
                 }
                 Menu {
-                    Picker("Сортировать", selection: $lib.sortKey) {
+                    Picker(tr("Сортировать"), selection: $lib.sortKey) {
                         ForEach(SortKey.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
                     .pickerStyle(.inline)
-                    Toggle("По убыванию", isOn: $lib.sortDescending)
+                    Toggle(tr("По убыванию"), isOn: $lib.sortDescending)
                     Divider()
-                    Picker("Группировать", selection: $lib.groupKey) {
+                    Picker(tr("Группировать"), selection: $lib.groupKey) {
                         ForEach(GroupKey.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
                     .pickerStyle(.inline)
                     Divider()
-                    Toggle("С вложенными папками", isOn: $lib.includeSubfolders)
+                    Toggle(tr("С вложенными папками"), isOn: $lib.includeSubfolders)
                 } label: {
-                    Label("Сортировка", systemImage: "arrow.up.arrow.down")
+                    Label(tr("Сортировка"), systemImage: "arrow.up.arrow.down")
                 }
-                .help("Сортировка и группировка: \(lib.sortKey.title.lowercased())\(lib.groupKey == .none ? "" : ", " + lib.groupKey.title.lowercased())")
+                .help(tr("Сортировка и группировка: \(lib.sortKey.title.lowercased())\(lib.groupKey == .none ? "" : ", " + lib.groupKey.title.lowercased())"))
                 if !lib.loupe {
                     Slider(value: $lib.thumbSize, in: 120...420)
                         .frame(width: 110)
-                        .help("Размер превью")
+                        .help(tr("Размер превью"))
                 }
                 Button { lib.showExport = true } label: {
-                    Label("Сохранить в папку", systemImage: "square.and.arrow.down.on.square")
+                    Label(tr("Сохранить в папку"), systemImage: "square.and.arrow.down.on.square")
                 }
-                .help("Сохранить отобранные в папку (⌘S). S — текущий кадр сразу")
+                .help(tr("Сохранить отобранные в папку (⌘S). S — текущий кадр сразу"))
                 Menu {
-                    Button("Перенести отклонённые в «_Отклонённые»", systemImage: "trash") { lib.moveRejected() }
-                    Button("Сохранить в папку…", systemImage: "square.and.arrow.down") { lib.showExport = true }
-                    Button("Открыть показанные в Capture One", systemImage: "camera.aperture") { lib.openVisibleInCaptureOne() }
+                    Button(tr("Перенести отклонённые в «_Отклонённые»"), systemImage: "trash") { lib.moveRejected() }
+                    Button(tr("Сохранить в папку…"), systemImage: "square.and.arrow.down") { lib.showExport = true }
+                    Button(tr("Открыть показанные в Capture One"), systemImage: "camera.aperture") { lib.openVisibleInCaptureOne() }
                     Divider()
-                    Button("Показать в Finder", systemImage: "magnifyingglass") { lib.revealCurrent() }
+                    Button(tr("Показать в Finder"), systemImage: "magnifyingglass") { lib.revealCurrent() }
                 } label: {
-                    Label("Действия", systemImage: "ellipsis.circle")
+                    Label(tr("Действия"), systemImage: "ellipsis.circle")
                 }
             }
         }
@@ -149,15 +152,15 @@ struct EmptyState: View {
                 .font(.system(size: 64, weight: .thin))
                 .foregroundStyle(.secondary)
             VStack(spacing: 8) {
-                Text("Перетащите папку со съёмкой")
+                Text(tr("Перетащите папку со съёмкой"))
                     .font(.title2.weight(.semibold))
-                Text("RAW Sony, Canon, Nikon, Fuji и JPEG. Оценки сохраняются в XMP — их сразу видит Capture One.")
+                Text(tr("RAW Sony, Canon, Nikon, Fuji и JPEG. Оценки сохраняются в XMP — их сразу видит Capture One."))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 380)
             }
-            Button("Выбрать папку…") { lib.chooseFolder() }
+            Button(tr("Выбрать папку…")) { lib.chooseFolder() }
                 .controlSize(.large)
                 .buttonStyle(.borderedProminent)
             KeyHints().padding(.top, 18)
@@ -174,11 +177,11 @@ struct EmptyState: View {
 
 struct KeyHints: View {
     private let hints: [(String, String)] = [
-        ("← →", "листать"), ("1–5", "звёзды"), ("0", "снять оценку"), ("X", "отклонить"),
-        ("6–9", "цвет"), ("Пробел", "сетка / кадр"), ("Z", "зум 100%"), ("I", "инфо"),
-        ("S", "кадр в папку"), ("⌘S", "сохранить отобранные"),
-        ("⌘ / ⇧ + клик", "выделить несколько"), ("⌘A", "выделить всё"),
-        ("E", "обработка"), ("C", "сравнить кадры"), ("⌘I", "импорт с карты"), ("\\", "до / после"),
+        ("← →", tr("листать")), ("1–5", tr("звёзды")), ("0", tr("снять оценку")), ("X", tr("отклонить")),
+        ("6–9", tr("цвет")), (tr("Пробел"), tr("сетка / кадр")), ("Z", tr("зум 100%")), ("I", tr("инфо")),
+        ("S", tr("кадр в папку")), ("⌘S", tr("сохранить отобранные")),
+        (tr("⌘ / ⇧ + клик"), tr("выделить несколько")), ("⌘A", tr("выделить всё")),
+        ("E", tr("обработка")), ("C", tr("сравнить кадры")), ("⌘I", tr("импорт с карты")), ("\\", tr("до / после")),
     ]
 
     var body: some View {

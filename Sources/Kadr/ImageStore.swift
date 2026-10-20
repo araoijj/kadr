@@ -12,7 +12,7 @@ final class ImageStore: @unchecked Sendable {
     private let ciContext = CIContext(options: [.cacheIntermediates: false])
 
     init() {
-        thumbs.countLimit = 4000
+        thumbs.countLimit = Prefs.thumbCache
         full.countLimit = 3
     }
 

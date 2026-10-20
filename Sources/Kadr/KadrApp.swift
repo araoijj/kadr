@@ -11,74 +11,80 @@ struct KadrApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Кадр") {
+        WindowGroup(I18n.appName) {
             ContentView()
                 .environment(library)
                 .preferredColorScheme(.dark)
                 .frame(minWidth: 1000, minHeight: 640)
         }
         .windowToolbarStyle(.unified(showsTitle: false))
+
+        Settings {
+            SettingsView()
+                .environment(library)
+                .preferredColorScheme(.dark)
+        }
         .commands {
             // ⌘Z / ⇧⌘Z — журнал «Кадра»; в текстовых полях — обычная отмена ввода.
             CommandGroup(replacing: .undoRedo) {
-                Button(library.undoTitle.map { "Отменить: \($0)" } ?? "Отменить") {
+                Button(library.undoTitle.map { tr("Отменить: \($0)") } ?? tr("Отменить")) {
                     if let um = NSApp.keyWindow?.firstResponder as? NSTextView { um.undoManager?.undo() } else { library.undo() }
                 }
                 .keyboardShortcut("z")
-                Button(library.redoTitle.map { "Вернуть: \($0)" } ?? "Вернуть") {
+                Button(library.redoTitle.map { tr("Вернуть: \($0)") } ?? tr("Вернуть")) {
                     if let um = NSApp.keyWindow?.firstResponder as? NSTextView { um.undoManager?.redo() } else { library.redo() }
                 }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 Divider()
-                Button("Журнал изменений") { library.showInfo = true; library.inspectorTab = .history }
+                Button(tr("Журнал изменений")) { library.showInfo = true; library.inspectorTab = .history }
                     .keyboardShortcut("y")
             }
             CommandGroup(replacing: .newItem) {
-                Button("Открыть папку…") { library.chooseFolder() }
+                Button(tr("Открыть папку…")) { library.chooseFolder() }
                     .keyboardShortcut("o")
-                Button("Импорт с карты памяти…") { library.showImport = true }
+                Button(tr("Импорт с карты памяти…")) { library.showImport = true }
                     .keyboardShortcut("i")
             }
             CommandGroup(after: .toolbar) {
-                Button("Увеличить") { library.zoomIn() }.keyboardShortcut("=")
-                Button("Уменьшить") { library.zoomOut() }.keyboardShortcut("-")
-                Button("Вписать в окно") { library.setZoom(nil) }.keyboardShortcut("0")
-                Button("Масштаб 100%") { library.loupe = true; library.setZoom(1, at: library.loupeCenter) }.keyboardShortcut("1")
+                Button(tr("Увеличить")) { library.zoomIn() }.keyboardShortcut("=")
+                Button(tr("Уменьшить")) { library.zoomOut() }.keyboardShortcut("-")
+                Button(tr("Вписать в окно")) { library.setZoom(nil) }.keyboardShortcut("0")
+                Button(tr("Масштаб 100%")) { library.loupe = true; library.setZoom(1, at: library.loupeCenter) }.keyboardShortcut("1")
                 Divider()
             }
-            CommandMenu("Обработка") {
-                Button("Копировать обработку") { library.copyAdjustments() }
+            CommandMenu(tr("Обработка")) {
+                Button(tr("Копировать обработку")) { library.copyAdjustments() }
                     .keyboardShortcut("c", modifiers: [.command, .shift])
-                Button("Вставить обработку") { library.pasteAdjustments() }
+                Button(tr("Вставить обработку")) { library.pasteAdjustments() }
                     .keyboardShortcut("v", modifiers: [.command, .shift])
-                Button("Сбросить обработку") { library.resetAdjustments() }
+                Button(tr("Сбросить обработку")) { library.resetAdjustments() }
                     .keyboardShortcut("r", modifiers: [.command, .option])
                 Divider()
-                Menu("Применить стиль") {
+                Menu(tr("Применить стиль")) {
                     ForEach(library.styles) { st in
                         Button(st.name) { library.applyStyle(st) }
                     }
                 }
-                Button("Загрузить LUT (.cube)…") { library.importLUTs() }
+                Button(tr("Загрузить LUT (.cube)…")) { library.importLUTs() }
                 Divider()
-                Toggle("Показать до обработки", isOn: $library.showOriginal)
+                Toggle(tr("Показать до обработки"), isOn: $library.showOriginal)
             }
-            CommandMenu("Отбор") {
-                Button("Перенести отклонённые в «_Отклонённые»") { library.moveRejected() }
+            CommandMenu(tr("Отбор")) {
+                Button(tr("Перенести отклонённые в «_Отклонённые»")) { library.moveRejected() }
                     .keyboardShortcut(.delete, modifiers: .command)
-                Button("Сохранить в папку…") { library.showExport = true }
+                Button(tr("Сохранить в папку…")) { library.showExport = true }
                     .keyboardShortcut("s", modifiers: .command)
-                Button("Открыть в Capture One") { library.openVisibleInCaptureOne() }
+                Button(tr("Открыть в Capture One")) { library.openVisibleInCaptureOne() }
                     .keyboardShortcut("o", modifiers: [.command, .shift])
                 Divider()
-                Button("Выделить всё") { library.selectAll() }
-                Button("Выделить серию") { library.selectSeries() }
+                Button(tr("Выделить всё")) { library.selectAll() }
+                Button(tr("Выделить серию")) { library.selectSeries() }
                     .keyboardShortcut("a", modifiers: [.command, .shift])
                 Divider()
-                Button("Пересчитать анализ папки") { library.reanalyze() }
-                Button("Показать в Finder") { library.revealCurrent() }
+                Button(tr("Пересчитать анализ папки")) { library.reanalyze() }
+                Button(tr("Показать в Finder")) { library.revealCurrent() }
                     .keyboardShortcut("r", modifiers: [.command, .shift])
-                Toggle("Переходить дальше после оценки", isOn: $library.autoAdvance)
+                Toggle(tr("Переходить дальше после оценки"), isOn: $library.autoAdvance)
             }
         }
     }

@@ -31,19 +31,19 @@ struct CompareView: View {
 
     private func toolbar(_ photos: [Photo]) -> some View {
         HStack(spacing: 14) {
-            Label("Сравнение · \(photos.count)", systemImage: "rectangle.split.2x1")
+            Label(tr("Сравнение · \(photos.count)"), systemImage: "rectangle.split.2x1")
                 .font(.callout.weight(.semibold))
-            Text("← → — выбрать кадр · 1–5, X — оценка · Z — зум 100% · тянуть мышью — сдвиг · Esc — выход")
+            Text(tr("← → — выбрать кадр · 1–5, X — оценка · Z — зум 100% · тянуть мышью — сдвиг · Esc — выход"))
                 .font(.caption).foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer()
             Button {
                 lib.rejectOthersInCompare()
             } label: {
-                Label("Оставить выбранный, остальные отклонить", systemImage: "checkmark.seal")
+                Label(tr("Оставить выбранный, остальные отклонить"), systemImage: "checkmark.seal")
             }
-            .help("Выбранный кадр остаётся, остальные помечаются отклонёнными (X)")
-            Button("Готово") { lib.stopCompare() }
+            .help(tr("Выбранный кадр остаётся, остальные помечаются отклонёнными (X)"))
+            Button(tr("Готово")) { lib.stopCompare() }
                 .keyboardShortcut(.cancelAction)
         }
         .controlSize(.small)
@@ -128,20 +128,20 @@ struct ComparePane: View {
                 Text(photo.name).font(.caption.weight(.medium))
                     .padding(.horizontal, 6).padding(.vertical, 3)
                     .background(.black.opacity(0.55), in: Capsule())
-                if photo.isBestInSeries { Badge(text: "Самый резкий", icon: "sparkles", tint: Theme.star) }
+                if photo.isBestInSeries { Badge(text: tr("Самый резкий"), icon: "sparkles", tint: Theme.star) }
                 Spacer()
                 if lib.compareZoom > 1.5 && full == nil { ProgressView().controlSize(.small) }
             }
             Spacer()
             HStack(spacing: 8) {
                 if photo.rejected {
-                    Label("Отклонён", systemImage: "xmark.circle.fill").font(.callout.weight(.semibold)).foregroundStyle(Theme.reject)
+                    Label(tr("Отклонён"), systemImage: "xmark.circle.fill").font(.callout.weight(.semibold)).foregroundStyle(Theme.reject)
                 }
                 Stars(rating: photo.rating, size: 13)
                 if let l = photo.label { Circle().fill(l.color).frame(width: 10, height: 10) }
                 Spacer()
                 if let s = photo.sharpness, let m = lib.photos.compactMap(\.sharpness).max(), m > 0 {
-                    Text("резкость \(Int(s / m * 100))%").font(.caption.monospacedDigit())
+                    Text(tr("резкость \(Int(s / m * 100))%")).font(.caption.monospacedDigit())
                         .padding(.horizontal, 6).padding(.vertical, 3)
                         .background(.black.opacity(0.55), in: Capsule())
                 }

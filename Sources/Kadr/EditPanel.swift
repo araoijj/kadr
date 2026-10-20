@@ -8,9 +8,9 @@ struct Inspector: View {
         @Bindable var lib = lib
         VStack(spacing: 0) {
             Picker("", selection: $lib.inspectorTab) {
-                Text("Инфо").tag(Library.InspectorTab.info)
-                Text("Обработка").tag(Library.InspectorTab.edit)
-                Text("Журнал").tag(Library.InspectorTab.history)
+                Text(tr("Инфо")).tag(Library.InspectorTab.info)
+                Text(tr("Обработка")).tag(Library.InspectorTab.edit)
+                Text(tr("Журнал")).tag(Library.InspectorTab.history)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -40,8 +40,8 @@ struct EditPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             Picker("", selection: $tab) {
-                Text("Настройки").tag(0)
-                Text("Стили").tag(1)
+                Text(tr("Настройки")).tag(0)
+                Text(tr("Стили")).tag(1)
                 Text("LUT").tag(2)
             }
             .pickerStyle(.segmented)
@@ -52,7 +52,7 @@ struct EditPanel: View {
                 if let p = lib.current {
                     VStack(alignment: .leading, spacing: 20) {
                         if lib.multiSelected {
-                            Label("Стили, вставка и сброс — для \(lib.targets.count) выделенных. Ползунки — для текущего кадра.",
+                            Label(tr("Стили, вставка и сброс — для \(lib.targets.count) выделенных. Ползунки — для текущего кадра."),
                                   systemImage: "checkmark.circle.fill")
                                 .font(.caption)
                                 .foregroundStyle(Color.accentColor)
@@ -65,17 +65,17 @@ struct EditPanel: View {
                     }
                     .padding(16)
                 } else {
-                    Text("Нет выбранного снимка").foregroundStyle(.secondary).padding()
+                    Text(tr("Нет выбранного снимка")).foregroundStyle(.secondary).padding()
                 }
             }
             Divider()
             if let p = lib.current { actions(p).padding(12) }
         }
         .sheet(isPresented: $newStyle) { NewStyleSheet().environment(lib) }
-        .alert("Переименовать стиль", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
-            TextField("Название", text: $renameText)
-            Button("Готово") { if let st = renaming { lib.renameStyle(st, to: renameText) }; renaming = nil }
-            Button("Отмена", role: .cancel) { renaming = nil }
+        .alert(tr("Переименовать стиль"), isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+            TextField(tr("Название"), text: $renameText)
+            Button(tr("Готово")) { if let st = renaming { lib.renameStyle(st, to: renameText) }; renaming = nil }
+            Button(tr("Отмена"), role: .cancel) { renaming = nil }
         }
     }
 
@@ -85,55 +85,55 @@ struct EditPanel: View {
         VStack(alignment: .leading, spacing: 22) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("Кадр").font(.headline)
+                    Text(tr("Кадр")).font(.headline)
                     if p.adj.hasGeometry { Circle().fill(Color.accentColor).frame(width: 6, height: 6) }
                     Spacer()
                     if p.adj.hasGeometry {
-                        Button("Сбросить") { lib.resetCrop() }.buttonStyle(.plain).font(.caption).foregroundStyle(Color.accentColor)
+                        Button(tr("Сбросить")) { lib.resetCrop() }.buttonStyle(.plain).font(.caption).foregroundStyle(Color.accentColor)
                     }
                 }
                 Button { lib.cropMode ? lib.finishCrop() : lib.startCrop() } label: {
-                    Label(lib.cropMode ? "Готово (Enter)" : "Кадрировать и выровнять (R)", systemImage: "crop")
+                    Label(lib.cropMode ? tr("Готово (Enter)") : tr("Кадрировать и выровнять (R)"), systemImage: "crop")
                         .frame(maxWidth: .infinity)
                 }
                 .controlSize(.large)
-                Text(p.adj.hasCrop ? "Формат: \(CropFormat.byID(p.adj.cropAspect)?.title ?? "свободный")" + (p.adj.angle != 0 ? String(format: " · горизонт %+.1f°", p.adj.angle) : "")
-                     : "Форматы Instagram: пост 4:5, квадрат, сторис 9:16, горизонтальный 1.91:1.")
+                Text(p.adj.hasCrop ? tr("Формат: \(CropFormat.byID(p.adj.cropAspect)?.title ?? "свободный")") + (p.adj.angle != 0 ? String(format: tr(" · горизонт %+.1f°"), p.adj.angle) : "")
+                     : tr("Форматы Instagram: пост 4:5, квадрат, сторис 9:16, горизонтальный 1.91:1."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            section("Профиль", .profile, p) {
+            section(tr("Профиль"), .profile, p) {
                 Picker("", selection: Binding(get: { p.adj.profile }, set: { v in var a = p.adj; a.profile = v; lib.setAdjustments(a) })) {
-                    Text("Как в камере").tag(Adjustments.Profile.camera)
-                    Text("Стандартный macOS").tag(Adjustments.Profile.standard)
+                    Text(tr("Как в камере")).tag(Adjustments.Profile.camera)
+                    Text(tr("Стандартный macOS")).tag(Adjustments.Profile.standard)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 Text(p.adj.profile == .camera
-                     ? "Цвета подобраны по JPEG камеры — правки начинаются с привычной картинки."
-                     : "Проявление RAW движком macOS: свои цвета, могут отличаться от камеры.")
+                     ? tr("Цвета подобраны по JPEG камеры — правки начинаются с привычной картинки.")
+                     : tr("Проявление RAW движком macOS: свои цвета, могут отличаться от камеры."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            section("Свет", .light, p) {
-                slider("Экспозиция", "sun.max", \.exposure, p, range: -5...5, step: 0.05) { String(format: "%+.2f EV", $0) }
-                slider("Контраст", "circle.lefthalf.filled", \.contrast, p)
-                slider("Света", "sun.max.fill", \.highlights, p)
-                slider("Тени", "moon.fill", \.shadows, p)
-                slider("Чёткость", "triangle", \.clarity, p)
-                slider("Матовость", "cloud.fog", \.fade, p, range: 0...100)
+            section(tr("Свет"), .light, p) {
+                slider(tr("Экспозиция"), "sun.max", \.exposure, p, range: -5...5, step: 0.05) { String(format: "%+.2f EV", $0) }
+                slider(tr("Контраст"), "circle.lefthalf.filled", \.contrast, p)
+                slider(tr("Света"), "sun.max.fill", \.highlights, p)
+                slider(tr("Тени"), "moon.fill", \.shadows, p)
+                slider(tr("Чёткость"), "triangle", \.clarity, p)
+                slider(tr("Матовость"), "cloud.fog", \.fade, p, range: 0...100)
             }
-            section("Цвет", .color, p) {
+            section(tr("Цвет"), .color, p) {
                 kelvinSlider(p)
-                slider("Оттенок", "drop", \.tint, p, range: -150...150, gradient: [.green, .gray, .pink])
-                slider("Красочность", "paintpalette", \.vibrance, p)
-                slider("Насыщенность", "drop.fill", \.saturation, p, gradient: [.gray, .red])
+                slider(tr("Оттенок"), "drop", \.tint, p, range: -150...150, gradient: [.green, .gray, .pink])
+                slider(tr("Красочность"), "paintpalette", \.vibrance, p)
+                slider(tr("Насыщенность"), "drop.fill", \.saturation, p, gradient: [.gray, .red])
             }
-            section("Тонирование", .toning, p) {
-                hueSlider("Тени", hue: \.shadowHue, sat: \.shadowSat, p)
-                hueSlider("Света", hue: \.highlightHue, sat: \.highlightSat, p)
+            section(tr("Тонирование"), .toning, p) {
+                hueSlider(tr("Тени"), hue: \.shadowHue, sat: \.shadowSat, p)
+                hueSlider(tr("Света"), hue: \.highlightHue, sat: \.highlightSat, p)
             }
-            section("Эффекты", .effects, p) {
-                slider("Виньетка", "circle.dashed", \.vignette, p, gradient: [.black, .gray, .white])
-                slider("Зерно", "circle.grid.3x3", \.grain, p, range: 0...100)
+            section(tr("Эффекты"), .effects, p) {
+                slider(tr("Виньетка"), "circle.dashed", \.vignette, p, gradient: [.black, .gray, .white])
+                slider(tr("Зерно"), "circle.grid.3x3", \.grain, p, range: 0...100)
             }
         }
     }
@@ -151,13 +151,13 @@ struct EditPanel: View {
     private func stylesTab(_ p: Photo) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Button { newStyle = true } label: {
-                Label("Новый стиль из текущих настроек…", systemImage: "plus.circle.fill")
+                Label(tr("Новый стиль из текущих настроек…"), systemImage: "plus.circle.fill")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .disabled(p.adj.isIdentity)
-            .help(p.adj.isIdentity ? "Сначала настройте кадр ползунками" : "Сохранить настройки кадра как свой пресет")
+            .help(p.adj.isIdentity ? tr("Сначала настройте кадр ползунками") : tr("Сохранить настройки кадра как свой пресет"))
 
             ForEach(lib.styleGroups, id: \.name) { g in
                 VStack(alignment: .leading, spacing: 8) {
@@ -165,7 +165,7 @@ struct EditPanel: View {
                         HStack {
                             Image(systemName: openGroups.contains(g.name) ? "chevron.down" : "chevron.right")
                                 .font(.caption.weight(.bold)).frame(width: 12)
-                            Text(g.name).font(.subheadline.weight(.semibold))
+                            Text(tr(g.name)).font(.subheadline.weight(.semibold))
                             Text("\(g.styles.count)").font(.caption).foregroundStyle(.secondary)
                             Spacer()
                         }
@@ -183,8 +183,8 @@ struct EditPanel: View {
                 }
             }
             HStack {
-                Button("Экспорт своих…") { lib.exportStyles() }
-                Button("Импорт…") { lib.importStyles() }
+                Button(tr("Экспорт своих…")) { lib.exportStyles() }
+                Button(tr("Импорт…")) { lib.importStyles() }
             }
             .controlSize(.small)
         }
@@ -212,15 +212,15 @@ struct EditPanel: View {
         .buttonStyle(.plain)
         .disabled(st.missingLUT)
         .opacity(st.missingLUT ? 0.4 : 1)
-        .help(st.missingLUT ? "Скачайте коллекцию плёнки" :
-              st.groups.count < StyleGroup.allCases.count ? "Меняет только: " + st.groups.map(\.title).sorted().joined(separator: ", ") : "Применить к выделенным")
+        .help(st.missingLUT ? tr("Скачайте коллекцию плёнки") :
+              st.groups.count < StyleGroup.allCases.count ? tr("Меняет только: ") + st.groups.map(\.title).sorted().joined(separator: ", ") : tr("Применить к выделенным"))
         .contextMenu {
-            Button("Применить") { lib.applyStyle(st) }
+            Button(tr("Применить")) { lib.applyStyle(st) }
             if !st.builtIn {
                 Divider()
-                Button("Обновить из текущего кадра") { lib.updateStyle(st) }
-                Button("Переименовать…") { renameText = st.name; renaming = st }
-                Button("Удалить стиль", role: .destructive) { lib.deleteStyle(st) }
+                Button(tr("Обновить из текущего кадра")) { lib.updateStyle(st) }
+                Button(tr("Переименовать…")) { renameText = st.name; renaming = st }
+                Button(tr("Удалить стиль"), role: .destructive) { lib.deleteStyle(st) }
             }
         }
     }
@@ -233,11 +233,11 @@ struct EditPanel: View {
                 HStack {
                     Text(LUTStore.displayName(lut)).font(.callout.weight(.semibold)).lineLimit(1)
                     Spacer()
-                    Button("Убрать") { var a = p.adj; a.lut = nil; lib.setAdjustments(a) }.controlSize(.small)
+                    Button(tr("Убрать")) { var a = p.adj; a.lut = nil; lib.setAdjustments(a) }.controlSize(.small)
                 }
-                slider("Сила", "slider.horizontal.below.square.filled.and.square", \.lutAmount, p, range: 0...200, defaultValue: 100) { "\(Int($0))%" }
+                slider(tr("Сила"), "slider.horizontal.below.square.filled.and.square", \.lutAmount, p, range: 0...200, defaultValue: 100) { "\(Int($0))%" }
                 HStack {
-                    Text("0 — без LUT, 100 — как задумано, 200 — усиленно").font(.caption2).foregroundStyle(.secondary)
+                    Text(tr("0 — без LUT, 100 — как задумано, 200 — усиленно")).font(.caption2).foregroundStyle(.secondary)
                     Spacer()
                     LUTPeek()
                 }
@@ -255,11 +255,11 @@ struct EditPanel: View {
                 }
             }
             HStack {
-                Button("Загрузить свои LUT…") { lib.importLUTs() }
-                Button("Папка LUT") { lib.revealLUTFolder() }
+                Button(tr("Загрузить свои LUT…")) { lib.importLUTs() }
+                Button(tr("Папка LUT")) { lib.revealLUTFolder() }
             }
             .controlSize(.small)
-            Text("Подходят .cube и HaldCLUT .png (например, коллекция RawTherapee Film Simulation).")
+            Text(tr("Подходят .cube и HaldCLUT .png (например, коллекция RawTherapee Film Simulation)."))
                 .font(.caption2).foregroundStyle(.secondary)
         }
     }
@@ -294,15 +294,15 @@ struct EditPanel: View {
         let dl = lib.collections
         return VStack(alignment: .leading, spacing: 6) {
             Label(c.title, systemImage: "film").font(.callout.weight(.semibold))
-            Text("51 эмуляция плёнки: Kodak Portra, Ektar, Gold, Fuji Pro 400H, Velvia, Provia, Ilford HP5, Tri-X… Автор \(c.author), лицензия \(c.license) — бесплатно. ~65 МБ.")
+            Text(tr("51 эмуляция плёнки: Kodak Portra, Ektar, Gold, Fuji Pro 400H, Velvia, Provia, Ilford HP5, Tri-X… Автор \(c.author), лицензия \(c.license) — бесплатно. ~65 МБ."))
                 .font(.caption).foregroundStyle(.secondary)
             if dl.busy {
                 ProgressView(value: Double(dl.done), total: Double(max(dl.total, 1)))
-                Text("Скачиваю \(dl.done) из \(dl.total)…").font(.caption2).foregroundStyle(.secondary)
+                Text(tr("Скачиваю \(dl.done) из \(dl.total)…")).font(.caption2).foregroundStyle(.secondary)
             } else {
                 HStack {
-                    Button("Скачать") { lib.downloadCollection(c) }.buttonStyle(.borderedProminent).controlSize(.small)
-                    Link("Страница проекта", destination: c.page).font(.caption)
+                    Button(tr("Скачать")) { lib.downloadCollection(c) }.buttonStyle(.borderedProminent).controlSize(.small)
+                    Link(tr("Страница проекта"), destination: c.page).font(.caption)
                 }
                 if let m = dl.message { Text(m).font(.caption2).foregroundStyle(.secondary) }
             }
@@ -318,18 +318,18 @@ struct EditPanel: View {
         return HStack(spacing: 6) {
             Toggle(isOn: $lib.showOriginal) { Image(systemName: "rectangle.lefthalf.inset.filled") }
                 .toggleStyle(.button)
-                .help("Показать снимок камеры без обработки (клавиша \\)")
+                .help(tr("Показать снимок камеры без обработки (клавиша \\)"))
             Button { lib.copyAdjustments() } label: { Image(systemName: "doc.on.doc") }
-                .help("Копировать обработку (⌘⇧C)")
+                .help(tr("Копировать обработку (⌘⇧C)"))
             Button { lib.pasteAdjustments() } label: { Image(systemName: "doc.on.clipboard") }
                 .disabled(lib.copiedAdj == nil)
-                .help("Вставить обработку на выделенные (⌘⇧V)")
+                .help(tr("Вставить обработку на выделенные (⌘⇧V)"))
             Button { newStyle = true } label: { Image(systemName: "plus.square.on.square") }
                 .disabled(p.adj.isIdentity)
-                .help("Сохранить как стиль")
+                .help(tr("Сохранить как стиль"))
             Spacer()
-            Button(role: .destructive) { lib.resetAdjustments() } label: { Label("Исходник", systemImage: "arrow.counterclockwise").fixedSize() }
-                .help("Вернуть кадр как снято: сбросить всю обработку и кадрирование (⌥⌘R)")
+            Button(role: .destructive) { lib.resetAdjustments() } label: { Label(tr("Исходник"), systemImage: "arrow.counterclockwise").fixedSize() }
+                .help(tr("Вернуть кадр как снято: сбросить всю обработку и кадрирование (⌥⌘R)"))
                 .disabled(lib.targets.allSatisfy(\.adj.isIdentity))
         }
         .controlSize(.regular)
@@ -343,10 +343,10 @@ struct EditPanel: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(title).font(.headline)
-                if changed { Circle().fill(Color.accentColor).frame(width: 6, height: 6).help("В разделе есть правки") }
+                if changed { Circle().fill(Color.accentColor).frame(width: 6, height: 6).help(tr("В разделе есть правки")) }
                 Spacer()
                 if changed {
-                    Button("Сбросить") {
+                    Button(tr("Сбросить")) {
                         var a = p.adj
                         a.merge(Adjustments(), groups: [group])
                         lib.setAdjustments(a)
@@ -391,7 +391,7 @@ struct EditPanel: View {
                 .foregroundStyle(.secondary)
                 .opacity(changed ? 1 : 0)
                 .disabled(!changed)
-                .help("Сбросить")
+                .help(tr("Сбросить"))
             }
             ZStack {
                 if let gradient {
@@ -420,14 +420,14 @@ struct EditPanel: View {
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Image(systemName: "thermometer.medium").frame(width: 18).foregroundStyle(changed ? Color.accentColor : .secondary)
-                Text("Температура").foregroundStyle(changed ? .primary : .secondary)
+                Text(tr("Температура")).foregroundStyle(changed ? .primary : .secondary)
                     .onTapGesture(count: 2) { binding.wrappedValue = asShot }
                 Spacer()
                 Text(fmt(k)).font(.callout.monospacedDigit().weight(changed ? .semibold : .regular))
                     .foregroundStyle(changed ? .primary : .secondary)
                 Button { binding.wrappedValue = asShot } label: { Image(systemName: "arrow.uturn.backward.circle.fill") }
                     .buttonStyle(.plain).foregroundStyle(.secondary).opacity(changed ? 1 : 0).disabled(!changed)
-                    .help("Как снято")
+                    .help(tr("Как снято"))
             }
             ZStack {
                 LinearGradient(colors: [.blue, .gray, .orange], startPoint: .leading, endPoint: .trailing)
@@ -435,7 +435,7 @@ struct EditPanel: View {
                 Slider(value: binding, in: range).tint(.clear)
             }
             HStack {
-                Text(isRaw ? "Как снято: \(fmt(asShot))" : "Не RAW: сдвиг от 5500 K").font(.caption2).foregroundStyle(.secondary)
+                Text(isRaw ? tr("Как снято: \(fmt(asShot))") : tr("Не RAW: сдвиг от 5500 K")).font(.caption2).foregroundStyle(.secondary)
                 Spacer()
                 if changed {
                     Text(String(format: "%+.0f K", p.adj.wbShift)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
@@ -452,7 +452,7 @@ struct EditPanel: View {
                 Circle().fill(Color(hue: h / 360, saturation: max(0.15, s / 100), brightness: 0.9)).frame(width: 14, height: 14)
                 Text(title).font(.body).foregroundStyle(s == 0 ? .secondary : .primary)
                 Spacer()
-                Text(s == 0 ? "выкл" : "\(Int(h))° · сила \(Int(s))").font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                Text(s == 0 ? tr("выкл") : tr("\(Int(h))° · сила \(Int(s))")).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
                 Button { var a = p.adj; a[keyPath: sat] = 0; lib.setAdjustments(a) } label: { Image(systemName: "arrow.uturn.backward.circle.fill") }
                     .buttonStyle(.plain).foregroundStyle(.secondary).opacity(s == 0 ? 0 : 1).disabled(s == 0)
             }
@@ -469,7 +469,7 @@ struct EditPanel: View {
                 .tint(.clear)
             }
             HStack(spacing: 6) {
-                Text("Сила").font(.caption).foregroundStyle(.secondary).frame(width: 34, alignment: .leading)
+                Text(tr("Сила")).font(.caption).foregroundStyle(.secondary).frame(width: 34, alignment: .leading)
                 Slider(value: Binding(get: { s }, set: { v in var a = p.adj; a[keyPath: sat] = v.rounded(); lib.setAdjustments(a) }), in: 0...100)
             }
         }
@@ -487,39 +487,39 @@ struct NewStyleSheet: View {
     var body: some View {
         let changed = lib.current?.adj.changedGroups ?? []
         VStack(alignment: .leading, spacing: 18) {
-            Text("Новый стиль").font(.title2.weight(.semibold))
+            Text(tr("Новый стиль")).font(.title2.weight(.semibold))
             VStack(alignment: .leading, spacing: 6) {
-                Text("Название").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                TextField("Например, «Мой свадебный»", text: $name).textFieldStyle(.roundedBorder)
+                Text(tr("Название")).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                TextField(tr("Например, «Мой свадебный»"), text: $name).textFieldStyle(.roundedBorder)
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text("Коллекция").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                Text(tr("Коллекция")).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
                 HStack {
-                    TextField("Мои стили", text: $collection).textFieldStyle(.roundedBorder)
-                    Menu("Выбрать") {
-                        ForEach(lib.userCollections, id: \.self) { c in Button(c) { collection = c } }
+                    TextField(tr("Мои стили"), text: $collection).textFieldStyle(.roundedBorder)
+                    Menu(tr("Выбрать")) {
+                        ForEach(lib.userCollections, id: \.self) { c in Button(tr(c)) { collection = c } }
                     }
                     .fixedSize()
                 }
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text("Что сохранить в стиль").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                Text(tr("Что сохранить в стиль")).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
                 ForEach(StyleGroup.allCases) { g in
                     Toggle(isOn: Binding(get: { groups.contains(g) }, set: { if $0 { groups.insert(g) } else { groups.remove(g) } })) {
                         HStack {
                             Text(g.title)
-                            if changed.contains(g) { Text("изменено").font(.caption).foregroundStyle(Color.accentColor) }
+                            if changed.contains(g) { Text(tr("изменено")).font(.caption).foregroundStyle(Color.accentColor) }
                         }
                     }
                     .toggleStyle(.checkbox)
                 }
-                Text("Невыбранные разделы стиль не трогает: например, стиль только с «Цвет» сохранит вашу экспозицию.")
+                Text(tr("Невыбранные разделы стиль не трогает: например, стиль только с «Цвет» сохранит вашу экспозицию."))
                     .font(.caption).foregroundStyle(.secondary)
             }
             HStack {
                 Spacer()
-                Button("Отмена") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("Сохранить стиль") {
+                Button(tr("Отмена")) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(tr("Сохранить стиль")) {
                     lib.createStyle(name: name, groups: groups, collection: collection)
                     dismiss()
                 }
@@ -564,7 +564,7 @@ struct LUTPeek: View {
     @State private var saved: Adjustments?
 
     var body: some View {
-        Text("Сравнить")
+        Text(tr("Сравнить"))
             .font(.caption.weight(.medium))
             .padding(.horizontal, 8).padding(.vertical, 3)
             .background(Capsule().fill(saved != nil ? Color.accentColor.opacity(0.4) : .white.opacity(0.1)))
@@ -579,6 +579,6 @@ struct LUTPeek: View {
                     if let a = saved { lib.withoutHistory { lib.setAdjustments(a) } }
                     saved = nil
                 })
-            .help("Зажмите — без LUT")
+            .help(tr("Зажмите — без LUT"))
     }
 }

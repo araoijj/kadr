@@ -9,7 +9,7 @@ struct ExportSheet: View {
                 Image(systemName: "square.and.arrow.down.on.square")
                     .font(.title2)
                     .foregroundStyle(Color.accentColor)
-                Text("Сохранить в папку").font(.title2.weight(.semibold))
+                Text(tr("Сохранить в папку")).font(.title2.weight(.semibold))
             }
             .padding(24)
             Divider()
@@ -27,11 +27,11 @@ struct ExportSheet: View {
         @Bindable var lib = lib
         return VStack(alignment: .leading, spacing: 20) {
 
-            section("Что сохранить") {
+            section(tr("Что сохранить")) {
                 Picker("", selection: $lib.export.scope) {
-                    Text("Отобранные — с оценкой или цветом (\(lib.photos(for: .rated).count))").tag(ExportSettings.Scope.rated)
-                    Text("Показанные сейчас: «\(lib.filter.title)» (\(lib.photos(for: .visible).count))").tag(ExportSettings.Scope.visible)
-                    Text(lib.multiSelected ? "Выделенные (\(lib.targets.count))" : "Только текущий снимок").tag(ExportSettings.Scope.selected)
+                    Text(tr("Отобранные — с оценкой или цветом (\(lib.photos(for: .rated).count))")).tag(ExportSettings.Scope.rated)
+                    Text(tr("Показанные сейчас: «\(lib.filter.title)» (\(lib.photos(for: .visible).count))")).tag(ExportSettings.Scope.visible)
+                    Text(lib.multiSelected ? tr("Выделенные (\(lib.targets.count))") : tr("Только текущий снимок")).tag(ExportSettings.Scope.selected)
                 }
                 .pickerStyle(.radioGroup)
                 .labelsHidden()
@@ -39,66 +39,66 @@ struct ExportSheet: View {
 
             // Три независимых решения: формат файла → размер в пикселях → качество сжатия.
             // Ни один пункт не меняет другой «за спиной».
-            section("Формат файла") {
+            section(tr("Формат файла")) {
                 Picker("", selection: $lib.export.format) {
-                    Text("Оригиналы RAW + XMP").tag(ExportSettings.Format.original)
-                    Text("JPEG (проявить RAW)").tag(ExportSettings.Format.jpeg)
+                    Text(tr("Оригиналы RAW + XMP")).tag(ExportSettings.Format.original)
+                    Text(tr("JPEG (проявить RAW)")).tag(ExportSettings.Format.jpeg)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 if lib.export.format == .original {
-                    Toggle("Перенести, а не копировать", isOn: $lib.export.move)
-                        .help("Файлы исчезнут из текущей папки")
+                    Toggle(tr("Перенести, а не копировать"), isOn: $lib.export.move)
+                        .help(tr("Файлы исчезнут из текущей папки"))
                     SizeEstimate()
                 }
             }
 
             if lib.export.format == .jpeg {
-                section("Размер") {
+                section(tr("Размер")) {
                     VStack(spacing: 6) {
                         ForEach(SizeChoice.allCases) { c in sizeRow(c) }
                     }
                     if lib.export.preset == .story {
-                        Toggle("Кадры не 9:16 — обрезать по центру (иначе вписать без обрезки)", isOn: $lib.export.presetCrop)
+                        Toggle(tr("Кадры не 9:16 — обрезать по центру (иначе вписать без обрезки)"), isOn: $lib.export.presetCrop)
                     }
                     if lib.export.preset == .instagram || lib.export.preset == .story { PlanSummary() }
                 }
 
-                section("Качество") { quality }
+                section(tr("Качество")) { quality }
 
-                section("Обработка") {
-                    Toggle("С обработкой, стилями и кадрированием из «Кадра»", isOn: $lib.export.applyEdits)
-                    Text("Проявление движком macOS; правки Capture One не переносятся. ~1–2 с на кадр.")
+                section(tr("Обработка")) {
+                    Toggle(tr("С обработкой, стилями и кадрированием из «Кадра»"), isOn: $lib.export.applyEdits)
+                    Text(tr("Проявление движком macOS; правки Capture One не переносятся. ~1–2 с на кадр."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
 
-            section("Имя файла") {
+            section(tr("Имя файла")) {
                 HStack {
                     TextField("{name}", text: $lib.export.nameTemplate)
                         .textFieldStyle(.roundedBorder)
                         .font(.body.monospaced())
-                    Menu("Вставить") {
-                        Button("{name} — исходное имя") { lib.export.nameTemplate += "{name}" }
-                        Button("{folder} — имя съёмки") { lib.export.nameTemplate += "{folder}" }
-                        Button("{date} — дата съёмки") { lib.export.nameTemplate += "{date}" }
-                        Button("{n} — номер 001, 002…") { lib.export.nameTemplate += "{n}" }
+                    Menu(tr("Вставить")) {
+                        Button(tr("{name} — исходное имя")) { lib.export.nameTemplate += "{name}" }
+                        Button(tr("{folder} — имя съёмки")) { lib.export.nameTemplate += "{folder}" }
+                        Button(tr("{date} — дата съёмки")) { lib.export.nameTemplate += "{date}" }
+                        Button(tr("{n} — номер 001, 002…")) { lib.export.nameTemplate += "{n}" }
                         Divider()
-                        Button("Как в камере") { lib.export.nameTemplate = "{name}" }
-                        Button("Съёмка_номер") { lib.export.nameTemplate = "{folder}_{n}" }
-                        Button("Дата_номер") { lib.export.nameTemplate = "{date}_{n}" }
+                        Button(tr("Как в камере")) { lib.export.nameTemplate = "{name}" }
+                        Button(tr("Съёмка_номер")) { lib.export.nameTemplate = "{folder}_{n}" }
+                        Button(tr("Дата_номер")) { lib.export.nameTemplate = "{date}_{n}" }
                     }
                     .fixedSize()
                 }
-                Text("Пример: \(namePreview)")
+                Text(tr("Пример: \(namePreview)"))
                     .font(.caption).foregroundStyle(.secondary)
             }
 
             if lib.export.format == .jpeg {
-                section("Водяной знак") {
-                    Toggle("Добавить текст на фото", isOn: $lib.export.watermarkOn)
+                section(tr("Водяной знак")) {
+                    Toggle(tr("Добавить текст на фото"), isOn: $lib.export.watermarkOn)
                     if lib.export.watermarkOn {
-                        TextField("© Ваше имя", text: $lib.export.watermarkText)
+                        TextField(tr("© Ваше имя"), text: $lib.export.watermarkText)
                             .textFieldStyle(.roundedBorder)
                         HStack {
                             Picker("", selection: $lib.export.watermarkPosition) {
@@ -109,12 +109,12 @@ struct ExportSheet: View {
                             Spacer()
                         }
                         HStack {
-                            Text("Величина текста").frame(width: 120, alignment: .leading)
+                            Text(tr("Величина текста")).frame(width: 120, alignment: .leading)
                             Slider(value: $lib.export.watermarkSize, in: 1...8)
-                            Text(String(format: "%.0f%% кадра", lib.export.watermarkSize)).monospacedDigit().foregroundStyle(.secondary).frame(width: 70)
+                            Text(String(format: tr("%.0f%% кадра"), lib.export.watermarkSize)).monospacedDigit().foregroundStyle(.secondary).frame(width: 70)
                         }
                         HStack {
-                            Text("Непрозрачность").frame(width: 120, alignment: .leading)
+                            Text(tr("Непрозрачность")).frame(width: 120, alignment: .leading)
                             Slider(value: $lib.export.watermarkOpacity, in: 0.15...1)
                             Text("\(Int((lib.export.watermarkOpacity * 100).rounded()))%").monospacedDigit().foregroundStyle(.secondary).frame(width: 70)
                         }
@@ -123,7 +123,7 @@ struct ExportSheet: View {
                 }
             }
 
-            section("Куда") {
+            section(tr("Куда")) {
                 HStack {
                     Image(systemName: "folder.fill").foregroundStyle(.secondary)
                     Text(destinationText)
@@ -131,12 +131,12 @@ struct ExportSheet: View {
                         .truncationMode(.head)
                         .foregroundStyle(lib.export.destination == nil ? .secondary : .primary)
                     Spacer()
-                    Button("Выбрать…") { lib.chooseExportFolder() }
+                    Button(tr("Выбрать…")) { lib.chooseExportFolder() }
                 }
                 .padding(10)
                 .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.05)))
-                Toggle("Создать подпапку «\(lib.folder?.lastPathComponent ?? "съёмка")»", isOn: $lib.export.subfolder)
-                Text("Совет: клавиша S отправляет текущий кадр в эту папку сразу, без окна.")
+                Toggle(tr("Создать подпапку «\(lib.folder?.lastPathComponent ?? "съёмка")»"), isOn: $lib.export.subfolder)
+                Text(tr("Совет: клавиша S отправляет текущий кадр в эту папку сразу, без окна."))
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -148,7 +148,7 @@ struct ExportSheet: View {
             if lib.exporting {
                 VStack(alignment: .leading, spacing: 6) {
                     ProgressView(value: Double(lib.exportDone), total: Double(max(lib.exportTotal, 1)))
-                    Text("Сохраняю \(lib.exportDone) из \(lib.exportTotal)…")
+                    Text(tr("Сохраняю \(lib.exportDone) из \(lib.exportTotal)…"))
                         .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 }
             }
@@ -156,11 +156,11 @@ struct ExportSheet: View {
             HStack {
                 Spacer()
                 if lib.exporting {
-                    Button("Остановить") { lib.cancelExport() }
+                    Button(tr("Остановить")) { lib.cancelExport() }
                 } else {
-                    Button("Отмена") { lib.showExport = false }
+                    Button(tr("Отмена")) { lib.showExport = false }
                         .keyboardShortcut(.cancelAction)
-                    Button("Сохранить \(lib.photos(for: lib.export.scope).count)") { lib.runExport() }
+                    Button(tr("Сохранить \(lib.photos(for: lib.export.scope).count)")) { lib.runExport() }
                         .keyboardShortcut(.defaultAction)
                         .buttonStyle(.borderedProminent)
                         .disabled(lib.export.destination == nil || lib.photos(for: lib.export.scope).isEmpty)
@@ -179,15 +179,15 @@ struct ExportSheet: View {
                 Text("\(q)%").font(.body.monospacedDigit().weight(.semibold)).frame(width: 46, alignment: .trailing)
             }
             HStack {
-                Text("экономно").frame(maxWidth: .infinity, alignment: .leading)
-                Text("хорошо").frame(maxWidth: .infinity, alignment: .center)
-                Text("максимум").frame(maxWidth: .infinity, alignment: .trailing)
+                Text(tr("экономно")).frame(maxWidth: .infinity, alignment: .leading)
+                Text(tr("хорошо")).frame(maxWidth: .infinity, alignment: .center)
+                Text(tr("максимум")).frame(maxWidth: .infinity, alignment: .trailing)
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
             .padding(.trailing, 52)
             SizeEstimate()
-            Text(q >= 95 ? "Почти без потерь — файлы крупные." : q >= 85 ? "Без видимых потерь — обычный выбор." : q >= 75 ? "Чуть заметно на градиентах неба и кожи." : "Заметные артефакты — только для превью.")
+            Text(q >= 95 ? tr("Почти без потерь — файлы крупные.") : q >= 85 ? tr("Без видимых потерь — обычный выбор.") : q >= 75 ? tr("Чуть заметно на градиентах неба и кожи.") : tr("Заметные артефакты — только для превью."))
                 .font(.caption2).foregroundStyle(.secondary)
         }
     }
@@ -221,7 +221,7 @@ struct ExportSheet: View {
     }
 
     private var destinationText: String {
-        guard let d = lib.export.destination else { return "Папка не выбрана" }
+        guard let d = lib.export.destination else { return tr("Папка не выбрана") }
         return d.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
     }
 
@@ -246,7 +246,7 @@ struct PlanSummary: View {
         let groups = Dictionary(grouping: plans, by: { $0 }).map { ($0.key, $0.value.count) }
             .sorted { $0.1 > $1.1 }
         VStack(alignment: .leading, spacing: 6) {
-            Text("Что получится (\(list.count) кадров)").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Text(tr("Что получится (\(list.count) кадров)")).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             ForEach(groups, id: \.0) { plan, n in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Image(systemName: plan.crop == nil ? "checkmark.circle.fill" : "crop")
@@ -256,7 +256,7 @@ struct PlanSummary: View {
                 }
             }
             if plans.contains(where: { $0.crop != nil }) {
-                Text("Чтобы выбрать, что останется в кадре, кадрируйте эти снимки сами (R) — пресет возьмёт вашу рамку.")
+                Text(tr("Чтобы выбрать, что останется в кадре, кадрируйте эти снимки сами (R) — пресет возьмёт вашу рамку."))
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
@@ -272,21 +272,21 @@ enum SizeChoice: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .instagram: "Instagram лента"
-        case .story: "Сторис / Reels"
+        case .instagram: tr("Instagram лента")
+        case .story: tr("Сторис / Reels")
         case .px2560: "2560 px"
         case .px1600: "1600 px"
-        case .full: "Полный размер"
+        case .full: tr("Полный размер")
         }
     }
 
     var subtitle: String {
         switch self {
-        case .instagram: "1080 по ширине; формат — из вашего кадрирования (4:5, 1:1, 1.91:1)"
+        case .instagram: tr("1080 по ширине; формат — из вашего кадрирования (4:5, 1:1, 1.91:1)")
         case .story: "1080 × 1920"
-        case .px2560: "по длинной стороне — сайт, Telegram, ВКонтакте"
-        case .px1600: "по длинной стороне — мессенджеры, почта"
-        case .full: "как снято — для печати и архива"
+        case .px2560: tr("по длинной стороне — сайт, Telegram, ВКонтакте")
+        case .px1600: tr("по длинной стороне — мессенджеры, почта")
+        case .full: tr("как снято — для печати и архива")
         }
     }
 
