@@ -140,6 +140,12 @@ final class Library {
 
     // AI analysis (defect detection): started by a button; opening a folder only runs lightweight indexing.
     var aiRunning = false
+    // AI noise reduction batch (Denoise.swift).
+    var denoiseRunning = false
+    var denoiseDone = 0
+    var denoiseTotal = 0
+    var denoiseFraction = 0.0
+    var denoiseTask: Task<Void, Never>?
     /// Modules turned on in Settings → AI; findings of the others are hidden even if computed earlier.
     var aiEnabled = Prefs.aiModules {
         didSet { Prefs.setAIModules(aiEnabled) }

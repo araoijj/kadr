@@ -28,7 +28,8 @@ final class Renderer: @unchecked Sendable {
                 guard self.current(channel) == gen else { cont.resume(returning: nil); return }
                 guard let base = self.base(url, maxSide: maxSide) else { cont.resume(returning: nil); return }
                 let cube = adj.profile == .camera ? CameraMatch.shared.cube(for: url) : nil
-                let out = EditPipeline.apply(adj, to: base, cameraCube: cube, asShotK: ImageStore.shared.asShotK(url))
+                let out = EditPipeline.apply(adj, to: base, cameraCube: cube, asShotK: ImageStore.shared.asShotK(url),
+                                              denoised: Denoiser.shared.input(for: url, adj))
                 let cg = self.context.createCGImage(out, from: out.extent.integral, format: .RGBA8,
                                                     colorSpace: CGColorSpace(name: CGColorSpace.displayP3))
                 cont.resume(returning: cg)
@@ -47,7 +48,8 @@ final class Renderer: @unchecked Sendable {
                 if pixels.width / region.width > base.extent.width * adj.cropW * 1.05, let full = self.base(url, maxSide: nil) { base = full }
                 guard self.current(channel) == gen else { cont.resume(returning: nil); return }
                 let cube = adj.profile == .camera ? CameraMatch.shared.cube(for: url) : nil
-                let out = EditPipeline.apply(adj, to: base, cameraCube: cube, asShotK: ImageStore.shared.asShotK(url))
+                let out = EditPipeline.apply(adj, to: base, cameraCube: cube, asShotK: ImageStore.shared.asShotK(url),
+                                              denoised: Denoiser.shared.input(for: url, adj))
                 let e = out.extent   // already after cropping
                 let r = CGRect(x: e.minX + region.minX * e.width, y: e.minY + (1 - region.maxY) * e.height,
                                width: region.width * e.width, height: region.height * e.height)

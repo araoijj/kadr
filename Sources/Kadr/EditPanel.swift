@@ -108,6 +108,35 @@ struct EditPanel: View {
                      : tr("Форматы Instagram: пост 4:5, квадрат, сторис 9:16, горизонтальный 1.91:1."))
                     .font(.caption).foregroundStyle(.secondary)
             }
+            // AI noise reduction: computed once per photo (~1 min), then a strength slider.
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Label(tr("AI-шумоподавление"), systemImage: "sparkles").font(.headline)
+                    Spacer()
+                }
+                if lib.denoiseRunning {
+                    ProgressView(value: (Double(lib.denoiseDone) + lib.denoiseFraction) / Double(max(lib.denoiseTotal, 1)))
+                    HStack {
+                        Text(tr("Кадр \(lib.denoiseDone + 1) из \(lib.denoiseTotal)…")).font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button(tr("Стоп")) { lib.stopDenoise() }.controlSize(.small)
+                    }
+                } else if Denoiser.shared.hasResult(p.url) {
+                    HStack {
+                        Slider(value: Binding(get: { p.adj.aiDenoise }, set: { v in var a = p.adj; a.aiDenoise = v.rounded(); lib.setAdjustments(a) }), in: 0...100)
+                        Text("\(Int(p.adj.aiDenoise))").font(.caption.monospacedDigit()).frame(width: 28)
+                    }
+                } else if Denoiser.shared.installed {
+                    Button { lib.denoiseTargets() } label: {
+                        Label(lib.multiSelected ? tr("Убрать шум у выделенных (\(lib.targets.count))") : tr("Убрать шум"), systemImage: "wand.and.stars")
+                            .frame(maxWidth: .infinity)
+                    }
+                    Text(tr("Модель SCUNet на видеокарте: ~1 минута на кадр 24 Мп, потом — мгновенно. Света из RAW не теряются."))
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text(tr("Модель шумоподавления не установлена (Настройки → AI)")).font(.caption).foregroundStyle(.secondary)
+                }
+            }
             section(tr("Профиль"), .profile, p) {
                 Picker("", selection: Binding(get: { p.adj.profile }, set: { v in var a = p.adj; a.profile = v; lib.setAdjustments(a) })) {
                     Text(tr("Как в камере")).tag(Adjustments.Profile.camera)

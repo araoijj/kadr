@@ -219,7 +219,7 @@ enum Exporter {
         // Even without edits, use the in-camera profile so colors match the preview.
         let adj = s.applyEdits ? item.adj : Adjustments()
         img = EditPipeline.apply(adj, to: img, cameraCube: adj.profile == .camera ? CameraMatch.shared.cube(for: item.url) : nil,
-                                 asShotK: ImageStore.shared.asShotK(item.url))
+                                 asShotK: ImageStore.shared.asShotK(item.url), denoised: Denoiser.shared.input(for: item.url, adj))
         img = fitToPreset(img, s, userCropped: adj.hasCrop)
         if s.watermarkOn {
             img = EditPipeline.watermark(img, text: s.watermarkText, sizePercent: s.watermarkSize,

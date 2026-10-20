@@ -29,6 +29,7 @@ struct Adjustments: Codable, Equatable, Hashable {
     var grain: Double = 0         // 0…100
     var lut: String?              // path inside the LUT folder (.cube or HaldCLUT .png)
     var lutAmount: Double = 100   // 0…200: above 100 amplifies the LUT effect
+    var aiDenoise: Double = 0     // 0…100: AI noise reduction strength (needs the cached SCUNet result)
 
     // Crop: a rectangle in frame fractions (y from top to bottom) plus horizon straightening, in degrees.
     var cropX: Double = 0
@@ -86,6 +87,7 @@ extension Adjustments {
         vignette = v(.vignette) ?? 0; grain = v(.grain) ?? 0
         lut = try? c.decodeIfPresent(String.self, forKey: .lut)
         lutAmount = v(.lutAmount) ?? 100
+        aiDenoise = v(.aiDenoise) ?? 0
         cropX = v(.cropX) ?? 0; cropY = v(.cropY) ?? 0; cropW = v(.cropW) ?? 1; cropH = v(.cropH) ?? 1
         angle = v(.angle) ?? 0
         cropAspect = try? c.decodeIfPresent(String.self, forKey: .cropAspect)
@@ -429,8 +431,11 @@ enum EditPipeline {
     /// Applies the settings to a linear image (CIRAWFilter output or a preview).
     /// cameraCube is the fitted "Camera matching" profile (developed RAW only).
     /// asShotK is the "as shot" white balance (from the RAW); the kelvin shift is relative to it.
-    static func apply(_ a: Adjustments, to input: CIImage, cameraCube: (size: Int, data: Data)? = nil, asShotK: Double = 5500) -> CIImage {
-        var img = a.hasGeometry ? geometry(input, a) : input
+    static func apply(_ a: Adjustments, to input: CIImage, cameraCube: (size: Int, data: Data)? = nil, asShotK: Double = 5500,
+                      denoised: CIImage? = nil) -> CIImage {
+        // 0. AI noise reduction — on the RAW base, before everything else.
+        let base = a.aiDenoise > 0 && denoised != nil ? Denoiser.apply(input, denoised: denoised!, amount: a.aiDenoise / 100) : input
+        var img = a.hasGeometry ? geometry(base, a) : base
         let e = img.extent
         let longSide = max(e.width, e.height)
 
