@@ -11,7 +11,7 @@ import json, os, re, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'Sources', 'Kadr')
 OUT = os.path.join(ROOT, 'tools', 'i18n')
-SKIP_FILES = {'Translations.swift', 'I18n.swift'}
+SKIP_FILES = {'Translations.swift', 'I18n.swift', 'Tags.swift'}   # Tags.swift: its Russian names are data, not UI strings
 CYR = re.compile(r'[А-Яа-яЁё]')
 # Do not translate: file names, internal collection keys, keyboard layout letters.
 KEEP = {'_Отклонённые', 'Documents/Фотосессии', 'Мои стили|Базовые', 'Мои стили', 'Базовые', 'Портрет', 'Пейзаж', 'Кино', 'Чёрно-белые', 'Плёнка'}
