@@ -1,9 +1,9 @@
 import CoreImage
 import Foundation
 
-/// Профиль «как в камере». Для каждого RAW подбираем 3D-LUT, который переводит проявление macOS
-/// в цвета встроенного JPEG камеры: оба изображения уменьшаем до одного размера и усредняем,
-/// какой цвет камеры соответствует каждому цвету macOS. Так обработка начинается с привычных цветов Sony.
+/// "Camera matching" profile. For each RAW we fit a 3D LUT that maps the macOS development
+/// to the colors of the camera's embedded JPEG: both images are downscaled to the same size and we average
+/// which camera color corresponds to each macOS color. This way editing starts from familiar Sony colors.
 final class CameraMatch: @unchecked Sendable {
     static let shared = CameraMatch()
     static let size = 17
@@ -24,7 +24,7 @@ final class CameraMatch: @unchecked Sendable {
 
     private func fit(_ url: URL) -> (size: Int, data: Data)? {
         guard let camera = ImageStore.shared.preview(url), let raw = EditPipeline.source(url, maxSide: 900) else { return nil }
-        // Кадр превью и RAW должны совпадать по пропорциям (иначе сравнивать нечего).
+        // The preview and the RAW must have the same aspect ratio (otherwise there's nothing to compare).
         let ca = Double(camera.width) / Double(camera.height), ra = raw.extent.width / raw.extent.height
         guard abs(ca - ra) / ca < 0.02 else { return nil }
         let w = 360, h = Int((Double(w) / ca).rounded())
@@ -34,7 +34,7 @@ final class CameraMatch: @unchecked Sendable {
         var sum = [Double](repeating: 0, count: n * n * n * 3)
         var weight = [Double](repeating: 0, count: n * n * n)
         let k = Double(n - 1)
-        // Края кадра пропускаем: там различаются коррекции объектива и виньетирование.
+        // Skip the frame edges: lens corrections and vignetting differ there.
         for y in (h / 12)..<(h - h / 12) {
             for x in (w / 12)..<(w - w / 12) {
                 let i = (y * w + x) * 4
@@ -51,7 +51,7 @@ final class CameraMatch: @unchecked Sendable {
                 } } }
             }
         }
-        // Там, где цветов кадра мало, — сдвиг соседей; где нет совсем — без изменений.
+        // Where the frame has few colors, use the neighbors' shift; where there are none at all, leave unchanged.
         var shift = [Double](repeating: 0, count: n * n * n * 3)
         var known = [Double](repeating: 0, count: n * n * n)
         for j in 0..<(n * n * n) where weight[j] > 0.5 {
@@ -59,7 +59,7 @@ final class CameraMatch: @unchecked Sendable {
             for ch in 0..<3 { shift[j * 3 + ch] = sum[j * 3 + ch] / weight[j] - id[ch] }
             known[j] = min(1, weight[j] / 4)
         }
-        for _ in 0..<6 {   // размываем сдвиг на пустые клетки
+        for _ in 0..<6 {   // spread the shift into empty cells
             var next = shift, nextKnown = known
             for b in 0..<n { for g in 0..<n { for r in 0..<n {
                 let j = r + g * n + b * n * n

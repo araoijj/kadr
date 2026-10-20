@@ -1,10 +1,10 @@
 import CryptoKit
 import Foundation
 
-/// Индекс анализа папки: EXIF, хэш похожести и резкость для каждого файла.
-/// При повторном открытии папки пересчитываются только новые и изменённые файлы
-/// (сверка по размеру и времени изменения). Индексы лежат в ~/Library/Application Support/Kadr/Index —
-/// в папки со снимками ничего не пишется, работает и с карт памяти «только для чтения».
+/// Folder analysis index: EXIF, similarity hash and sharpness for each file.
+/// When a folder is reopened, only new and changed files are recomputed
+/// (matched by size and modification time). Indexes live in ~/Library/Application Support/Kadr/Index;
+/// nothing is written into photo folders, so it also works with read-only memory cards.
 struct IndexEntry: Codable, Sendable {
     var size: Int64
     var mtime: Double
@@ -15,7 +15,7 @@ struct IndexEntry: Codable, Sendable {
 }
 
 enum AnalysisIndex {
-    static let version = 7   // 2 — отбор; 3 — яркость; 4 — размер лиц, пересвет на лице; 5 — порог надёжного лица 180 px; 6 — сетка лица, наклон головы; 7 — JPEG по самой картинке, а не по миниатюре EXIF 160 px
+    static let version = 7   // 2: culling; 3: brightness; 4: face size, overexposed faces; 5: reliable-face threshold 180 px; 6: face mesh, head tilt; 7: JPEG from the image itself, not the 160 px EXIF thumbnail
 
     private struct File: Codable {
         var version: Int
@@ -47,7 +47,7 @@ enum AnalysisIndex {
         if let d = try? JSONEncoder().encode(f) { try? d.write(to: file(for: dir), options: .atomic) }
     }
 
-    /// Сколько места занимают индексы и сколько папок в них.
+    /// How much space the indexes take and how many folders they cover.
     static func usage() -> (folders: Int, bytes: Int64) {
         let files = (try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: [.fileSizeKey])) ?? []
         return (files.count, files.reduce(0) { $0 + Int64((try? $1.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) })

@@ -3,8 +3,8 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-/// Готовые размеры для соцсетей. Формат каждого кадра берётся из его кадрирования в «Кадре» —
-/// второй раз ничего настраивать не нужно; пресет только доводит размер до требований сети.
+/// Ready-made sizes for social networks. Each photo's aspect ratio comes from its crop in Kadr,
+/// so there's nothing to set up twice; the preset only fits the size to the network's requirements.
 enum ExportPreset: String, Codable, CaseIterable, Identifiable {
     case custom, instagram, story, web
     var id: String { rawValue }
@@ -27,7 +27,7 @@ enum ExportPreset: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Старые пресеты «пост/квадрат/горизонтальный» теперь — одна «Instagram лента».
+    /// The old "post/square/landscape" presets are now a single "Instagram feed".
     init(from d: Decoder) throws {
         let raw = try d.singleValueContainer().decode(String.self)
         switch raw {
@@ -38,11 +38,11 @@ enum ExportPreset: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// Что получится из кадра при выбранном пресете — одна и та же логика для сводки в окне и для экспорта.
+/// What a photo turns into with the chosen preset; the same logic for the dialog summary and for export.
 struct ExportPlan: Hashable {
     let width: Int
     let height: Int
-    let crop: Double?        // обрезать по центру до этой пропорции; nil — без обрезки
+    let crop: Double?        // center-crop to this aspect ratio; nil = no crop
     let note: String
 
     static let igMin = 4.0 / 5, igMax = 1.91, story = 9.0 / 16
@@ -54,7 +54,7 @@ struct ExportPlan: Hashable {
             let w = a >= 1 ? 2560 : Int((2560 * a).rounded()), h = a >= 1 ? Int((2560 / a).rounded()) : 2560
             return ExportPlan(width: w, height: h, crop: nil, note: tr("без обрезки"))
         case .instagram:
-            // Свои 4:5, 1:1, 1.91:1 после округления пикселей бывают 0,802 — защёлкиваем на точный формат.
+            // Our 4:5, 1:1, 1.91:1 can come out as 0.802 after pixel rounding, so snap to the exact ratio.
             for (ratio, h) in [(igMin, 1350), (1.0, 1080), (igMax, 566)] where abs(a - ratio) / ratio < 0.015 {
                 return ExportPlan(width: 1080, height: h, crop: a == ratio ? nil : ratio,
                                   note: userCropped ? tr("по вашему кадрированию") : tr("как снято, формат подходит Instagram"))
@@ -78,34 +78,34 @@ struct ExportPlan: Hashable {
     }
 }
 
-/// Настройки сохранения — запоминаются между запусками.
+/// Save settings, remembered between launches.
 struct ExportSettings: Codable, Equatable {
     enum Scope: String, Codable, CaseIterable { case visible, rated, selected = "current" }
     enum Format: String, Codable, CaseIterable { case original, jpeg }
 
     var scope: Scope = .rated
     var format: Format = .original
-    var move = false              // только для оригиналов
+    var move = false              // originals only
     var jpegQuality = 0.9
-    var longSide = 0              // 0 — полный размер
-    var subfolder = true          // подпапка с именем съёмки
+    var longSide = 0              // 0 = full size
+    var subfolder = true          // subfolder named after the shoot
     var destination: URL?
 
-    var applyEdits = true         // JPEG с обработкой и стилем
+    var applyEdits = true         // JPEG with edits and style
     var nameTemplate = "{name}"   // {name} {folder} {date} {n}
     var watermarkOn = false
     var watermarkText = ""
-    var watermarkSize = 3.0       // % от длинной стороны
+    var watermarkSize = 3.0       // % of the long side
     var watermarkOpacity = 0.6
     var watermarkPosition: Watermark.Position = .bottomRight
     var preset: ExportPreset = .custom
-    var presetCrop = true         // если формат кадра другой — кадрировать по центру (иначе вписать)
+    var presetCrop = true         // if the photo's aspect ratio differs, center-crop (otherwise fit)
 
     static let key = "exportSettings"
 
     init() {}
 
-    /// Старые сохранённые настройки без новых полей тоже читаются.
+    /// Old saved settings without the new fields are still readable.
     init(from d: Decoder) throws {
         let c = try d.container(keyedBy: CodingKeys.self)
         let def = ExportSettings()
@@ -125,7 +125,7 @@ struct ExportSettings: Codable, Equatable {
         watermarkPosition = (try? c.decode(Watermark.Position.self, forKey: .watermarkPosition)) ?? def.watermarkPosition
         preset = (try? c.decode(ExportPreset.self, forKey: .preset)) ?? def.preset
         presetCrop = (try? c.decode(Bool.self, forKey: .presetCrop)) ?? def.presetCrop
-        // Бывший пресет «Сайт/Telegram» — теперь просто размер 2560 px.
+        // Former "Website/Telegram" preset is now just a 2560 px size.
         if preset == .web { preset = .custom; longSide = 2560 }
     }
 
@@ -140,23 +140,23 @@ struct ExportSettings: Codable, Equatable {
     }
 }
 
-/// Один снимок для сохранения.
+/// A single photo to save.
 struct ExportItem: Sendable {
     let url: URL
     let adj: Adjustments
     let date: Date?
-    let index: Int      // порядковый номер в сохранении, с 1
+    let index: Int      // sequence number within the save, starting at 1
 }
 
 enum Exporter {
-    /// Итоговая папка: destination или destination/<имя съёмки>.
+    /// Output folder: destination or destination/<shoot name>.
     static func targetFolder(_ s: ExportSettings, shoot: URL?) -> URL? {
         guard let dest = s.destination else { return nil }
         if s.subfolder, let shoot { return dest.appendingPathComponent(shoot.lastPathComponent, isDirectory: true) }
         return dest
     }
 
-    /// Имя файла по шаблону, без расширения.
+    /// File name from the template, without extension.
     static func baseName(_ item: ExportItem, template: String, folder: String?) -> String {
         let original = item.url.deletingPathExtension().lastPathComponent
         let f = DateFormatter()
@@ -172,14 +172,14 @@ enum Exporter {
         return name.isEmpty ? original : name
     }
 
-    /// Один снимок. Возвращает false, если файл уже есть или произошла ошибка.
+    /// A single photo. Returns false if the file already exists or an error occurred.
     static func export(_ item: ExportItem, to folder: URL, _ s: ExportSettings, shootName: String?) -> Bool {
         let fm = FileManager.default
         try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
         let base = baseName(item, template: s.nameTemplate, folder: shootName)
         switch s.format {
         case .original:
-            // RAW, XMP и парный JPEG получают одно новое имя — так Capture One видит XMP.
+            // RAW, XMP and the paired JPEG get the same new name so Capture One picks up the XMP.
             var ok = false
             for f in companions(of: item.url) where fm.fileExists(atPath: f.path) {
                 let target = folder.appendingPathComponent(base).appendingPathExtension(f.pathExtension)
@@ -200,23 +200,23 @@ enum Exporter {
         for ext in ["JPG", "JPEG", "HIF", "HEIC"] where ext.lowercased() != url.pathExtension.lowercased() {
             list.append(base.appendingPathExtension(ext))
         }
-        // На регистронезависимом диске JPG и jpg — один файл.
+        // On a case-insensitive volume JPG and jpg are the same file.
         var seen = Set<String>()
         return list.filter { seen.insert($0.path.lowercased()).inserted }
     }
 
     private static let context = CIContext(options: [.workingFormat: CIFormat.RGBAh, .cacheIntermediates: false])
 
-    /// Проявление RAW → обработка → водяной знак → JPEG sRGB с EXIF исходника.
+    /// RAW development → edits → watermark → sRGB JPEG with the source EXIF.
     private static func writeJPEG(_ item: ExportItem, to target: URL, _ s: ExportSettings) -> Bool {
-        // Сколько пикселей нужно от RAW: с запасом на своё кадрирование.
+        // How many pixels we need from the RAW: with headroom for our own crop.
         var maxSide: CGFloat? = s.longSide > 0 ? CGFloat(s.longSide) : nil
         if s.preset != .custom {
             let need: CGFloat = s.preset == .web ? 2560 : 1920
             maxSide = need / CGFloat(max(min(item.adj.cropW, item.adj.cropH), 0.2)) * 1.2
         }
         guard var img = EditPipeline.source(item.url, maxSide: maxSide) else { return false }
-        // Без обработки — всё равно с профилем «как в камере», чтобы цвета совпадали с превью.
+        // Even without edits, use the in-camera profile so colors match the preview.
         let adj = s.applyEdits ? item.adj : Adjustments()
         img = EditPipeline.apply(adj, to: img, cameraCube: adj.profile == .camera ? CameraMatch.shared.cube(for: item.url) : nil,
                                  asShotK: ImageStore.shared.asShotK(item.url))
@@ -236,7 +236,7 @@ enum Exporter {
                 if let v = p[k] { props[k] = v }
             }
         }
-        props[kCGImagePropertyOrientation] = 1   // поворот уже применён при проявлении
+        props[kCGImagePropertyOrientation] = 1   // rotation already applied during development
         if var tiff = props[kCGImagePropertyTIFFDictionary] as? [CFString: Any] {
             tiff[kCGImagePropertyTIFFOrientation] = 1
             props[kCGImagePropertyTIFFDictionary] = tiff
@@ -245,7 +245,7 @@ enum Exporter {
         return CGImageDestinationFinalize(dest)
     }
 
-    /// Под требования соцсети по плану: обрезка по центру (если нужна) и точный размер в пикселях.
+    /// To the social network's planned requirements: center crop (if needed) and exact pixel size.
     static func fitToPreset(_ input: CIImage, _ s: ExportSettings, userCropped: Bool) -> CIImage {
         var img = input
         let e = img.extent
@@ -260,7 +260,7 @@ enum Exporter {
         let e2 = img.extent
         let k = CGFloat(plan.width) / e2.width
         img = img.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k])
-        // Доводим до точных пикселей плана (1080×1350, а не 1080×1349 из-за округления).
+        // Bring it to the plan's exact pixels (1080×1350, not 1080×1349 due to rounding).
         let e3 = img.extent
         img = img.transformed(by: CGAffineTransform(scaleX: CGFloat(plan.width) / e3.width, y: CGFloat(plan.height) / e3.height))
         return img.cropped(to: CGRect(x: 0, y: 0, width: plan.width, height: plan.height))

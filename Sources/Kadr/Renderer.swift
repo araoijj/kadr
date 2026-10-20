@@ -1,8 +1,8 @@
 import CoreImage
 import Foundation
 
-/// Отрисовка обработанных кадров. Проявленный RAW (база) кэшируется, поэтому при движении
-/// ползунка пересчитываются только фильтры — это десятки миллисекунд, а не секунды.
+/// Rendering of edited photos. The developed RAW (base) is cached, so when a slider moves
+/// only the filters are recomputed: tens of milliseconds, not seconds.
 final class Renderer: @unchecked Sendable {
     static let shared = Renderer()
 
@@ -16,8 +16,8 @@ final class Renderer: @unchecked Sendable {
 
     init() { thumbs.countLimit = 2000 }
 
-    /// Проявленный кадр для просмотра. Если пока считался этот запрос, пришёл новый
-    /// по тому же каналу — возвращаем nil (старую картинку не трогаем).
+    /// Developed image for viewing. If a new request came in on the same channel while this one
+    /// was being computed, return nil (the old image is left untouched).
     func render(_ url: URL, _ adj: Adjustments, maxSide: CGFloat?, channel: String = "loupe") async -> CGImage? {
         let gen = bump(channel)
         return await withCheckedContinuation { cont in
@@ -33,8 +33,8 @@ final class Renderer: @unchecked Sendable {
         }
     }
 
-    /// Видимый кусок кадра при увеличении. region — доли кадра (y сверху вниз), pixels — размер на экране.
-    /// Считается только этот кусок; при нехватке разрешения берётся полноразмерное проявление RAW.
+    /// Visible part of the image when zoomed in. region: fractions of the image (y top-down); pixels: on-screen size.
+    /// Only this part is computed; if resolution falls short, the full-size RAW development is used.
     func renderRegion(_ url: URL, _ adj: Adjustments, region: CGRect, pixels: CGSize, channel: String = "region") async -> CGImage? {
         let gen = bump(channel)
         return await withCheckedContinuation { cont in
@@ -45,12 +45,12 @@ final class Renderer: @unchecked Sendable {
                 guard self.current(channel) == gen else { cont.resume(returning: nil); return }
                 let cube = adj.profile == .camera ? CameraMatch.shared.cube(for: url) : nil
                 let out = EditPipeline.apply(adj, to: base, cameraCube: cube, asShotK: ImageStore.shared.asShotK(url))
-                let e = out.extent   // уже после кадрирования
+                let e = out.extent   // already after cropping
                 let r = CGRect(x: e.minX + region.minX * e.width, y: e.minY + (1 - region.maxY) * e.height,
                                width: region.width * e.width, height: region.height * e.height)
                 let k = pixels.width / r.width
                 var img = out.cropped(to: r).transformed(by: CGAffineTransform(translationX: -r.minX, y: -r.minY))
-                if k > 1 { img = img.samplingNearest() }   // крупнее 100% — без размытия, видны настоящие пиксели
+                if k > 1 { img = img.samplingNearest() }   // above 100%, no smoothing, so the real pixels are visible
                 img = img.transformed(by: CGAffineTransform(scaleX: k, y: k))
                 let cg = self.context.createCGImage(img, from: CGRect(origin: .zero, size: pixels).integral, format: .RGBA8,
                                                     colorSpace: CGColorSpace(name: CGColorSpace.displayP3))
@@ -59,7 +59,7 @@ final class Renderer: @unchecked Sendable {
         }
     }
 
-    /// Заранее проявляет RAW и подбирает профиль камеры — первая правка будет мгновенной.
+    /// Develops the RAW and picks the camera profile ahead of time, so the first edit is instant.
     func prewarm(_ url: URL, maxSide: CGFloat) {
         queue.async {
             _ = ImageStore.shared.asShotK(url)
@@ -68,7 +68,7 @@ final class Renderer: @unchecked Sendable {
         }
     }
 
-    /// Миниатюра с обработкой: фильтры поверх встроенного превью (быстро, близко к итогу).
+    /// Edited thumbnail: filters on top of the embedded preview (fast, close to the final result).
     func thumbnail(_ url: URL, _ adj: Adjustments, size: CGFloat = 640) -> CGImage? {
         let key = "\(url.path)|\(adj.hashValue)|\(Int(size))" as NSString
         if let c = thumbs.object(forKey: key) { return c }
@@ -83,7 +83,7 @@ final class Renderer: @unchecked Sendable {
         return cg
     }
 
-    /// Миниатюра для сетки и ленты: встроенное превью, а у обработанных — с фильтрами.
+    /// Thumbnail for the grid and filmstrip: the embedded preview, with filters for edited photos.
     static func thumb(for p: Photo) async -> CGImage? {
         let url = p.url, adj = p.adj
         if adj.isIdentity {
@@ -117,7 +117,7 @@ final class Renderer: @unchecked Sendable {
         if let b = bases[key] { return b }
         guard let src = EditPipeline.source(url, maxSide: maxSide) else { return nil }
         let b = src.insertingIntermediate(cache: true)
-        // Полноразмерная основа (50 Мп ≈ 400 МБ) — только одна, остальные — до 4 уменьшенных.
+        // Only one full-size base (50 MP ≈ 400 MB); the rest are up to 4 downscaled ones.
         if maxSide == nil {
             for k in baseOrder where k.hasSuffix("|0") { bases[k] = nil }
             baseOrder.removeAll { $0.hasSuffix("|0") }

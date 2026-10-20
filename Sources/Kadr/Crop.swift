@@ -1,12 +1,12 @@
 import AppKit
 import SwiftUI
 
-/// Форматы кадрирования, в том числе под Instagram.
+/// Crop formats, including ones for Instagram.
 struct CropFormat: Identifiable, Hashable {
     let id: String
     let title: String
     let hint: String
-    let ratio: Double?        // ширина / высота; nil — свободно, 0 — как у исходника
+    let ratio: Double?        // width / height; nil means free, 0 means same as the source
 
     static let all: [CropFormat] = [
         .init(id: "free", title: tr("Свободно"), hint: "", ratio: nil),
@@ -25,14 +25,14 @@ struct CropFormat: Identifiable, Hashable {
 }
 
 extension Library {
-    /// Пропорции кадра в пикселях (после кадрирования камеры, до своего кадрирования).
+    /// Frame aspect in pixels (after the camera crop, before our own crop).
     func imageAspect(_ p: Photo) -> Double {
         let s = pixelSize(p)
         return Double(s.width / s.height)
     }
 
-    /// Размер кадра в пикселях RAW: ориентация и кадрирование камеры — по превью, размеры — из EXIF.
-    /// Пропорции превью неточные (1616×1080 ≠ 3:2), поэтому берём только их «форму».
+    /// RAW frame size in pixels: orientation and camera crop come from the preview, dimensions from EXIF.
+    /// Preview proportions are inexact (1616×1080 ≠ 3:2), so we only take their "shape".
     func pixelSize(_ p: Photo) -> CGSize {
         let ex = p.exif.width != nil ? p.exif : ImageStore.shared.exif(p.url)
         let prev = ImageStore.shared.cachedPreview(p.url) ?? ImageStore.shared.preview(p.url)
@@ -40,14 +40,14 @@ extension Library {
         let long = CGFloat(max(ex.width ?? 0, ex.height ?? 0)), short = CGFloat(min(ex.width ?? 0, ex.height ?? 0))
         guard long > 0, short > 0 else { return CGSize(width: 1000 * pa, height: 1000) }
         var w = pa >= 1 ? long : short, h = pa >= 1 ? short : long
-        // Камера кадрировала (например, 4:3) — пропорции превью заметно другие.
+        // The camera cropped (e.g. 4:3): the preview proportions are noticeably different.
         if abs(w / h - pa) / pa > 0.02 { if pa < w / h { w = h * pa } else { h = w / pa } }
         return CGSize(width: w.rounded(), height: h.rounded())
     }
 
-    /// Самая большая рамка нужного формата по центру кадра.
+    /// The largest centered box of the requested format.
     func centeredCrop(ratio: Double, imageAspect a: Double) -> CGRect {
-        // в долях: w/h (доли) = ratio / a
+        // in fractions: w/h (fractions) = ratio / a
         let k = ratio / a
         return k >= 1 ? CGRect(x: 0, y: (1 - 1 / k) / 2, width: 1, height: 1 / k)
                       : CGRect(x: (1 - k) / 2, y: 0, width: k, height: 1)
@@ -64,7 +64,7 @@ extension Library {
         setAdjustments(a)
     }
 
-    /// Поменять ориентацию формата (4:5 ↔ 5:4).
+    /// Flip the format orientation (4:5 ↔ 5:4).
     func flipCropOrientation() {
         guard let p = current else { return }
         let a0 = imageAspect(p)
@@ -74,7 +74,7 @@ extension Library {
         setAdjustments(a)
     }
 
-    /// То же кадрирование — на все выделенные (например, 4:5 на всю серию для Instagram).
+    /// Apply the same crop to all selected frames (e.g. 4:5 to a whole series for Instagram).
     func applyCropToTargets() {
         guard let src = current?.adj else { return }
         let before = snapshot(targets.map(\.id))
@@ -97,11 +97,11 @@ extension Library {
     }
 }
 
-/// Редактор рамки поверх кадра: тянуть за углы и края, двигать внутри; сетка третей.
+/// Crop box editor over the frame: drag corners and edges, move inside; rule-of-thirds grid.
 struct CropEditor: View {
     let photo: Photo
     @Environment(Library.self) private var lib
-    @State private var rect: CGRect?          // рамка во время перетаскивания (доли кадра)
+    @State private var rect: CGRect?          // box while dragging (frame fractions)
     @State private var start: CGRect = .zero
     @State private var handle: Handle = .move
 
@@ -111,7 +111,7 @@ struct CropEditor: View {
         GeometryReader { geo in
             let pane = geo.size
             let a = lib.imageAspect(photo)
-            // Снизу — место под панель форматов, чтобы она не закрывала нижние ручки рамки.
+            // Room at the bottom for the format panel so it doesn't cover the bottom handles of the box.
             let barSpace: CGFloat = 120
             let fit = min((pane.width - 60) / CGFloat(a), pane.height - 40 - barSpace)
             let shown = CGSize(width: fit * CGFloat(a), height: fit)
@@ -120,21 +120,21 @@ struct CropEditor: View {
             let box = CGRect(x: origin.x + r.minX * shown.width, y: origin.y + r.minY * shown.height,
                              width: r.width * shown.width, height: r.height * shown.height)
             ZStack(alignment: .topLeading) {
-                // Кадр без кадрирования (но с выравниванием и обработкой).
+                // Uncropped frame (but straightened and edited).
                 EditedImage(photo: photo, adj: {
                     var x = photo.adj; x.cropRect = CGRect(x: 0, y: 0, width: 1, height: 1); return x
                 }())
                 .frame(width: shown.width, height: shown.height)
                 .offset(x: origin.x, y: origin.y)
 
-                // Затемнение вне рамки.
+                // Dimming outside the box.
                 Path { p in
                     p.addRect(CGRect(origin: origin, size: shown))
                     p.addRect(box)
                 }
                 .fill(Color.black.opacity(0.6), style: FillStyle(eoFill: true))
 
-                // Сетка третей и рамка.
+                // Rule-of-thirds grid and the box.
                 Path { p in
                     for i in 1...2 {
                         let x = box.minX + box.width * CGFloat(i) / 3, y = box.minY + box.height * CGFloat(i) / 3
@@ -149,7 +149,7 @@ struct CropEditor: View {
                                CGPoint(x: box.minX, y: box.maxY), CGPoint(x: box.maxX, y: box.maxY)].enumerated()), id: \.offset) { _, pt in
                     RoundedRectangle(cornerRadius: 2).fill(Color.white).frame(width: 14, height: 14).offset(x: pt.x - 7, y: pt.y - 7)
                 }
-                // Размер результата.
+                // Result size.
                 Text(sizeLabel(r, a))
                     .font(.caption.monospacedDigit())
                     .padding(.horizontal, 8).padding(.vertical, 3)
@@ -202,7 +202,7 @@ struct CropEditor: View {
         return .move
     }
 
-    /// Новая рамка; при выбранном формате пропорции держатся.
+    /// New box; with a format selected, the aspect ratio is kept.
     private func update(_ s: CGRect, _ h: Handle, dx: CGFloat, dy: CGFloat, imageAspect a: Double) -> CGRect {
         let minSide: CGFloat = 0.05
         if h == .move {
@@ -224,9 +224,9 @@ struct CropEditor: View {
         l = max(0, min(l, r - minSide)); r = min(1, max(r, l + minSide))
         t = max(0, min(t, b - minSide)); b = min(1, max(b, t + minSide))
         var out = CGRect(x: l, y: t, width: r - l, height: b - t)
-        // Фиксированный формат: высоту подгоняем под ширину (в пикселях — с учётом пропорций кадра).
+        // Fixed format: fit the height to the width (in pixels, accounting for the frame aspect).
         if let f = CropFormat.byID(photo.adj.cropAspect), let ratio = f.ratio {
-            let want = CGFloat((ratio == 0 ? a : ratio) / a)          // w/h в долях
+            let want = CGFloat((ratio == 0 ? a : ratio) / a)          // w/h in fractions
             var w = out.width, hh = w / want
             if [.top, .bottom].contains(h) { hh = out.height; w = hh * want }
             if hh > 1 { hh = 1; w = hh * want }
@@ -240,7 +240,7 @@ struct CropEditor: View {
     }
 }
 
-/// Панель кадрирования под кадром: форматы, поворот, готово/отмена.
+/// Crop panel below the frame: formats, rotation, done/cancel.
 struct CropBar: View {
     @Environment(Library.self) private var lib
 

@@ -1,19 +1,19 @@
 import AppKit
 import Observation
 
-/// Снимок на карте памяти.
+/// A photo on a memory card.
 struct CardFile: Sendable {
     let url: URL
     let size: Int64
-    let date: Date      // время съёмки из EXIF, а если его нет — время изменения файла
+    let date: Date      // capture time from EXIF, or the file's modification time if missing
     var key: String { "\(url.lastPathComponent)|\(size)|\(Int(date.timeIntervalSince1970))" }
 }
 
-/// Импорт с карты памяти: сканирование DCIM, копирование с проверкой, учёт уже импортированного.
+/// Memory card import: DCIM scan, verified copying, tracking of already imported files.
 @MainActor
 @Observable
 final class CardImporter {
-    // Настройки — запоминаются.
+    // Settings, remembered.
     var baseFolder: URL = {
         if let p = UserDefaults.standard.string(forKey: "import.base") { return URL(fileURLWithPath: p) }
         let home = FileManager.default.homeDirectoryForCurrentUser
@@ -31,7 +31,7 @@ final class CardImporter {
     }
     var shootName = ""
 
-    // Состояние.
+    // State.
     var source: URL?
     var files: [CardFile] = []
     var scanning = false
@@ -46,7 +46,7 @@ final class CardImporter {
     var toCopy: [CardFile] { onlyNew ? newFiles : files }
     var days: [Date] { Array(Set(toCopy.map { Calendar.current.startOfDay(for: $0.date) })).sorted() }
 
-    /// Папка съёмки для дня: «2026-10-20 Свадьба».
+    /// Shoot folder for a day: "2026-10-20 Wedding".
     func folderName(for day: Date) -> String {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
@@ -59,9 +59,9 @@ final class CardImporter {
         return baseFolder.appendingPathComponent(folderName(for: day), isDirectory: true)
     }
 
-    // MARK: - Карта
+    // MARK: - Card
 
-    /// Похоже ли на карту камеры: в корне есть DCIM.
+    /// Whether this looks like a camera card: there's a DCIM folder at the root.
     nonisolated static func isCameraCard(_ volume: URL) -> Bool {
         var dir: ObjCBool = false
         return FileManager.default.fileExists(atPath: volume.appendingPathComponent("DCIM").path, isDirectory: &dir) && dir.boolValue
@@ -91,7 +91,7 @@ final class CardImporter {
                   let v = try? u.resourceValues(forKeys: Set(keys)), v.isDirectory != true else { continue }
             found.append((u, Int64(v.fileSize ?? 0), v.contentModificationDate ?? Date()))
         }
-        // EXIF читаем параллельно: только заголовок файла, ~несколько мс на кадр даже с карты.
+        // Read EXIF in parallel: only the file header, a few ms per photo even from a card.
         var dates = [Date?](repeating: nil, count: found.count)
         let lock = NSLock()
         DispatchQueue.concurrentPerform(iterations: found.count) { i in
@@ -103,9 +103,9 @@ final class CardImporter {
             .sorted { $0.date < $1.date }
     }
 
-    // MARK: - Копирование
+    // MARK: - Copying
 
-    /// Копирует, сверяет размер, отмечает импортированное. По окончании вызывает done с папкой для открытия.
+    /// Copies, verifies size, marks as imported. When finished, calls done with the folder to open.
     func start(done: @escaping (URL) -> Void) {
         let list = toCopy
         guard !list.isEmpty, !copying else { return }
@@ -152,7 +152,7 @@ final class CardImporter {
         var target = dir.appendingPathComponent(f.url.lastPathComponent)
         if let s = try? target.resourceValues(forKeys: [.fileSizeKey]).fileSize {
             if Int64(s) == f.size { return .exists }
-            // Тот же номер кадра с другой карты/камеры — не перезаписываем.
+            // Same frame number from another card/camera: don't overwrite.
             let base = f.url.deletingPathExtension().lastPathComponent, ext = f.url.pathExtension
             var n = 2
             repeat { target = dir.appendingPathComponent("\(base)-\(n).\(ext)"); n += 1 } while fm.fileExists(atPath: target.path)
@@ -167,7 +167,7 @@ final class CardImporter {
         }
     }
 
-    // MARK: - Учёт импортированного (по имени, размеру и времени файла)
+    // MARK: - Tracking imported files (by name, size and file time)
 
     private nonisolated static var registryURL: URL { AppFolders.support.appendingPathComponent("imported.json") }
 

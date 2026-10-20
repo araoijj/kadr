@@ -1,7 +1,7 @@
 import Foundation
 
-/// Готовые рецепты по коллекциям. Параметры подобраны для «Кадра» — свои, без чужих пресетов.
-/// Плёночные рецепты используют LUT из коллекции t3mujinpack (MIT) — появляются после её загрузки.
+/// Ready-made recipes by collection. The parameters are tuned for Kadr: our own, not borrowed presets.
+/// Film recipes use LUTs from the t3mujinpack collection (MIT) and appear once it's downloaded.
 extension Style {
     static let builtIns: [Style] = basic + portrait + landscape + cinema + blackWhite + film
 
@@ -66,7 +66,7 @@ extension Style {
         Style(tr("Ч/Б селен"), "Чёрно-белые") { $0.saturation = -100; $0.contrast = 20; $0.shadowHue = 260; $0.shadowSat = 15; $0.highlightHue = 40; $0.highlightSat = 10 },
     ]
 
-    /// Рецепты на основе эмуляций плёнки: LUT + зерно/виньетка.
+    /// Recipes based on film emulations: LUT + grain/vignette.
     static let film: [Style] = [
         filmStyle("Portra 400", "Color Negative - Kodak Portra 400") { $0.grain = 12 },
         filmStyle("Portra 160 NC", "Color Negative - Kodak Portra 160 NC") { $0.grain = 8 },

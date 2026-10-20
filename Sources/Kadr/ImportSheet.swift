@@ -162,7 +162,7 @@ struct ImportSheet: View {
     }
 }
 
-/// Плашка «вставлена карта» сверху окна.
+/// "Card inserted" banner at the top of the window.
 struct CardBanner: View {
     @Environment(Library.self) private var lib
 

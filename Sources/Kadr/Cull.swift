@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 
-/// Причина, по которой кадр похож на брак. Это подсказка — решает фотограф.
+/// Why a frame looks like a reject. This is a hint; the photographer decides.
 enum CullReason: String, CaseIterable, Identifiable, Hashable {
     case blur, blink, eyesClosed, overexposed, underexposed, tilted, utility, duplicate, weakerInSeries
     var id: String { rawValue }
@@ -34,9 +34,9 @@ enum CullReason: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    /// Брак или подсказка. Откалибровано на съёмке 2032 кадра (27.07.2026):
-    /// горизонт детектор путает с линиями; закрытые глаза на одиночном кадре — часто поза;
-    /// тёмный вечерний кадр вытягивается из RAW; «слабее в серии» — другая поза, а не брак.
+    /// Reject or hint. Calibrated on a 2032-frame shoot (27.07.2026):
+    /// the horizon detector confuses lines; closed eyes in a single frame are often a pose;
+    /// a dark evening frame can be pulled up from RAW; "weaker in series" is a different pose, not a defect.
     var isDefect: Bool {
         switch self {
         case .blur, .blink, .overexposed, .utility, .duplicate: true
@@ -44,7 +44,7 @@ enum CullReason: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
-    /// Насколько сильно причина снижает оценку кадра.
+    /// How much the reason lowers the frame's score.
     var penalty: Int {
         switch self {
         case .blur: 45
@@ -62,42 +62,42 @@ enum CullReason: String, CaseIterable, Identifiable, Hashable {
 
 struct CullVerdict {
     var reasons: [CullReason] = []
-    var score = 100            // 0…100: техника + эстетика
+    var score = 100            // 0…100: technique + aesthetics
     var suspect: Bool { reasons.contains(where: \.isDefect) }
 }
 
 extension Library {
-    /// Лицо с открытыми глазами в серии: наклон головы и размер — чтобы сравнивать кадры в одной позе.
+    /// A face with open eyes in a series: head pitch and size, to compare frames in the same pose.
     struct OpenPose: Sendable { var id: URL; var pitch: Double; var px: Double }
 
-    // MARK: - Вердикт
+    // MARK: - Verdict
 
-    /// Пороги зависят от строгости: 0 — мягко (ловим только явный брак), 1 — строго.
+    /// Thresholds depend on strictness: 0 is lenient (catch only obvious defects), 1 is strict.
     func verdict(_ p: Photo) -> CullVerdict {
         var v = CullVerdict()
         let st = cullStrictness
         if p.duplicateOf != nil { v.reasons.append(.duplicate) }
         if let c = p.cull {
-            // Резкость лиц и резкость кадра в разном масштабе — сравниваем со своей медианой.
-            // Резкость надёжного лица и резкость объекта/кадра — в разном масштабе: у каждой своя медиана.
-            // Сравниваем внутри сцены: вечерний кадр (темно, шумодав) — с вечерними, дневной — с дневными.
+            // Face sharpness and frame sharpness are on different scales; compare each with its own median.
+            // Reliable-face sharpness and subject/frame sharpness are on different scales: each has its own median.
+            // Compare within a scene: an evening frame (dark, noise reduction) against evening ones, a daytime frame against daytime ones.
             let byFace = c.faces.contains(where: \.reliable)
             let local = p.sceneID.flatMap { sceneMedians[$0] }
             let median = (byFace ? local?.face : local?.other) ?? (byFace ? cullMedianFaceSharpness : cullMedianSharpness)
-            // Недосвет: тёмный кадр без светлых мест. Ночная сцена или low-key со светлыми акцентами — не брак.
+            // Underexposure: a dark frame with no bright areas. A night scene or low-key with bright accents is not a defect.
             let dark = (c.meanLuma ?? 0.5) < 0.06 + 0.06 * st
                 || ((c.meanLuma ?? 0.5) < 0.16 && (c.brightLuma ?? 1) < 0.30 + 0.08 * st)
-            // На очень тёмном кадре мало перепадов — это недосвет, а не смаз.
+            // A very dark frame has few transitions: that's underexposure, not blur.
             if !dark, let s = c.subjectSharpness, median > 0, s / median < 0.18 + 0.27 * st {
                 v.reasons.append(.blur)
             }
-            // Глаза — только у крупных лиц к камере. Моргание — когда в той же серии глаза открыты.
+            // Eyes only for large camera-facing faces. A blink is when eyes are open elsewhere in the same series.
             let rel = c.faces.filter(\.reliable)
             let mesh = c.faces.filter(\.meshUsable)
             if !mesh.isEmpty {
-                // Сетка MediaPipe. Моргание — если в серии есть кадр с открытыми глазами в той же позе
-                // (наклон головы ±8°, тот же размер лица). Голова опущена ≥ 15° — это взгляд вниз, не брак;
-                // одиночный кадр с закрытыми глазами — только подсказка (может быть задумано).
+                // MediaPipe mesh. A blink if the series has a frame with open eyes in the same pose
+                // (head pitch ±8°, same face size). Head lowered ≥ 15° is a downward gaze, not a defect;
+                // a single frame with closed eyes is only a hint (it may be intentional).
                 if let f = mesh.filter({ $0.eyesShut(st) }).max(by: { ($0.px ?? 0) < ($1.px ?? 0) }) {
                     let pitch = f.pitch ?? 0, px = f.px ?? 1
                     let samePose = p.seriesID.flatMap { seriesOpenPoses[$0] }?.contains {
@@ -107,15 +107,15 @@ extension Library {
                     else if pitch < 12 { v.reasons.append(.eyesClosed) }
                 }
             } else if let eyes = rel.compactMap(\.eyes).min() {
-                // Контур от macOS (моделей нет): брак — только если глаза закрыты и сами по себе, и относительно лучшего кадра серии.
+                // macOS contour (no models): a reject only if the eyes are closed both on their own and relative to the best frame in the series.
                 if let sid = p.seriesID, let open = seriesOpenEyes[sid], open >= 0.26, eyes < min(0.16 + 0.03 * st, open * (0.5 + 0.1 * st)) {
                     v.reasons.append(.blink)
                 } else if eyes < 0.12 + 0.04 * st {
                     v.reasons.append(.eyesClosed)
                 }
             }
-            // Пересвет — на лице/объекте; весь кадр — только если выбита большая часть (белое небо за спиной — норма).
-            // Калибровка: светлое лицо на пасмурном небе даёт 14–25% «выбитых» пикселей — это норма.
+            // Overexposure on the face/subject; the whole frame only if most of it is blown (white sky behind is normal).
+            // Calibration: a bright face against an overcast sky gives 14–25% "blown" pixels; that's normal.
             if (c.subjectClip ?? 0) > 0.40 - 0.15 * st || c.clipHigh > 0.45 - 0.15 * st { v.reasons.append(.overexposed) }
             if c.clipLow > 0.30 - 0.12 * st || dark { v.reasons.append(.underexposed) }
             if let h = c.horizon, abs(h) >= 2.5 - 1.0 * st, abs(h) <= 15 { v.reasons.append(.tilted) }
@@ -124,7 +124,7 @@ extension Library {
                let s = c.subjectSharpness, s < best * (0.45 + 0.3 * st), !v.reasons.contains(.blur) {
                 v.reasons.append(.weakerInSeries)
             }
-            // База — эстетика (0,5 → 75, 0,85 → 92), минус штрафы за брак.
+            // Base is aesthetics (0.5 → 75, 0.85 → 92), minus penalties for defects.
             v.score = Int((50 + (c.aesthetics ?? 0.5) * 50).rounded()) - v.reasons.reduce(0) { $0 + $1.penalty }
         } else {
             v.score = 75 - v.reasons.reduce(0) { $0 + $1.penalty }
@@ -133,7 +133,7 @@ extension Library {
         return v
     }
 
-    /// Ранг кадра внутри серии: какой оставить.
+    /// Rank of a frame within its series: which one to keep.
     func seriesRank(_ p: Photo, maxSharp: Double) -> Double {
         guard let c = p.cull else { return (p.sharpness ?? 0) / max(maxSharp, 1) }
         var r = (c.subjectSharpness ?? p.sharpness ?? 0) / max(maxSharp, 1) * 40
@@ -143,7 +143,7 @@ extension Library {
             r += big.compactMap(\.quality).reduce(0, +) / Double(big.count) * 15
         }
         if let a = c.aesthetics { r += (a + 1) / 2 * 15 }
-        // Пересвет «добавляет резкости» (жёсткие перепады) — без штрафа лучшим стал бы выбитый кадр.
+        // Overexposure "adds sharpness" (hard transitions); without a penalty a blown frame would win.
         if c.clipHigh > 0.05 { r -= 30 }
         if (c.meanLuma ?? 0.5) < 0.08 { r -= 30 }
         if (c.subjectClip ?? 0) > 0.15 { r -= 20 }
@@ -151,13 +151,13 @@ extension Library {
         return r
     }
 
-    /// После анализа: медиана резкости папки и лучший в каждой серии.
+    /// After analysis: the folder's sharpness median and the best frame in each series.
     func updateCullStats() {
         func median(_ a: [Double]) -> Double { let s = a.sorted(); return s.isEmpty ? 0 : s[s.count / 2] }
         let byFace = { (p: Photo) in p.cull?.faces.contains(where: \.reliable) ?? false }
         cullMedianSharpness = median(photos.filter { !byFace($0) }.compactMap { $0.cull?.subjectSharpness ?? $0.sharpness })
         cullMedianFaceSharpness = median(photos.filter(byFace).compactMap { $0.cull?.subjectSharpness })
-        // Медианы по сценам (если в сцене хотя бы 8 кадров нужного вида — иначе по всей папке).
+        // Medians per scene (if the scene has at least 8 frames of the right kind; otherwise over the whole folder).
         var sm: [Int: (face: Double?, other: Double?)] = [:]
         for (sid, list) in Dictionary(grouping: photos.filter { $0.sceneID != nil }, by: { $0.sceneID! }) {
             let f = list.filter(byFace).compactMap { $0.cull?.subjectSharpness }
@@ -171,14 +171,14 @@ extension Library {
             best[sid] = max(best[sid] ?? 0, s)
         }
         seriesBestSharpness = best
-        // Насколько открыты глаза в серии (по лучшему кадру) — для поиска моргания.
+        // How open the eyes are in the series (by the best frame), for blink detection.
         var open: [Int: Double] = [:]
         for p in photos {
             guard let sid = p.seriesID, let e = p.cull?.faces.filter(\.reliable).compactMap(\.eyes).min() else { continue }
             open[sid] = max(open[sid] ?? 0, e)
         }
         seriesOpenEyes = open
-        // По MediaPipe: позы с открытыми глазами в каждой серии — с ними сравниваем закрытые.
+        // Per MediaPipe: open-eye poses in each series, used to compare closed-eye frames against.
         var poses: [Int: [OpenPose]] = [:]
         for p in photos {
             guard let sid = p.seriesID else { continue }
@@ -189,7 +189,7 @@ extension Library {
         seriesOpenPoses = poses
     }
 
-    /// Осветлить тёмный кадр: экспозиция так, чтобы средняя яркость стала ~0,35 (до +3 EV).
+    /// Brighten a dark frame: set exposure so the mean luminance reaches ~0.35 (up to +3 EV).
     func brightenDark() {
         guard let p = current, let l = p.cull?.meanLuma, l > 0.005 else { return }
         var a = p.adj
@@ -198,7 +198,7 @@ extension Library {
         flash(tr("Экспозиция \(String(format: "%+.2f EV", a.exposure))"))
     }
 
-    /// Выровнять горизонт по найденному углу (до ±15°) — одним шагом журнала.
+    /// Straighten the horizon by the detected angle (up to ±15°), as a single undo step.
     func straightenByHorizon() {
         guard let p = current, let h = p.cull?.horizon, abs(h) <= 15 else { return }
         var a = p.adj
@@ -207,9 +207,9 @@ extension Library {
         flash(tr("Горизонт выровнен: \(String(format: "%+.1f°", a.angle))"))
     }
 
-    // MARK: - Решения: P — оставить, X — брак, U — снять
+    // MARK: - Decisions: P keeps, X rejects, U clears
 
-    /// P: оставить. Без оценки — ★, чтобы отбор был виден и в Capture One.
+    /// P: keep. With no rating, sets ★ so the pick is visible in Capture One too.
     func keep() {
         let many = multiSelected
         update(tr("Оставлено")) { if $0.rating == 0 { $0.rating = 1 }; $0.rejected = false }
@@ -217,7 +217,7 @@ extension Library {
         if !many { advanceAfterDecision() }
     }
 
-    /// U: снять решение — ни оценки, ни отклонения.
+    /// U: clear the decision: no rating, no reject.
     func unflag() {
         update(tr("Решение снято")) { $0.rating = 0; $0.rejected = false }
         flash(tr("Решение снято") + countSuffix)
@@ -229,9 +229,9 @@ extension Library {
         return (k, r, u)
     }
 
-    // MARK: - Массовые действия (каждое — один шаг журнала, с подтверждением)
+    // MARK: - Bulk actions (each is one undo step, with confirmation)
 
-    /// Отклонить все «подозрительные» кадры среди показанных, кроме уже оставленных вами.
+    /// Reject all "suspicious" frames among those shown, except ones you have already kept.
     func acceptSuggestions() {
         let list = visible.filter { !$0.rejected && $0.rating == 0 && verdict($0).suspect }
         guard !list.isEmpty else { flash(tr("Предложений нет")); return }
@@ -243,7 +243,7 @@ extension Library {
         flash(tr("Отклонено: \(list.count)"))
     }
 
-    /// В каждой серии лучший — оставить (★), остальные — в брак. Уже оценённые вами не трогаются.
+    /// In each series keep the best (★) and reject the rest. Frames you have already rated are left alone.
     func keepBestInSeries() {
         let series = Dictionary(grouping: photos.filter { $0.seriesID != nil }, by: { $0.seriesID! })
         var ids: [URL] = []

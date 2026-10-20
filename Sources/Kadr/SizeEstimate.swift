@@ -4,7 +4,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 extension Library {
-    /// Итоговый размер кадра в пикселях при текущих настройках сохранения.
+    /// Final frame size in pixels with the current export settings.
     func outputPixels(_ p: Photo, _ s: ExportSettings) -> CGSize {
         let adj = s.applyEdits ? p.adj : Adjustments()
         let full = pixelSize(p)
@@ -18,8 +18,8 @@ extension Library {
     }
 }
 
-/// Ориентировочный размер файлов: образцы реально сжимаются с выбранным качеством и обработкой,
-/// затем байты на пиксель пересчитываются на итоговые размеры всех кадров.
+/// Approximate file size: samples are actually compressed with the chosen quality and edits,
+/// then bytes per pixel are scaled to the final dimensions of all frames.
 struct SizeEstimate: View {
     @Environment(Library.self) private var lib
     @State private var text = ""
@@ -40,7 +40,7 @@ struct SizeEstimate: View {
         .font(.caption)
         .foregroundStyle(.secondary)
         .task(id: Key(ids: list.map(\.id), s: settingsKey)) {
-            try? await Task.sleep(for: .milliseconds(250))   // ползунок качества тянут — не считаем каждый шаг
+            try? await Task.sleep(for: .milliseconds(250))   // the quality slider is being dragged; don't recompute on every step
             guard !Task.isCancelled else { return }
             busy = true
             text = await SizeEstimator.describe(lib, list, lib.export) ?? text
@@ -58,7 +58,7 @@ struct SizeEstimate: View {
 enum SizeEstimator {
     static func bytes(_ n: Int64) -> String { ByteCountFormatter.string(fromByteCount: n, countStyle: .file) }
 
-    /// Оценка в байтах: на каждый кадр и всего. Для оригиналов — точная сумма файлов.
+    /// Estimate in bytes: per frame and total. For originals, the exact sum of file sizes.
     @MainActor
     static func estimate(_ lib: Library, _ list: [Photo], _ s: ExportSettings) async -> (perPhoto: [Double], exact: Bool)? {
         guard !list.isEmpty else { return nil }
@@ -68,7 +68,7 @@ enum SizeEstimator {
                 Double(Exporter.companions(of: p.url).reduce(Int64(0)) { $0 + Int64((try? fm.attributesOfItem(atPath: $1.path)[.size] as? Int) ?? 0) })
             }, true)
         }
-        // Образцы: до 3 кадров, равномерно по списку.
+        // Samples: up to 3 frames, evenly spaced through the list.
         let picks = list.count <= 3 ? list : [list[0], list[list.count / 2], list[list.count - 1]]
         var bppSum = 0.0, n = 0.0
         for p in picks {
@@ -91,17 +91,17 @@ enum SizeEstimator {
         return tr("≈ \(bytes(Int64(total / Double(list.count)))) на кадр") + one
     }
 
-    /// Байт на пиксель при сжатии кадра в итоговом масштабе.
+    /// Bytes per pixel when compressing a frame at the final scale.
     static func sampleBytesPerPixel(_ url: URL, _ adj: Adjustments, out: CGSize, quality: Double) async -> Double? {
         let long = max(out.width, out.height)
         if long <= 1600 {
-            // Небольшой результат (Instagram, 1600 px) — весь кадр по превью с обработкой.
+            // Small result (Instagram, 1600 px): the whole frame from the preview with edits.
             guard let img = await Task.detached(priority: .utility, operation: { Renderer.shared.thumbnail(url, adj, size: long) }).value
             else { return nil }
             return await encode(img, quality)
         }
-        // Крупный — 5 фрагментов 512×512 в итоговом масштабе: центр и четыре четверти.
-        // Один центр завышал оценку на 40–50%: там обычно резкий объект, а края — размытый фон.
+        // Large result: 5 tiles of 512×512 at the final scale: the center and four quarters.
+        // The center alone overestimated by 40–50%: it usually holds a sharp subject, while the edges are blurred background.
         let tile = min(512, out.width, out.height)
         let tw = tile / out.width, th = tile / out.height
         var sum = 0.0, n = 0.0

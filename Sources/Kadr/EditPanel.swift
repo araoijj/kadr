@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Правая панель: вкладки «Инфо» и «Обработка».
+/// Right panel: "Info" and "Edit" tabs.
 struct Inspector: View {
     @Environment(Library.self) private var lib
 
@@ -79,7 +79,7 @@ struct EditPanel: View {
         }
     }
 
-    // MARK: - Настройки
+    // MARK: - Settings
 
     private func sliders(_ p: Photo) -> some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -138,7 +138,7 @@ struct EditPanel: View {
         }
     }
 
-    // MARK: - Стили
+    // MARK: - Styles
 
     private var openGroups: Set<String> { Set(openGroupsRaw.split(separator: "|").map(String.init)) }
 
@@ -192,8 +192,8 @@ struct EditPanel: View {
 
     private func styleChip(_ st: Style, _ p: Photo) -> some View {
         let active = st.groups.count < StyleGroup.allCases.count ? p.adj.matches(st.adj, groups: st.groups) && !p.adj.isIdentity : p.adj == st.adj
-        // Превью — стиль на чистом кадре: не зависит от ползунков, иначе каждое их движение
-        // перерисовывало бы все превью и забивало процессор.
+        // Previews apply the style to the unedited frame and ignore the sliders; otherwise every slider move
+        // would redraw all previews and hog the CPU.
         var result = Adjustments()
         result.merge(st.adj, groups: st.groups)
         return Button { lib.applyStyle(st) } label: {
@@ -266,7 +266,7 @@ struct EditPanel: View {
 
     private func lutChip(_ name: String, _ p: Photo) -> some View {
         let active = p.adj.lut == name
-        var preview = Adjustments()   // LUT на чистом кадре, в полную силу — не зависит от ползунков
+        var preview = Adjustments()   // LUT on the unedited frame at full strength, independent of the sliders
         preview.lut = name
         return Button {
             var a = p.adj
@@ -311,7 +311,7 @@ struct EditPanel: View {
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.1)))
     }
 
-    // MARK: - Действия (всегда внизу панели)
+    // MARK: - Actions (always at the bottom of the panel)
 
     private func actions(_ p: Photo) -> some View {
         @Bindable var lib = lib
@@ -335,9 +335,9 @@ struct EditPanel: View {
         .controlSize(.regular)
     }
 
-    // MARK: - Компоненты
+    // MARK: - Components
 
-    /// Раздел с заголовком; если в нём есть правки — кнопка «сбросить раздел».
+    /// Section with a header; if it has edits, shows a "Reset section" button.
     private func section<C: View>(_ title: String, _ group: StyleGroup, _ p: Photo, @ViewBuilder _ content: () -> C) -> some View {
         let changed = p.adj.changedGroups.contains(group)
         return VStack(alignment: .leading, spacing: 12) {
@@ -360,7 +360,7 @@ struct EditPanel: View {
         }
     }
 
-    /// Ползунок: значок, название, значение, кнопка сброса; двойной клик по названию — тоже сброс.
+    /// Slider: icon, name, value, reset button; double-clicking the name also resets.
     private func slider(_ title: String, _ icon: String, _ key: WritableKeyPath<Adjustments, Double>, _ p: Photo,
                         range: ClosedRange<Double> = -100...100, step: Double = 1, defaultValue: Double = 0,
                         gradient: [Color]? = nil, format: ((Double) -> String)? = nil) -> some View {
@@ -404,7 +404,7 @@ struct EditPanel: View {
         }
     }
 
-    /// Баланс белого в кельвинах, как в Lightroom и Capture One. Исходная точка — «как снято» из RAW.
+    /// White balance in kelvins, as in Lightroom and Capture One. The starting point is "as shot" from the RAW.
     private func kelvinSlider(_ p: Photo) -> some View {
         let asShot = ImageStore.shared.asShotK(p.url)
         let k = asShot + p.adj.wbShift
@@ -413,7 +413,7 @@ struct EditPanel: View {
         let range = min(2000, k)...max(12000, k)
         let binding = Binding<Double>(get: { k }, set: { v in
             var a = p.adj
-            a.wbShift = ((v - asShot) / 50).rounded() * 50   // шаг 50 K
+            a.wbShift = ((v - asShot) / 50).rounded() * 50   // 50 K step
             lib.setAdjustments(a)
         })
         func fmt(_ v: Double) -> String { "\(Int(v.rounded()).formatted(.number.grouping(.never))) K" }
@@ -444,7 +444,7 @@ struct EditPanel: View {
         }
     }
 
-    /// Тонирование: оттенок (цветная полоса) и сила.
+    /// Toning: hue (color strip) and strength.
     private func hueSlider(_ title: String, hue: WritableKeyPath<Adjustments, Double>, sat: WritableKeyPath<Adjustments, Double>, _ p: Photo) -> some View {
         let h = p.adj[keyPath: hue], s = p.adj[keyPath: sat]
         return VStack(alignment: .leading, spacing: 6) {
@@ -476,7 +476,7 @@ struct EditPanel: View {
     }
 }
 
-/// Окно «Новый стиль» — как «Новый пресет» в Lightroom: название, коллекция и какие разделы сохранять.
+/// "New style" sheet, like "New Preset" in Lightroom: name, collection and which sections to save.
 struct NewStyleSheet: View {
     @Environment(Library.self) private var lib
     @Environment(\.dismiss) private var dismiss
@@ -534,7 +534,7 @@ struct NewStyleSheet: View {
     }
 }
 
-/// Миниатюра текущего кадра с рецептом — видно, как ляжет стиль.
+/// Thumbnail of the current frame with the recipe applied, to preview how the style will look.
 struct StylePreview: View {
     let photo: Photo?
     let adj: Adjustments
@@ -558,7 +558,7 @@ struct StylePreview: View {
     }
 }
 
-/// Зажмите, чтобы увидеть кадр без LUT, — отпустите, чтобы вернуть.
+/// Hold to see the frame without the LUT; release to bring it back.
 struct LUTPeek: View {
     @Environment(Library.self) private var lib
     @State private var saved: Adjustments?

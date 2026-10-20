@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Сравнение 2–4 кадров рядом. Зум и сдвиг общие: видно одно и то же место на всех кадрах.
+/// Side-by-side comparison of 2–4 frames. Zoom and pan are shared, so the same spot is visible in every frame.
 struct CompareView: View {
     @Environment(Library.self) private var lib
 
@@ -173,7 +173,7 @@ struct ComparePane: View {
         .allowsHitTesting(false)
     }
 
-    /// Не даём увести кадр за край: центр не ближе половины окна к границе.
+    /// Keeps the frame from being pushed past the edge: the center stays at least half a window from the border.
     private func clamp(_ c: CGPoint, size: CGSize, pane: CGSize) -> CGPoint {
         func axis(_ v: CGFloat, _ img: CGFloat, _ view: CGFloat) -> CGFloat {
             guard img > view else { return 0.5 }

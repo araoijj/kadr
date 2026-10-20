@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Меню по правому клику на превью, в ленте и в просмотре.
+/// Right-click menu for previews, in the filmstrip and in the viewer.
 struct PhotoContextMenu: ViewModifier {
     let photo: Photo
     @Environment(Library.self) private var lib

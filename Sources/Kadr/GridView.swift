@@ -6,7 +6,7 @@ struct GridView: View {
     private let spacing: CGFloat = 10
     private let pad: CGFloat = 16
 
-    // Выделение рамкой: рамки превью и прямоугольник в координатах сетки.
+    // Marquee selection: preview frames and the rectangle in grid coordinates.
     @State private var frames: [URL: CGRect] = [:]
     @State private var marquee: CGRect?
     @State private var marqueeBase: Set<URL> = []
@@ -72,7 +72,7 @@ struct GridView: View {
         }
     }
 
-    /// Тянем мышью — выделяются все превью, которые задела рамка. С ⌘ или ⇧ — добавляются к уже выделенным.
+    /// Drag with the mouse to select every preview the marquee touches. With ⌘ or ⇧ they're added to the current selection.
     private func marqueeGesture(_ list: [Photo]) -> some Gesture {
         DragGesture(minimumDistance: 4, coordinateSpace: .named("grid"))
             .onChanged { v in
@@ -237,7 +237,7 @@ struct SectionHeader: View {
     }
 }
 
-/// Плашки активных доп. фильтров над сеткой — видно, почему показаны не все кадры.
+/// Chips for active extra filters above the grid, showing why not all frames are visible.
 struct FilterChips: View {
     @Environment(Library.self) private var lib
 

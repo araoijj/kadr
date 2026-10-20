@@ -2,8 +2,8 @@ import AppKit
 import CryptoKit
 import Foundation
 
-/// Состояние кадра, которое можно отменить: обработка, кадрирование, оценка, отклонение, метка.
-/// Хранятся только параметры (неразрушающая обработка) — сотни байт на кадр, не пиксели.
+/// Undoable photo state: edits, crop, rating, rejection, label.
+/// Only parameters are stored (non-destructive editing): hundreds of bytes per photo, not pixels.
 struct PhotoState: Codable, Equatable {
     var adj: Adjustments
     var rating: Int
@@ -15,13 +15,13 @@ struct PhotoState: Codable, Equatable {
     }
 }
 
-/// Один шаг журнала. Изменения кадров хранятся только для тех, кого шаг затронул.
+/// A single history step. Photo changes are stored only for the photos the step touched.
 struct HistoryEntry: Codable, Identifiable {
     var id = UUID()
     var date = Date()
     var title: String
-    var key: String?                       // для склейки движений одного ползунка
-    var changes: [String: Change]          // путь файла → было/стало
+    var key: String?                       // for merging movements of the same slider
+    var changes: [String: Change]          // file path → before/after
 
     struct Change: Codable {
         var before: PhotoState
@@ -31,13 +31,13 @@ struct HistoryEntry: Codable, Identifiable {
     var photoNames: [String] { changes.keys.map { ($0 as NSString).lastPathComponent }.sorted() }
 }
 
-/// Журнал папки на диске: ~/Library/Application Support/Kadr/History/<папка>.json — переживает перезапуск.
+/// The folder's history on disk: ~/Library/Application Support/Kadr/History/<folder>.json, survives relaunch.
 enum HistoryStore {
-    /// Сколько шагов храним. Замер (20.10): шаг для одного кадра ~1,1 КБ, запись/отмена ~0,1 мс;
-    /// пакетный шаг на 1000 кадров ~0,7 МБ, и 100 таких — уже 70 МБ и 2,5 с на сохранение.
-    /// Поэтому два предела: 100 шагов и не больше 20 000 изменений кадров всего (~14 МБ, ~0,5 с фоном).
+    /// How many steps we keep. Measured (20.10): a single-photo step is ~1.1 KB, record/undo ~0.1 ms;
+    /// a batch step over 1000 photos is ~0.7 MB, and 100 of those is already 70 MB and 2.5 s to save.
+    /// Hence two limits: 100 steps and no more than 20,000 photo changes in total (~14 MB, ~0.5 s in the background).
     static var limit: Int { Prefs.historyLimit }
-    static var maxPhotoChanges: Int { limit * 200 }   // 100 шагов → 20 000 изменений кадров (~14 МБ)
+    static var maxPhotoChanges: Int { limit * 200 }   // 100 steps → 20,000 photo changes (~14 MB)
 
     private struct File: Codable {
         var entries: [HistoryEntry]
@@ -64,17 +64,17 @@ enum HistoryStore {
 }
 
 extension Library {
-    // MARK: - Запись
+    // MARK: - Recording
 
-    /// Снимок состояний кадров перед изменением.
+    /// Snapshot of photo states before a change.
     func snapshot(_ ids: [URL]) -> [URL: PhotoState] {
         var out: [URL: PhotoState] = [:]
         for id in ids { if let p = photo(id) { out[id] = PhotoState(p) } }
         return out
     }
 
-    /// Записать шаг: сравнивает «до» с текущим, неизменённые кадры не пишет.
-    /// key — склейка: подряд идущие движения одного ползунка на том же кадре (в пределах 1,5 с) — один шаг.
+    /// Record a step: compares "before" with the current state, skipping unchanged photos.
+    /// key merges steps: consecutive movements of the same slider on the same photo (within 1.5 s) become one step.
     func record(_ title: String, before: [URL: PhotoState], key: String? = nil) {
         guard !historyPaused else { return }
         var changes: [String: HistoryEntry.Change] = [:]
@@ -84,7 +84,7 @@ extension Library {
             if a != b { changes[id.path] = .init(before: b, after: a) }
         }
         guard !changes.isEmpty else { return }
-        // Отменённые шаги после текущей позиции больше не вернуть — как в любом редакторе.
+        // Undone steps after the current position can no longer be redone, as in any editor.
         if historyPos < history.count { history.removeSubrange(historyPos...) }
         if let key, let last = history.last, last.key == key, Date().timeIntervalSince(last.date) < 1.5,
            Set(last.changes.keys) == Set(changes.keys) {
@@ -96,14 +96,14 @@ extension Library {
         } else {
             history.append(HistoryEntry(title: title, key: key, changes: changes))
             if history.count > HistoryStore.limit { history.removeFirst(history.count - HistoryStore.limit) }
-            // Самые старые пакетные шаги уходят первыми, если журнал разросся.
+            // The oldest batch steps go first if the history has grown too large.
             while history.count > 1, history.reduce(0, { $0 + $1.changes.count }) > HistoryStore.maxPhotoChanges { history.removeFirst() }
         }
         historyPos = history.count
         scheduleHistorySave()
     }
 
-    /// Изменения без записи в журнал (например, «Сравнить без LUT», пока зажата кнопка).
+    /// Changes without recording to history (e.g. "Compare without LUT" while the button is held).
     func withoutHistory(_ f: () -> Void) {
         let was = historyPaused
         historyPaused = true
@@ -111,7 +111,7 @@ extension Library {
         historyPaused = was
     }
 
-    // MARK: - Отмена и возврат
+    // MARK: - Undo and redo
 
     var canUndo: Bool { historyPos > 0 }
     var canRedo: Bool { historyPos < history.count }
@@ -136,7 +136,7 @@ extension Library {
         flash(tr("Возвращено: \(e.title)"))
     }
 
-    /// Перейти к состоянию «после шага n» (0 — исходное, до всех шагов журнала).
+    /// Go to the state "after step n" (0 = original, before all history steps).
     func jumpHistory(to n: Int) {
         let target = min(max(n, 0), history.count)
         while historyPos > target { apply(history[historyPos - 1], forward: false); historyPos -= 1 }
@@ -159,15 +159,15 @@ extension Library {
             touched.append(id)
         }
         saveEditsSoon()
-        // Показываем, что поменялось: если текущий кадр не затронут — встаём на затронутый.
+        // Show what changed: if the current photo isn't affected, move to an affected one.
         if let cur = currentID, !touched.contains(where: { $0.path == cur.path }), let first = touched.first {
             select(photos.first { $0.id.path == first.path } ?? photos[0])
         }
     }
 
-    // MARK: - Подписи шагов
+    // MARK: - Step labels
 
-    /// «Экспозиция +0.35 EV», «Температура 5400 K»… — по первому изменённому параметру.
+    /// "Exposure +0.35 EV", "Temperature 5400 K"…, based on the first changed parameter.
     func describeChange(_ a: Adjustments, _ b: Adjustments, url: URL) -> (title: String, key: String) {
         let k = ImageStore.shared.asShotK(url)
         let fields: [(String, KeyPath<Adjustments, Double>, (Double) -> String)] = [

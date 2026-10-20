@@ -1,8 +1,8 @@
 import Foundation
 
-/// Оценки и метки хранятся в XMP-файле рядом со снимком (Z7D00185.ARW → Z7D00185.xmp).
-/// Этот формат читают Capture One, Lightroom, Bridge и darktable, поэтому отбор
-/// здесь сразу виден в Capture One. Чужие поля в существующем XMP не трогаем.
+/// Ratings and labels are stored in an XMP file next to the photo (Z7D00185.ARW → Z7D00185.xmp).
+/// This format is read by Capture One, Lightroom, Bridge and darktable, so culling
+/// here shows up in Capture One right away. Other fields in an existing XMP are left untouched.
 enum Sidecar {
     static let xmpNS = "http://ns.adobe.com/xap/1.0/"
     static let rdfNS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -64,7 +64,7 @@ enum Sidecar {
         (try? doc.nodes(forXPath: "//*[local-name()='Description']"))?.first as? XMLElement
     }
 
-    /// Значение бывает и атрибутом (xmp:Rating="3"), и дочерним элементом (<xmp:Rating>3</xmp:Rating>).
+    /// The value can be an attribute (xmp:Rating="3") or a child element (<xmp:Rating>3</xmp:Rating>).
     private static func value(of name: String, in desc: XMLElement) -> String? {
         if let a = desc.attributes?.first(where: { $0.localName == name && ($0.uri == xmpNS || $0.prefix == "xmp") }) {
             return a.stringValue
@@ -76,7 +76,7 @@ enum Sidecar {
     }
 
     private static func set(_ name: String, to value: String?, in desc: XMLElement) {
-        // Убираем обе формы, потом пишем атрибутом.
+        // Remove both forms, then write it as an attribute.
         for a in desc.attributes ?? [] where a.localName == name && (a.uri == xmpNS || a.prefix == "xmp") {
             desc.removeAttribute(forName: a.name ?? "")
         }

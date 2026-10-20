@@ -2,8 +2,8 @@ import AppKit
 import CoreImage
 import ImageIO
 
-/// Быстрое чтение снимков. Для просмотра берём JPEG-превью, которое камера встраивает в RAW
-/// (у Sony A1 — 1616×1080, ~20 мс на кадр). Полное проявление RAW — только по запросу (зум 100%).
+/// Fast image reading. For viewing we use the JPEG preview the camera embeds in the RAW
+/// (1616×1080 on the Sony A1, ~20 ms per photo). Full RAW development only on demand (100% zoom).
 final class ImageStore: @unchecked Sendable {
     static let shared = ImageStore()
 
@@ -19,13 +19,13 @@ final class ImageStore: @unchecked Sendable {
     static let rawExtensions: Set<String> = ["arw", "srf", "sr2", "cr2", "cr3", "nef", "nrw", "raf", "orf", "rw2", "dng", "pef", "3fr", "iiq"]
     static let imageExtensions: Set<String> = rawExtensions.union(["jpg", "jpeg", "heic", "heif", "hif", "png", "tif", "tiff"])
 
-    /// Встроенное превью (или уменьшенная картинка, если превью нет).
+    /// Embedded preview (or a downscaled image if there's no preview).
     func preview(_ url: URL) -> CGImage? {
         if let c = thumbs.object(forKey: url as NSURL) { return c }
         guard let src = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
-        // У RAW — превью, встроенное камерой (быстро). У JPEG встроенная миниатюра EXIF всего 160×120
-        // (у вертикальных ещё и с чёрными полями) — поэтому JPEG и прочие читаем из самой картинки.
-        // Если и у RAW превью крошечное — тоже из самого снимка.
+        // RAW: the camera-embedded preview (fast). The embedded EXIF thumbnail in a JPEG is only 160×120
+        // (and letterboxed in black for portrait shots), so JPEG and other formats are read from the image itself.
+        // If even the RAW preview is tiny, read from the image itself as well.
         let raw = Self.rawExtensions.contains(url.pathExtension.lowercased())
         func make(_ always: Bool) -> CGImage? {
             var opts: [CFString: Any] = [
@@ -48,12 +48,12 @@ final class ImageStore: @unchecked Sendable {
         return img
     }
 
-    /// JPEG с уменьшением при чтении (DCT в 4 раза: 6000 px → 1500 px) — вдвое быстрее полного декодирования.
-    /// Поворот по EXIF — вручную: этот путь его не применяет.
+    /// JPEG downscaled while decoding (4× DCT: 6000 px → 1500 px), twice as fast as a full decode.
+    /// EXIF orientation is applied manually: this path doesn't apply it.
     private func subsampled(_ src: CGImageSource) -> CGImage? {
         let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any]
         let w = props?[kCGImagePropertyPixelWidth] as? Int ?? 0, h = props?[kCGImagePropertyPixelHeight] as? Int ?? 0
-        guard max(w, h) >= 4800,   // меньше — уменьшение в 4 раза даст мелкую картинку, пусть читает обычным путём
+        guard max(w, h) >= 4800,   // smaller than that, 4× downscaling gives too small an image; let it go the normal path
               let img = CGImageSourceCreateImageAtIndex(src, 0, [kCGImageSourceSubsampleFactor: 4, kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
         else { return nil }
         let o = (props?[kCGImagePropertyOrientation] as? UInt32) ?? 1
@@ -62,7 +62,7 @@ final class ImageStore: @unchecked Sendable {
         return ciContext.createCGImage(ci, from: ci.extent)
     }
 
-    /// Снимок, уменьшенный до maxSide, — для резкого просмотра JPEG/HEIC под размер экрана.
+    /// Image downscaled to maxSide, for a sharp JPEG/HEIC view at screen size.
     func decoded(_ url: URL, maxSide: CGFloat) -> CGImage? {
         guard let src = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
         let opts: [CFString: Any] = [
@@ -75,7 +75,7 @@ final class ImageStore: @unchecked Sendable {
 
     func cachedPreview(_ url: URL) -> CGImage? { thumbs.object(forKey: url as NSURL) }
 
-    /// Полное проявление RAW (для зума 100%). У 50 Мп файла ~1–2 с, поэтому кэшируем 3 последних.
+    /// Full RAW development (for 100% zoom). A 50 MP file takes ~1–2 s, so the last 3 are cached.
     func fullImage(_ url: URL) -> CGImage? {
         if let c = full.object(forKey: url as NSURL) { return c }
         var ci: CIImage?
@@ -92,7 +92,7 @@ final class ImageStore: @unchecked Sendable {
     private let wbLock = NSLock()
     private var wbCache: [String: Double] = [:]
 
-    /// Баланс белого «как снято», кельвины (у не-RAW — 5500 K, дневной свет).
+    /// As-shot white balance in Kelvin (5500 K daylight for non-RAW).
     func asShotK(_ url: URL) -> Double {
         guard ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) else { return 5500 }
         wbLock.lock()
@@ -130,10 +130,10 @@ final class ImageStore: @unchecked Sendable {
         return info
     }
 
-    // MARK: - Анализ: похожесть и резкость
+    // MARK: - Analysis: similarity and sharpness
 
-    /// dHash 64 бита: сравнивает яркость соседних точек уменьшенной до 9×8 картинки.
-    /// Устойчив к разной экспозиции, поэтому брекетинг и серии попадают в одну группу.
+    /// 64-bit dHash: compares the brightness of neighboring pixels in the image downscaled to 9×8.
+    /// Robust to exposure differences, so brackets and series fall into the same group.
     func dHash(_ img: CGImage) -> UInt64? {
         guard let g = grayscale(img, width: 9, height: 8) else { return nil }
         var h: UInt64 = 0
@@ -146,7 +146,7 @@ final class ImageStore: @unchecked Sendable {
         return h
     }
 
-    /// Резкость = дисперсия лапласиана по центральной части кадра (там обычно объект).
+    /// Sharpness = variance of the Laplacian over the central part of the frame (where the subject usually is).
     func sharpness(_ img: CGImage) -> Double? {
         let w = 640, h = Int(Double(w) * Double(img.height) / Double(img.width))
         guard h > 4, let g = grayscale(img, width: w, height: h) else { return nil }
@@ -164,8 +164,8 @@ final class ImageStore: @unchecked Sendable {
         return sq / n - mean * mean
     }
 
-    /// Резкость внутри области (доли кадра, y сверху вниз), например лица. Область приводится к 160 px,
-    /// чтобы лица разного размера сравнивались честно.
+    /// Sharpness within a region (fractions of the image, y top-down), e.g. a face. The region is scaled to 160 px
+    /// so faces of different sizes are compared fairly.
     func sharpness(_ img: CGImage, region r: CGRect) -> Double? {
         let pad = 0.08
         let rr = CGRect(x: max(0, r.minX - r.width * pad), y: max(0, r.minY - r.height * pad),

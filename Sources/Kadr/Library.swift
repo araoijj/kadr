@@ -7,7 +7,7 @@ enum PhotoFilter: Hashable {
     case stars(Int)
     case label(ColorLabel)
     case duplicates
-    // Отбор
+    // Culling
     case suspects, undecided, leaders
     case reason(CullReason)
     case scene(Int)
@@ -57,14 +57,14 @@ final class Library {
     var filter: PhotoFilter = .all
     var currentID: URL?
     var loupe = false
-    /// Масштаб просмотра: nil — вписать в окно, 1 — 100% (пиксель кадра = пиксель экрана), 2 — 200%…
+    /// Loupe zoom: nil = fit to window, 1 = 100% (one image pixel = one screen pixel), 2 = 200%…
     var loupeZoom: CGFloat?
-    var loupeZoomBase: CGFloat?                    // начало щипка
-    var loupeCenter = CGPoint(x: 0.5, y: 0.5)      // центр видимой области в долях кадра (y — сверху вниз)
-    var fitZoom: CGFloat = 0.25                    // масштаб режима «Вписать» (его считает просмотр)
-    var loupeDisplay: CGSize = .zero               // размер кадра на экране при текущем масштабе, точки
-    var splitCompare = false                       // шторка «до / после» (Y)
-    var splitPos: CGFloat = 0.5                    // положение шторки, доля ширины
+    var loupeZoomBase: CGFloat?                    // pinch start
+    var loupeCenter = CGPoint(x: 0.5, y: 0.5)      // center of the visible area as fractions of the image (y top-down)
+    var fitZoom: CGFloat = 0.25                    // zoom level of "Fit" mode (computed by the loupe view)
+    var loupeDisplay: CGSize = .zero               // on-screen image size at the current zoom, in points
+    var splitCompare = false                       // before/after split slider (Y)
+    var splitPos: CGFloat = 0.5                    // split slider position, fraction of width
     static let zoomSteps: [CGFloat] = [0.25, 0.5, 1, 2, 4]
 
     var zoom100: Bool {
@@ -72,7 +72,7 @@ final class Library {
         set { setZoom(newValue ? 1 : nil) }
     }
 
-    /// point — куда приблизить (доли кадра); меньше «вписать» не уменьшаем.
+    /// point: where to zoom in (fractions of the image); never zooms out below "Fit".
     func setZoom(_ z: CGFloat?, at point: CGPoint? = nil) {
         if let z, z > fitZoom * 1.01 {
             loupeZoom = min(z, 8)
@@ -84,7 +84,7 @@ final class Library {
         loupeZoomBase = loupeZoom
     }
 
-    /// Щипок и ⌘+колёсико: плавный масштаб, ниже «вписать» — возврат к нему.
+    /// Pinch and ⌘+scroll wheel: smooth zoom; going below "Fit" snaps back to it.
     func setZoomKeepingBase(_ z: CGFloat) {
         let base = loupeZoomBase
         if z > fitZoom * 1.01 { loupeZoom = min(z, 8) } else { loupeZoom = nil; loupeCenter = CGPoint(x: 0.5, y: 0.5) }
@@ -102,7 +102,7 @@ final class Library {
         setZoom(Self.zoomSteps.last { $0 < cur * 0.99 }, at: loupeCenter)
     }
 
-    /// Сдвиг видимой области на dx, dy точек экрана (прокрутка, перетаскивание).
+    /// Pans the visible area by dx, dy screen points (scrolling, dragging).
     func pan(dx: CGFloat, dy: CGFloat) {
         guard loupeZoom != nil, loupeDisplay.width > 0 else { return }
         loupeCenter = CGPoint(x: loupeCenter.x - dx / loupeDisplay.width, y: loupeCenter.y - dy / loupeDisplay.height)
@@ -120,7 +120,7 @@ final class Library {
 
     private var index: [URL: Int] = [:]
 
-    // Режим «Отбор» (Cull.swift, CullView.swift).
+    // "Culling" mode (Cull.swift, CullView.swift).
     var culling = false {
         didSet { if culling { loupe = false; comparing = false; if let c = currentID { viewed.insert(c) } } }
     }
@@ -133,21 +133,21 @@ final class Library {
     var viewed: Set<URL> = []
     var showCullSummary = false
 
-    // AI-анализ (поиск брака): запускается кнопкой — при открытии папки идёт только лёгкая индексация.
+    // AI analysis (defect detection): started by a button; opening a folder only runs lightweight indexing.
     var aiRunning = false
     var aiDone = 0
     var aiTotal = 0
-    var aiCount = 0               // кадров с готовым AI-анализом
+    var aiCount = 0               // photos with finished AI analysis
     var aiReady: Bool { aiCount > 0 }
-    /// Находки AI видны: анализ готов и подсказки включены (во время анализа — нет: медианы ещё не посчитаны,
-    /// а пересчёт очередей на каждый кадр тормозит интерфейс).
+    /// AI findings are visible: analysis is done and hints are on (not during analysis: medians aren't computed yet,
+    /// and recomputing the queues on every photo slows down the UI).
     var aiOn: Bool { aiReady && cullHints && !aiRunning }
     private var aiTask: Task<Void, Never>?
     var scenes: [SceneInfo] = []
     var tournamentAll: [URL] = []
     var tournamentQueue: [URL] = []
     var tournamentRound = 0
-    static let cullFacePixels: CGFloat = 380   // лицо в колонке отбора: 190 pt на Retina
+    static let cullFacePixels: CGFloat = 380   // face in the culling column: 190 pt on Retina
     var cullMedianSharpness = 0.0
     var cullMedianFaceSharpness = 0.0
     var seriesBestSharpness: [Int: Double] = [:]
@@ -155,9 +155,9 @@ final class Library {
     var seriesOpenPoses: [Int: [OpenPose]] = [:]
     var sceneMedians: [Int: (face: Double?, other: Double?)] = [:]
 
-    // Журнал изменений (History.swift).
+    // Change history (History.swift).
     var history: [HistoryEntry] = []
-    var historyPos = 0                  // сколько шагов применено; дальше — отменённые, их можно вернуть
+    var historyPos = 0                  // number of steps applied; the rest are undone and can be redone
     var historyPaused = false
     private var historySaveTask: Task<Void, Never>?
 
@@ -176,16 +176,16 @@ final class Library {
 
     func saveEditsSoon() { scheduleEditsSave() }
 
-    // MARK: - Обработка
+    // MARK: - Edit
 
     enum InspectorTab: Hashable { case info, edit, history }
     var inspectorTab: InspectorTab = .info {
         didSet {
-            // Обрабатывать удобнее на большом кадре — из сетки переходим в просмотр.
+            // Editing is easier on a large image, so switch from the grid to the loupe.
             if inspectorTab == .edit, oldValue != .edit, !loupe, !comparing, currentID != nil { loupe = true }
         }
     }
-    var showOriginal = false           // «до» — клавиша \
+    var showOriginal = false           // "before" view, \ key
     var styles: [Style] = Style.builtIns + StyleStore.load()
     var luts: [String] = LUTStore.shared.list()
     var copiedAdj: Adjustments?
@@ -195,7 +195,7 @@ final class Library {
         collections.download(c) { [weak self] in self?.luts = LUTStore.shared.list() }
     }
 
-    /// Стили по коллекциям в заданном порядке.
+    /// Styles grouped by collection, in the configured order.
     var styleGroups: [(name: String, styles: [Style])] {
         let groups = Dictionary(grouping: styles, by: \.collection)
         let order = Style.collectionOrder + groups.keys.filter { !Style.collectionOrder.contains($0) }.sorted()
@@ -203,7 +203,7 @@ final class Library {
     }
     private var saveEditsTask: Task<Void, Never>?
 
-    /// Ползунки двигают только текущий кадр (как основной вариант в Capture One).
+    /// Sliders affect only the current photo (like the primary variant in Capture One).
     func setAdjustments(_ a: Adjustments) {
         guard let id = currentID, let i = index[id] else { return }
         let old = photos[i].adj
@@ -211,14 +211,14 @@ final class Library {
         let before = snapshot([id])
         photos[i].adj = a
         scheduleEditsSave()
-        // Во время кадрирования шаги не пишем — один шаг при «Готово».
+        // Don't record steps while cropping; one step is recorded on "Done".
         if !cropMode {
             let d = describeChange(old, a, url: id)
             record(d.title, before: before, key: "\(id.path)|\(d.key)")
         }
     }
 
-    // MARK: - Кадрирование
+    // MARK: - Crop
 
     var cropMode = false
     private var cropBackup: Adjustments?
@@ -262,13 +262,13 @@ final class Library {
         setAdjustments(a)
     }
 
-    /// Для массовых правок из других файлов (кадрирование серии).
+    /// For bulk edits from other files (cropping a series).
     func setAdjustmentsRaw(_ i: Int, _ a: Adjustments) {
         photos[i].adj = a
         scheduleEditsSave()
     }
 
-    /// Стиль, вставка и сброс — на все выделенные.
+    /// Style, paste and reset apply to all selected photos.
     private func setAdjustmentsForTargets(_ title: String, _ change: (inout Adjustments) -> Void) {
         let before = snapshot(targets.map(\.id))
         for t in targets {
@@ -284,7 +284,7 @@ final class Library {
         flash(tr("Стиль «\(st.name)»") + countSuffix)
     }
 
-    /// Новый стиль из текущего кадра: только выбранные разделы.
+    /// New style from the current photo: only the chosen sections.
     func createStyle(name: String, groups: Set<StyleGroup>, collection: String) {
         guard let p = current else { return }
         let n = name.trimmingCharacters(in: .whitespaces)
@@ -296,7 +296,7 @@ final class Library {
         flash(tr("Стиль «\(n)» сохранён"))
     }
 
-    /// Перезаписать свой стиль текущими настройками кадра (разделы стиля сохраняются).
+    /// Overwrite a user style with the current photo's settings (the style's sections are kept).
     func updateStyle(_ st: Style) {
         guard let p = current, let i = styles.firstIndex(where: { $0.id == st.id }), !st.builtIn else { return }
         styles[i].adj = p.adj
@@ -316,7 +316,7 @@ final class Library {
         Array(Set(styles.filter { !$0.builtIn }.map(\.collection) + ["Мои стили"])).sorted()
     }
 
-    /// Свои стили в файл .kadrstyles — чтобы перенести на другой Mac или поделиться.
+    /// User styles to a .kadrstyles file, to move them to another Mac or share them.
     func exportStyles() {
         let mine = styles.filter { !$0.builtIn }
         guard !mine.isEmpty else { flash(tr("Своих стилей пока нет")); return }
@@ -408,7 +408,7 @@ final class Library {
     }
     private var analysisTask: Task<Void, Never>?
 
-    // MARK: - Выборка
+    // MARK: - Filtering
 
     var visible: [Photo] {
         photos.filter { p in
@@ -419,7 +419,7 @@ final class Library {
         .sorted(by: inOrder)
     }
 
-    // MARK: - Сортировка, группировка, доп. фильтры
+    // MARK: - Sorting, grouping, extra filters
 
     let browser = FolderBrowser()
     let importer = CardImporter()
@@ -433,7 +433,7 @@ final class Library {
         }
     }
 
-    // MARK: - Сравнение
+    // MARK: - Compare
 
     var comparing = false
     var compareIDs: [URL] = []
@@ -444,10 +444,10 @@ final class Library {
 
     var comparePhotos: [Photo] { compareIDs.compactMap { index[$0].map { photos[$0] } } }
 
-    /// Можно ли сравнить: выделено 2+ кадра или текущий входит в серию.
+    /// Whether comparison is possible: 2+ photos selected, or the current one belongs to a series.
     var canCompare: Bool { multiSelected || (current.map { series(of: $0).count > 1 } ?? false) }
 
-    /// Выделенные (до 4), а если выделен один — до 4 кадров его серии начиная с него.
+    /// The selection (up to 4), or, if only one is selected, up to 4 photos of its series starting from it.
     func startCompare() {
         var ids: [URL]
         if multiSelected {
@@ -494,7 +494,7 @@ final class Library {
         compareZoomBase = compareZoom
     }
 
-    /// Оставить кадр в фокусе, остальные сравниваемые — отклонить.
+    /// Keep the focused photo and reject the other compared ones.
     func rejectOthersInCompare() {
         guard let keep = currentID else { return }
         let before = snapshot(compareIDs)
@@ -529,7 +529,7 @@ final class Library {
     var lensFilter: String?
     var dayFilter: Date?
 
-    /// Объективы и дни съёмки с количеством кадров — для боковой панели.
+    /// Lenses and shooting days with photo counts, for the sidebar.
     var lenses: [(name: String, count: Int)] {
         Dictionary(grouping: photos, by: \.lensName).map { ($0.key, $0.value.count) }.sorted { $0.name < $1.name }
     }
@@ -538,7 +538,7 @@ final class Library {
         Dictionary(grouping: photos.filter { $0.day != nil }, by: { $0.day! }).map { ($0.key, $0.value.count) }.sorted { $0.day > $1.day }
     }
 
-    /// Разделы сетки: подряд идущие кадры с одним ключом группы.
+    /// Grid sections: consecutive photos sharing the same group key.
     var sections: [(title: String, photos: [Photo])] {
         let list = visible
         guard groupKey != .none else { return [("", list)] }
@@ -571,7 +571,7 @@ final class Library {
         return dir.hasPrefix(root + "/") ? String(dir.dropFirst(root.count + 1)) : dir
     }
 
-    /// Корневая папка — первой, вложенные — по алфавиту пути.
+    /// Root folder first, subfolders alphabetically by path.
     private func folderSortKey(_ p: Photo) -> String {
         p.url.deletingLastPathComponent().standardizedFileURL == folder?.standardizedFileURL ? "" : relativeFolder(p)
     }
@@ -596,7 +596,7 @@ final class Library {
         case .scene: return cmp(a.sceneID ?? 0, b.sceneID ?? 0)
         case .folder: return folderSortKey(a).localizedStandardCompare(folderSortKey(b))
         case .lens: return a.lensName.localizedStandardCompare(b.lensName)
-        case .rating: return cmp(b.rejected ? -1 : b.rating, a.rejected ? -1 : a.rating)   // высокие сверху
+        case .rating: return cmp(b.rejected ? -1 : b.rating, a.rejected ? -1 : a.rating)   // highest first
         }
     }
 
@@ -648,7 +648,7 @@ final class Library {
         return photos.filter { $0.seriesID == s }
     }
 
-    // MARK: - Открытие папки
+    // MARK: - Opening a folder
 
     func chooseFolder() {
         let panel = NSOpenPanel()
@@ -676,14 +676,14 @@ final class Library {
         photos = []
         let files = Self.imageFiles(in: url, recursive: includeSubfolders)
 
-        // Если рядом лежат RAW и JPEG с одним именем — показываем один RAW.
+        // If a RAW and a JPEG with the same name sit side by side, show only the RAW.
         let rawBases = Set(files.filter { ImageStore.rawExtensions.contains($0.pathExtension.lowercased()) }
             .map { $0.deletingPathExtension().path })
         let chosen = files.filter {
             ImageStore.rawExtensions.contains($0.pathExtension.lowercased()) || !rawBases.contains($0.deletingPathExtension().path)
         }
 
-        // Обработка хранится в каждой папке своя.
+        // Each folder keeps its own edits.
         var edits: [URL: [String: Adjustments]] = [:]
         var indexes: [URL: [String: IndexEntry]] = [:]
         for dir in Set(chosen.map { $0.deletingLastPathComponent() }) {
@@ -697,7 +697,7 @@ final class Library {
             var p = Photo(id: f, fileSize: size, rating: s.rating, rejected: s.rejected, label: s.label)
             p.mtime = v?.contentModificationDate?.timeIntervalSince1970 ?? 0
             p.adj = edits[f.deletingLastPathComponent()]?[f.lastPathComponent] ?? .none
-            // Уже анализировали и файл не менялся — берём из индекса, не пересчитываем.
+            // Already analyzed and the file hasn't changed: take it from the index instead of recomputing.
             if let c = indexes[f.deletingLastPathComponent()]?[f.lastPathComponent], c.size == size, c.mtime == p.mtime {
                 p.exif = c.exif; p.hash = c.hash; p.sharpness = c.sharpness; p.cull = c.cull; p.indexed = true
             }
@@ -713,7 +713,7 @@ final class Library {
 
     func reload() { if let folder { open(folder) } }
 
-    /// Забыть индекс открытой папки (и вложенных) и посчитать заново.
+    /// Forget the index of the open folder (and its subfolders) and recompute it.
     func reanalyze() {
         for dir in Set(photos.map { $0.url.deletingLastPathComponent() }) {
             try? FileManager.default.removeItem(at: AnalysisIndex.file(for: dir))
@@ -721,7 +721,7 @@ final class Library {
         reload()
     }
 
-    /// Снимки папки; с recursive — и всех вложенных, кроме скрытых и «_Отклонённые».
+    /// Photos in the folder; with recursive, also in all subfolders except hidden ones and `_Отклонённые`.
     nonisolated static func imageFiles(in url: URL, recursive: Bool) -> [URL] {
         let fm = FileManager.default
         let keys: [URLResourceKey] = [.fileSizeKey, .isDirectoryKey]
@@ -745,9 +745,9 @@ final class Library {
         index = Dictionary(uniqueKeysWithValues: photos.enumerated().map { ($1.id, $0) })
     }
 
-    /// Фоном: EXIF, превью, хэш и резкость, затем серии и дубли.
-    /// Фоном и бережно: только новые/изменённые файлы, 2 потока с низким приоритетом,
-    /// индекс сохраняется по ходу (каждые 50 кадров) — прерванный анализ не пропадает.
+    /// In the background: EXIF, preview, hash and sharpness, then series and duplicates.
+    /// Background and gentle: only new/changed files, 2 low-priority threads,
+    /// the index is saved as it goes (every 50 photos), so an interrupted analysis isn't lost.
     private func startAnalysis() {
         analyzed = photos.filter(\.indexed).count
         let urls = photos.filter { !$0.indexed }.map(\.id)
@@ -761,17 +761,17 @@ final class Library {
                 func add() -> Bool {
                     guard let u = it.next() else { return false }
                     group.addTask(priority: .utility) {
-                        // Баланс белого «как снято» (~40 мс, CIRAWFilter) — не здесь: он нужен только обработке и считается по требованию.
+                        // As-shot white balance (~40 ms, CIRAWFilter) is not computed here: only editing needs it, so it's computed on demand.
                         let exif = store.exif(u)
                         guard let img = store.preview(u) else { return (u, exif, nil, nil, nil) }
-                        // Только лёгкая индексация (~5 мс): EXIF, хэш для серий и дублей, общая резкость.
-                        // Лица, глаза и прочий AI-анализ — по кнопке (startAI), он нагружает Mac.
+                        // Lightweight indexing only (~5 ms): EXIF, hash for series and duplicates, overall sharpness.
+                        // Faces, eyes and the rest of the AI analysis run on a button press (startAI); it loads the Mac heavily.
                         return (u, exif, store.dHash(img), store.sharpness(img), nil)
                     }
                     return true
                 }
                 for _ in 0..<workers { _ = add() }
-                // Результаты — в интерфейс пачками: каждая правка photos перерисовывает счётчики по всей папке.
+                // Push results to the UI in batches: every change to photos redraws the counters for the whole folder.
                 var batch: [(URL, ExifInfo, UInt64?, Double?)] = []
                 func flush() async {
                     let b = batch; batch = []
@@ -809,7 +809,7 @@ final class Library {
         }
     }
 
-    /// Кадру нужен AI-анализ: его ещё не было, или после установки сетки лица MediaPipe глаза у лиц мерились по-старому.
+    /// The photo needs AI analysis: it hasn't had one yet, or its face eyes were measured the old way before the MediaPipe face mesh was installed.
     func needsAI(_ p: Photo, mesh: Bool = FaceMesh.shared.installed) -> Bool {
         guard let c = p.cull else { return true }
         return mesh && c.mesh != true && !c.faces.isEmpty
@@ -821,11 +821,11 @@ final class Library {
         return photos.reduce(0) { $0 + (needsAI($1, mesh: mesh) ? 1 : 0) }
     }
 
-    /// AI-анализ открытой папки: лица и глаза (Apple Vision, MediaPipe), смаз по лицу или объекту,
-    /// пересвет на лице, горизонт, эстетика. Фоном, с прогрессом; уже посчитанное берётся из индекса.
+    /// AI analysis of the open folder: faces and eyes (Apple Vision, MediaPipe), blur on the face or subject,
+    /// overexposed faces, horizon, aesthetics. In the background with progress; already computed results come from the index.
     func startAI() {
         guard !aiRunning, analyzed >= photos.count else { return }
-        FaceMesh.shared.installBundledIfNeeded()   // на случай, если запуск опередил установку при старте
+        FaceMesh.shared.installBundledIfNeeded()   // in case launch got ahead of the install at startup
         let mesh = FaceMesh.shared.installed
         let urls = photos.filter { needsAI($0, mesh: mesh) }.map(\.id)
         guard !urls.isEmpty else { return }
@@ -874,14 +874,14 @@ final class Library {
                 guard let self else { return }
                 self.saveIndex()
                 self.aiRunning = false
-                self.finishAnalysis()   // лучший в серии и медианы — уже с учётом лиц и глаз
+                self.finishAnalysis()   // best in series and medians, now taking faces and eyes into account
             }
         }
     }
 
     func stopAI() { aiTask?.cancel() }
 
-    /// Индекс по папкам: только проанализированные файлы, удалённые выпадают сами.
+    /// Per-folder index: only analyzed files; deleted ones drop out on their own.
     private func saveIndex() {
         var byDir: [URL: [String: IndexEntry]] = [:]
         for p in photos where p.indexed {
@@ -892,7 +892,7 @@ final class Library {
     }
 
     private func finishAnalysis() {
-        // Порядок съёмки — по времени из EXIF.
+        // Shooting order, by EXIF time.
         photos.sort {
             switch ($0.exif.date, $1.exif.date) {
             case let (a?, b?) where a != b: a < b
@@ -903,12 +903,12 @@ final class Library {
         aiCount = photos.filter { $0.cull != nil }.count
         groupSeries()
         findDuplicates()
-        computeScenes()       // сцены — до статистики: резкость сравнивается внутри сцены
+        computeScenes()       // scenes before statistics: sharpness is compared within a scene
         updateCullStats()
     }
 
-    /// Серия = подряд идущие кадры с похожей картинкой (расстояние Хэмминга ≤ 12)
-    /// и паузой не больше 30 секунд.
+    /// Series = consecutive photos with similar images (Hamming distance ≤ 12)
+    /// and no more than 30 seconds apart.
     private func groupSeries() {
         var next = 1
         var runStart = 0
@@ -940,7 +940,7 @@ final class Library {
         close(photos.count)
     }
 
-    /// Точный дубль: тот же размер файла, то же время съёмки и та же картинка.
+    /// Exact duplicate: same file size, same capture time and same image.
     private func findDuplicates() {
         var seen: [String: URL] = [:]
         for i in photos.indices {
@@ -951,13 +951,13 @@ final class Library {
         }
     }
 
-    // MARK: - Навигация и выделение
+    // MARK: - Navigation and selection
 
-    /// Выделенные снимки. currentID — тот, что в фокусе (показан в просмотре и в инфо).
+    /// Selected photos. currentID is the focused one (shown in the loupe and in Info).
     var selection: Set<URL> = []
     private var anchorID: URL?
 
-    /// С чем работают оценки, метки и сохранение: выделение, а если выделен один — текущий.
+    /// What ratings, labels and saving act on: the selection, or the current photo if only one is selected.
     var targets: [Photo] {
         let sel = selection.filter { index[$0] != nil }
         if sel.count > 1 { return photos.filter { sel.contains($0.id) } }
@@ -969,7 +969,7 @@ final class Library {
     func isSelected(_ p: Photo) -> Bool { p.id == currentID || selection.contains(p.id) }
 
     private func focus(_ id: URL?, extend: Bool = false) {
-        currentID = id   // масштаб сохраняется: удобно листать серию и сравнивать резкость в 100%
+        currentID = id   // zoom is kept: handy for flipping through a series and comparing sharpness at 100%
         if culling, let id { viewed.insert(id) }
         guard let id else { selection = []; return }
         if extend, let anchor = anchorID { selectRange(from: anchor, to: id) } else {
@@ -992,9 +992,9 @@ final class Library {
         focus(list[n].id, extend: extend)
     }
 
-    /// Клик: обычный — один снимок, ⌘ — добавить/убрать, ⇧ — диапазон.
-    /// Модификаторы в момент нажатия кнопки мыши. Одиночный клик SwiftUI срабатывает с задержкой
-    /// (ждёт возможный двойной), и к этому времени ⌘ часто уже отпущен — поэтому запоминаем при нажатии.
+    /// Click: plain selects one photo, ⌘ adds/removes, ⇧ selects a range.
+    /// Modifiers at mouse-down time. A SwiftUI single click fires with a delay
+    /// (it waits for a possible double click), and by then ⌘ is often already released, so we capture them on mouse-down.
     var clickModifiers: NSEvent.ModifierFlags = []
 
     func click(_ p: Photo) {
@@ -1019,7 +1019,7 @@ final class Library {
 
     func select(_ p: Photo) { focus(p.id) }
 
-    /// Выделение рамкой: hit — задетые кадры в порядке сетки, adding — что было выделено до (с ⌘/⇧).
+    /// Marquee selection: hit = photos touched, in grid order; adding = what was selected before (with ⌘/⇧).
     func setMarquee(_ hit: [URL], adding base: Set<URL>) {
         selection = base.union(hit)
         guard let first = hit.first else {
@@ -1040,13 +1040,13 @@ final class Library {
 
     func clearSelection() { focus(currentID) }
 
-    /// Выделить все кадры серии, в которой текущий.
+    /// Select all photos of the current photo's series.
     func selectSeries() {
         guard let p = current, p.seriesID != nil else { return }
         selection = Set(series(of: p).map(\.id))
     }
 
-    // MARK: - Оценки (применяются ко всем выделенным)
+    // MARK: - Ratings (applied to all selected)
 
     func setRating(_ r: Int) {
         let many = multiSelected
@@ -1089,7 +1089,7 @@ final class Library {
     private func advanceIfNeeded() {
         guard autoAdvance, !comparing, let cur = currentID else { return }
         let list = visible
-        // Если кадр выпал из текущего фильтра — встаём на следующий за ним.
+        // If the photo dropped out of the current filter, move to the next one after it.
         if !list.contains(where: { $0.id == cur }) {
             let all = photos.map(\.id)
             if let i = all.firstIndex(of: cur) {
@@ -1109,9 +1109,9 @@ final class Library {
         }
     }
 
-    // MARK: - Файловые операции
+    // MARK: - File operations
 
-    /// Переносит отклонённые в подпапку «_Отклонённые» (вместе с XMP и парным JPEG). Удаления нет.
+    /// Moves rejected photos into the `_Отклонённые` subfolder (along with XMP and the paired JPEG). Nothing is deleted.
     func moveRejected() {
         let rejected = photos.filter(\.rejected)
         guard !rejected.isEmpty else { flash(tr("Нет отклонённых")); return }
@@ -1138,7 +1138,7 @@ final class Library {
         flash(tr("Перенесено: \(moved)"))
     }
 
-    // MARK: - Сохранение в папку
+    // MARK: - Save to Folder
 
     var export = ExportSettings.load()
     var showExport = false
@@ -1178,7 +1178,7 @@ final class Library {
         exportTotal = items.count
         exportTask = Task { [weak self] in
             var ok = 0
-            // RAW → JPEG тяжёлый (~1–2 с на кадр 50 Мп), поэтому по 3 параллельно.
+            // RAW → JPEG is heavy (~1–2 s per 50 MP photo), so run 3 in parallel.
             let workers = settings.format == .jpeg ? 3 : 1
             await withTaskGroup(of: Bool.self) { group in
                 var it = items.makeIterator()
@@ -1216,7 +1216,7 @@ final class Library {
         flash(tr("Сохранено: \(ok) → \(target.lastPathComponent)"))
     }
 
-    /// Клавиша S: текущий кадр сразу в папку сохранения (копия оригинала + XMP).
+    /// S key: save the current photo straight to the save folder (copy of the original + XMP).
     func quickSend() {
         let list = targets
         guard !list.isEmpty else { return }
@@ -1233,7 +1233,7 @@ final class Library {
         }
     }
 
-    /// Выделенные, а если выделен один — всё, что показано в фильтре.
+    /// The selection, or, if only one is selected, everything shown in the filter.
     func openVisibleInCaptureOne() {
         let urls = (multiSelected ? targets : visible).map(\.url)
         guard !urls.isEmpty else { return }
@@ -1246,15 +1246,15 @@ final class Library {
         if !urls.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(urls) }
     }
 
-    // MARK: - Контекстное меню
+    // MARK: - Context menu
 
-    /// Правый клик как в Finder: по выделенному — действие над всем выделением,
-    /// по невыделенному — сначала выделяем только его.
+    /// Right-click as in Finder: on a selected photo, the action applies to the whole selection;
+    /// on an unselected one, select only it first.
     func contextTarget(_ p: Photo) {
         if !isSelected(p) { focus(p.id) }
     }
 
-    /// Сколько снимков затронет действие из меню этого кадра.
+    /// How many photos an action from this photo's menu will affect.
     func contextCount(_ p: Photo) -> Int { isSelected(p) && multiSelected ? targets.count : 1 }
 
     func openTargetsInCaptureOne() {
@@ -1275,7 +1275,7 @@ final class Library {
         flash(tr("Путь скопирован") + countSuffix)
     }
 
-    /// Окно сохранения с уже выбранными «Выделенные» и нужным форматом.
+    /// Save dialog with "Selected" and the right format already chosen.
     func exportTargets(as format: ExportSettings.Format) {
         export.scope = .selected
         export.format = format

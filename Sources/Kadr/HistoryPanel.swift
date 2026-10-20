@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Вкладка «Журнал»: шаги новые сверху, клик — перейти к состоянию после этого шага.
+/// "History" tab: newest steps on top; click to go to the state after that step.
 struct HistoryPanel: View {
     @Environment(Library.self) private var lib
     @State private var onlyCurrent = false
@@ -31,7 +31,7 @@ struct HistoryPanel: View {
                             .font(.caption).foregroundStyle(.secondary).padding(16)
                     }
                     ForEach(rows, id: \.element.id) { i, e in row(i, e) }
-                    // Нижняя строка — состояние до всех шагов журнала.
+                    // The bottom row is the state before all history steps.
                     Button { lib.jumpHistory(to: 0) } label: {
                         HStack {
                             Image(systemName: lib.historyPos == 0 ? "largecircle.fill.circle" : "circle")

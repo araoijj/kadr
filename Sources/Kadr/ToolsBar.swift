@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Основные инструменты в верхней панели: вид, кадрирование, шторка, сравнение, 100%, обработка.
-/// Включённый инструмент подсвечен; в подсказке — клавиша.
+/// Main tools in the top bar: view, crop, Before/After split, compare, 100%, edit.
+/// The active tool is highlighted; the tooltip shows its key.
 struct ToolsBar: View {
     @Environment(Library.self) private var lib
 

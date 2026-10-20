@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Сборка Kadr.app: swift build → обёртка .app → ~/Applications
+# Builds Kadr.app: swift build → .app bundle → ~/Applications
 set -e
 cd "$(dirname "$0")"
 swift build -c release
@@ -7,8 +7,8 @@ APP=build/Kadr.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/Kadr "$APP/Contents/MacOS/Kadr"
-# Сетка лица MediaPipe (Apache 2.0) — внутрь приложения, чтобы AI-отбор работал без отдельной установки.
-# В репозитории моделей нет: архив берётся из выпуска models-1 и кэшируется в .build.
+# MediaPipe face mesh (Apache 2.0) goes inside the app so AI culling works without a separate install.
+# The models are not in the repo: the archive is fetched from the models-1 release and cached in .build.
 MODELS_ZIP=.build/models/kadr-facemesh-1.zip
 if [ ! -s "$MODELS_ZIP" ]; then
   mkdir -p .build/models
@@ -19,7 +19,7 @@ if [ -s "$MODELS_ZIP" ]; then
   ditto -x -k "$MODELS_ZIP" .build/models/x && rm -rf "$APP/Contents/Resources/FaceMesh" \
     && mv .build/models/x/kadr-facemesh-1 "$APP/Contents/Resources/FaceMesh" && rm -rf .build/models/x
 fi
-# Иконка: Resources/AppIcon-1024.png (рисуется tools/make-icon.swift) → AppIcon.icns
+# Icon: Resources/AppIcon-1024.png (drawn by tools/make-icon.swift) → AppIcon.icns
 ICONSET=.build/AppIcon.iconset
 rm -rf "$ICONSET" && mkdir -p "$ICONSET"
 for s in 16 32 128 256 512; do
@@ -46,7 +46,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 codesign --force --deep -s - "$APP" >/dev/null 2>&1 || true
 echo "Готово: $PWD/$APP"
-# Установка: та копия, что запускается из Launchpad/Spotlight. Запущенное приложение сперва закрыть.
+# Install: the copy launched from Launchpad/Spotlight. Quit the running app first.
 if pgrep -x Kadr >/dev/null; then
   echo "«Кадр» запущен — закройте его и повторите, иначе в ~/Applications останется старая версия"
 else

@@ -1,16 +1,16 @@
 import AppKit
 import SwiftUI
 
-/// Режим «Отбор»: большой кадр, прогресс, решения, очередь и турнир — ручной отбор.
-/// AI-отбор (причины брака, AI-очереди, лица в 100%) — после запуска AI-анализа и при включённых подсказках.
+/// "Culling" mode: large frame, progress, decisions, queue and "Tournament" — manual culling.
+/// AI culling (reject reasons, AI queues, faces at 100%) appears after "Run AI Analysis" and with "Hints" enabled.
 struct CullView: View {
     @Environment(Library.self) private var lib
     @State private var barHeight: CGFloat = 84
 
     var body: some View {
         VStack(spacing: 0) {
-            // Панель подстраивается под ширину центра, а не задаёт её: иначе вместе с «Инфо»
-            // она распирает окно и боковые панели уезжают за край.
+            // The bar adapts to the center width instead of dictating it: otherwise, together with "Info",
+            // it stretches the window and pushes the side panels off the edge.
             Color.clear.frame(maxWidth: .infinity).frame(height: barHeight)
                 .overlay(alignment: .topLeading) {
                     CullTopBar()
@@ -31,7 +31,7 @@ struct CullView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // Лица — только если кадру остаётся место (узкое окно: лица смотрятся зумом).
+                // Faces only if the frame still has room (narrow window: faces are viewed via zoom).
                 if lib.aiOn, g.size.width >= 640, let p = lib.current, !(p.cull?.faces.isEmpty ?? true) {
                     Divider()
                     FacesColumn(photo: p).frame(width: 210)
@@ -50,8 +50,8 @@ struct CullTopBar: View {
     @Environment(Library.self) private var lib
 
     var body: some View {
-        // Сверху — ручной отбор (прогресс, решения, очередь, турнир), ниже — отдельная полоса AI-отбора.
-        // Широкое окно — две строки, узкое — три: иначе панель распирает окно.
+        // Manual culling on top (progress, decisions, queue, tournament), with a separate AI culling strip below.
+        // Wide window: two rows, narrow: three; otherwise the bar stretches the window.
         ViewThatFits(in: .horizontal) {
             VStack(spacing: 8) {
                 HStack(spacing: 14) {
@@ -115,8 +115,8 @@ struct CullTopBar: View {
         .fixedSize()
     }
 
-    /// AI-отбор: запуск по кнопке, прогресс, затем подсказки, строгость и AI-действия.
-    /// Пока не запущен — отбор полностью ручной, без значков брака.
+    /// AI culling: started by a button, then progress, then hints, strictness and AI actions.
+    /// Until it runs, culling is fully manual, with no reject badges.
     @ViewBuilder private func aiStrip(compact: Bool) -> some View {
         @Bindable var lib = lib
         HStack(spacing: 10) {
@@ -207,7 +207,7 @@ struct CullTopBar: View {
     }
 }
 
-/// Поверх кадра: решение, причины брака, оценка, «Выровнять».
+/// Frame overlay: decision, reject reasons, rating, "Straighten".
 struct CullOverlay: View {
     let photo: Photo
     @Environment(Library.self) private var lib
@@ -256,7 +256,7 @@ struct CullOverlay: View {
     }
 }
 
-/// Лица текущего кадра в 100% — резкость глаз видна сразу, без зума.
+/// Faces in the current frame at 100%, so eye sharpness is visible right away without zooming.
 struct FacesColumn: View {
     let photo: Photo
     @Environment(Library.self) private var lib
@@ -305,9 +305,9 @@ struct FaceCrop: View {
             }
         }
         .task(id: ThumbKey(url: photo.url, adj: photo.adj)) {
-            // Лицо в координатах кадрированного снимка; квадрат вокруг лица в ~100% (380 px на Retina).
+            // Face in the cropped image's coordinates; a square around the face at ~100% (380 px on Retina).
             let a = photo.adj
-            // Квадрат в пикселях (кадр 3:2 — в долях это прямоугольник), внутри границ снимка.
+            // Square in pixels (a 3:2 frame makes it a rectangle in fractions), within the image bounds.
             let ps = lib.pixelSize(photo)
             let W = ps.width * a.cropW, H = ps.height * a.cropH
             var f = face.rect
@@ -321,7 +321,7 @@ struct FaceCrop: View {
     }
 }
 
-/// Итог отбора: сколько оставлено и отклонено, и что сделать дальше.
+/// Culling summary: how many were kept and rejected, and what to do next.
 struct CullSummary: View {
     @Environment(Library.self) private var lib
     @Environment(\.dismiss) private var dismiss

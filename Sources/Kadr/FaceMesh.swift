@@ -2,24 +2,24 @@ import CoreGraphics
 import CoreML
 import Foundation
 
-/// Сетка лица MediaPipe Face Landmarker (Google, Apache 2.0), перегнанная в Core ML:
-/// 478 точек лица → 52 оценки мимики, из них моргание и прищур каждого глаза.
-/// Модели (~7 МБ) лежат в «Папке данных»/Models и ставятся из настроек; без них отбор
-/// судит о глазах по контуру от macOS — грубее: прищур и взгляд вниз путаются с морганием.
+/// MediaPipe Face Landmarker face mesh (Google, Apache 2.0), converted to Core ML:
+/// 478 face landmarks → 52 blendshape scores, including blink and squint for each eye.
+/// The models (~7 MB) live in "Data folder"/Models and are installed from Settings; without them Culling
+/// judges eyes by the macOS contour, which is cruder: squints and downward gazes get confused with blinks.
 final class FaceMesh: @unchecked Sendable {
     static let shared = FaceMesh()
 
     struct Eyes: Codable, Sendable, Hashable {
-        var blink: Double      // моргание слабее закрытого глаза 0…1: оба закрыты ≥ ~0,42, открытые ≤ ~0,3
-        var squint: Double     // прищур (смех, солнце)
-        var lookDown: Double   // взгляд вниз; у закрытых век модель тоже ставит ≥ ~0,5, у тёмных очков — ~0
+        var blink: Double      // blink of the less closed eye 0…1: both closed ≥ ~0.42, open ≤ ~0.3
+        var squint: Double     // squint (laughing, sun)
+        var lookDown: Double   // downward gaze; the model also gives ≥ ~0.5 for closed lids, ~0 for dark glasses
     }
 
-    /// Архив с моделями в выпусках репозитория «Кадра».
+    /// Model archive in the Kadr repository releases.
     static let downloadURL = URL(string: "https://github.com/araoijj/kadr/releases/download/models-1/kadr-facemesh-1.zip")!
 
     static let modelNames = ["face_landmarks_detector", "face_blendshapes"]
-    /// Индексы 146 точек, которые модель мимики берёт из 478 (из исходников MediaPipe, face_blendshapes_graph.cc).
+    /// Indices of the 146 landmarks the blendshape model takes from the 478 (from the MediaPipe sources, face_blendshapes_graph.cc).
     private static let subset = [
         0, 1, 4, 5, 6, 7, 8, 10, 13, 14, 17, 21, 33, 37, 39, 40, 46, 52, 53, 54, 55, 58, 61, 63, 65, 66, 67, 70, 78, 80,
         81, 82, 84, 87, 88, 91, 93, 95, 103, 105, 107, 109, 127, 132, 133, 136, 144, 145, 146, 148, 149, 150, 152, 153, 154, 155, 157, 158, 159, 160,
@@ -34,15 +34,15 @@ final class FaceMesh: @unchecked Sendable {
     let folder: URL
 
     init(folder: URL? = nil) {
-        // KADR_MODELS — другая папка моделей (для проверочных прогонов, чтобы не трогать «Папку данных»).
+        // KADR_MODELS points to another models folder (for test runs, so the "Data folder" stays untouched).
         let env = ProcessInfo.processInfo.environment["KADR_MODELS"].map { URL(fileURLWithPath: $0, isDirectory: true) }
         self.folder = folder ?? env ?? AppFolders.support.appendingPathComponent("Models", isDirectory: true)
     }
 
-    /// Модели установлены и загружаются.
+    /// Models are installed and load.
     var available: Bool { lock.withLock { load(); return landmarks != nil && blend != nil } }
 
-    /// Модели на диске (без загрузки). Запоминается: спрашивают на каждый кадр и при каждой перерисовке.
+    /// Models are on disk (without loading). Cached: it's queried for every frame and on every redraw.
     var installed: Bool {
         lock.withLock {
             if let installedCache { return installedCache }
@@ -53,7 +53,7 @@ final class FaceMesh: @unchecked Sendable {
     }
     private var installedCache: Bool?
 
-    /// Поставить модели из папки, архива .zip или одного .mlpackage: компилируем в .mlmodelc и кладём в Models.
+    /// Install models from a folder, a .zip archive or a single .mlpackage: compile to .mlmodelc and put into Models.
     func install(from src: URL) throws {
         let fm = FileManager.default
         var dir = src
@@ -89,14 +89,14 @@ final class FaceMesh: @unchecked Sendable {
         lock.withLock { tried = false; landmarks = nil; blend = nil; installedCache = nil }
     }
 
-    /// Модели, встроенные в приложение (Contents/Resources/FaceMesh) — ставятся сами при первом запуске.
+    /// Models bundled with the app (Contents/Resources/FaceMesh); installed automatically on first launch.
     static var bundled: URL? {
         guard let u = Bundle.main.resourceURL?.appendingPathComponent("FaceMesh", isDirectory: true),
               FileManager.default.fileExists(atPath: u.appendingPathComponent(modelNames[0] + ".mlpackage").path) else { return nil }
         return u
     }
 
-    /// Поставить встроенные модели, если их ещё нет (компиляция ~0,3 с). Пользователю ничего нажимать не нужно.
+    /// Install the bundled models if they aren't there yet (compilation ~0.3 s). The user doesn't need to do anything.
     func installBundledIfNeeded() {
         guard !installed, let b = Self.bundled else { return }
         try? install(from: b)
@@ -117,18 +117,18 @@ final class FaceMesh: @unchecked Sendable {
         blend = m(Self.modelNames[1])
     }
 
-    /// Моргание и прищур лица. `face` — рамка от macOS в долях кадра (y сверху вниз).
+    /// Blink and squint for a face. `face` is the macOS box in frame fractions (y from top to bottom).
     func eyes(_ img: CGImage, face r: CGRect) -> Eyes? {
         guard let b = blendshapes(img, face: r) else { return nil }
         // 9/10 — eyeBlinkLeft/Right, 11/12 — eyeLookDownLeft/Right, 19/20 — eyeSquintLeft/Right.
-        // Моргание — по менее закрытому глазу: при настоящем моргании закрыты оба, а у смеха,
-        // взгляда вбок и полупрофиля один глаз остаётся открытым (калибровка на 2032 кадрах).
+        // Blink uses the less closed eye: in a real blink both are closed, whereas when laughing,
+        // looking sideways or in half-profile one eye stays open (calibrated on 2032 frames).
         return Eyes(blink: min(b[9], b[10]), squint: max(b[19], b[20]), lookDown: (b[11] + b[12]) / 2)
     }
 
-    /// 52 оценки мимики MediaPipe (порядок — как в face_blendshapes_graph.cc: 0 _neutral, 9/10 eyeBlink, 11/12 eyeLookDown…).
-    /// Два прохода, как у MediaPipe при слежении: грубый кроп по рамке, затем точный — по найденным точкам
-    /// (поворот по линии глаз, квадрат ×1,5). ~12 мс на лицо.
+    /// 52 MediaPipe blendshape scores (order as in face_blendshapes_graph.cc: 0 _neutral, 9/10 eyeBlink, 11/12 eyeLookDown…).
+    /// Two passes, like MediaPipe in tracking mode: a rough crop from the box, then a precise one from the found landmarks
+    /// (rotated along the eye line, square ×1.5). ~12 ms per face.
     func blendshapes(_ img: CGImage, face r: CGRect) -> [Double]? {
         lock.withLock {
             load()
@@ -149,7 +149,7 @@ final class FaceMesh: @unchecked Sendable {
         }
     }
 
-    /// Второй проход: область по точкам первого — центр рамки точек, поворот по уголкам глаз 33 → 263.
+    /// Second pass: region from the first pass's landmarks: center of the landmark box, rotation from eye corners 33 → 263.
     private func mesh(_ model: MLModel, _ img: CGImage, roi p: [CGPoint]) -> [CGPoint]? {
         let xs = p.map(\.x), ys = p.map(\.y)
         guard let x0 = xs.min(), let x1 = xs.max(), let y0 = ys.min(), let y1 = ys.max() else { return nil }
@@ -157,15 +157,15 @@ final class FaceMesh: @unchecked Sendable {
         return mesh(model, img, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, side: max(x1 - x0, y1 - y0) * 1.5, rot: rot)
     }
 
-    /// Квадрат `side` с центром (cx, cy), повёрнутый на `rot`, → 256×256 → 478 точек в пикселях кадра (y сверху вниз).
+    /// Square `side` centered at (cx, cy), rotated by `rot` → 256×256 → 478 landmarks in frame pixels (y from top to bottom).
     private func mesh(_ model: MLModel, _ img: CGImage, cx: Double, cy: Double, side: Double, rot: Double) -> [CGPoint]? {
         let n = 256
-        // F: точка кропа (u, v) → точка кадра (X, Y), обе сверху вниз.
+        // F: crop point (u, v) → frame point (X, Y), both top to bottom.
         let k = side / Double(n), c = cos(rot), s = sin(rot)
         let a = k * c, b = -k * s, d = k * s, e = k * c
         let tx = cx - (a + b) * Double(n) / 2, ty = cy - (d + e) * Double(n) / 2
         let F = CGAffineTransform(a: a, b: d, c: b, d: e, tx: tx, ty: ty)
-        // Контексты Core Graphics считают снизу вверх: переворачиваем кроп и кадр.
+        // Core Graphics contexts count from bottom to top: flip the crop and the frame.
         let flipCrop = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: Double(n))
         let flipImg = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: Double(img.height))
         let G = flipCrop.concatenating(F).concatenating(flipImg)
@@ -187,7 +187,7 @@ final class FaceMesh: @unchecked Sendable {
         }
         guard let out = try? model.prediction(from: MLDictionaryFeatureProvider(dictionary: ["input": x])),
               let lm = out.featureValue(for: "landmarks")?.multiArrayValue, lm.count >= 1434 else { return nil }
-        // Лицо в кропе вообще есть? Модель отдаёт логит уверенности.
+        // Is there a face in the crop at all? The model returns a confidence logit.
         if let pr = out.featureValue(for: "presence")?.multiArrayValue, pr.count > 0, 1 / (1 + exp(-pr[0].doubleValue)) < 0.5 { return nil }
         return (0..<478).map { i in
             let u = lm[i * 3].doubleValue, v = lm[i * 3 + 1].doubleValue

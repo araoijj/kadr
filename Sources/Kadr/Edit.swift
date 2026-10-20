@@ -3,40 +3,40 @@ import CoreImage
 import Foundation
 import ImageIO
 
-/// Настройки обработки кадра. Ползунки −100…100 (экспозиция — в EV, оттенки — в градусах), 0 — без изменений.
+/// Per-frame edit settings. Sliders are −100…100 (exposure in EV, hues in degrees); 0 means no change.
 struct Adjustments: Codable, Equatable, Hashable {
     enum Profile: String, Codable, CaseIterable {
-        case camera     // цвета как в JPEG камеры (подбираются по встроенному превью)
-        case standard   // проявление macOS как есть
+        case camera     // colors as in the camera JPEG (fitted to the embedded preview)
+        case standard   // macOS RAW development as is
     }
 
     var profile: Profile = .camera
     var exposure: Double = 0      // −3…+3 EV
-    var wbShift: Double = 0       // баланс белого: сдвиг от «как снято», кельвины (+ теплее)
-    var tint: Double = 0          // −150…+150 как в Lightroom: зеленее ← → пурпурнее
+    var wbShift: Double = 0       // white balance: shift from "as shot", in kelvin (+ is warmer)
+    var tint: Double = 0          // −150…+150 as in Lightroom: greener ← → more magenta
     var contrast: Double = 0
     var highlights: Double = 0
     var shadows: Double = 0
-    var fade: Double = 0          // 0…100, «матовость» — приподнятые чёрные
-    var clarity: Double = 0       // локальный контраст
+    var fade: Double = 0          // 0…100, "matte" look: lifted blacks
+    var clarity: Double = 0       // local contrast
     var vibrance: Double = 0
     var saturation: Double = 0
-    var shadowHue: Double = 0     // тонирование теней: 0…360
+    var shadowHue: Double = 0     // shadow toning: 0…360
     var shadowSat: Double = 0     // 0…100
-    var highlightHue: Double = 0  // тонирование светов
+    var highlightHue: Double = 0  // highlight toning
     var highlightSat: Double = 0
-    var vignette: Double = 0      // − затемнить края, + осветлить
+    var vignette: Double = 0      // − darkens the edges, + lightens them
     var grain: Double = 0         // 0…100
-    var lut: String?              // путь в папке LUT (.cube или HaldCLUT .png)
-    var lutAmount: Double = 100   // 0…200: больше 100 — усиление эффекта LUT
+    var lut: String?              // path inside the LUT folder (.cube or HaldCLUT .png)
+    var lutAmount: Double = 100   // 0…200: above 100 amplifies the LUT effect
 
-    // Кадрирование: прямоугольник в долях кадра (y — сверху вниз) и выравнивание горизонта, градусы.
+    // Crop: a rectangle in frame fractions (y from top to bottom) plus horizon straightening, in degrees.
     var cropX: Double = 0
     var cropY: Double = 0
     var cropW: Double = 1
     var cropH: Double = 1
     var angle: Double = 0
-    var cropAspect: String?       // выбранный формат в панели (для подсветки), на картинку не влияет
+    var cropAspect: String?       // format selected in the panel (for highlighting); does not affect the image
 
     var hasCrop: Bool { cropX != 0 || cropY != 0 || cropW != 1 || cropH != 1 }
     var hasGeometry: Bool { hasCrop || angle != 0 }
@@ -46,7 +46,7 @@ struct Adjustments: Codable, Equatable, Hashable {
     }
 
     static let none = Adjustments()
-    /// «До» для шторки: без цвета и тона, но с той же рамкой и горизонтом — половинки совпадают.
+    /// "Before" for the Before/After slider: no color or tone, but the same crop and horizon, so the halves line up.
     var beforeVersion: Adjustments {
         var b = Adjustments()
         b.profile = profile
@@ -56,26 +56,26 @@ struct Adjustments: Codable, Equatable, Hashable {
         return b
     }
 
-    /// Без изменений: всё по умолчанию и LUT не выбран (его сила тогда не важна).
+    /// Unchanged: everything at defaults and no LUT selected (its amount doesn't matter then).
     var isIdentity: Bool { var a = self; a.lutAmount = 100; a.cropAspect = nil; return a == .none }
 }
 
 extension Adjustments {
     private enum LegacyKeys: String, CodingKey { case temperature }
 
-    /// Сборка рецепта: Adjustments { $0.contrast = 20; $0.vibrance = 30 }
+    /// Recipe builder: Adjustments { $0.contrast = 20; $0.vibrance = 30 }
     init(_ build: (inout Adjustments) -> Void) {
         self.init()
         build(&self)
     }
 
-    /// Старые edits.json и styles.json без новых полей тоже читаются.
+    /// Old edits.json and styles.json files without the new fields still decode.
     init(from d: Decoder) throws {
         let c = try d.container(keyedBy: CodingKeys.self)
         self.init()
         func v(_ k: CodingKeys) -> Double? { try? c.decodeIfPresent(Double.self, forKey: k) }
         profile = (try? c.decodeIfPresent(Profile.self, forKey: .profile)) ?? .camera
-        // Старые сохранения хранили «температуру» в условных −100…100 (1 ед. ≈ 30 K) — переводим в кельвины.
+        // Old saves stored "temperature" in arbitrary −100…100 units (1 unit ≈ 30 K); convert to kelvin.
         let legacy = try? d.container(keyedBy: LegacyKeys.self)
         let oldTemp = (try? legacy?.decodeIfPresent(Double.self, forKey: .temperature)) ?? nil
         exposure = v(.exposure) ?? 0; wbShift = v(.wbShift) ?? (oldTemp.map { $0 * 30 } ?? 0); tint = v(.tint) ?? 0
@@ -92,7 +92,7 @@ extension Adjustments {
     }
 }
 
-/// Разделы настроек — как в окне «Новый пресет» Lightroom: в стиль можно сохранить только часть.
+/// Settings groups, as in Lightroom's "New Preset" window: a style can store only some of them.
 enum StyleGroup: String, Codable, CaseIterable, Identifiable {
     case profile, light, color, toning, effects, lut
     var id: String { rawValue }
@@ -109,7 +109,7 @@ enum StyleGroup: String, Codable, CaseIterable, Identifiable {
 }
 
 extension Adjustments {
-    /// Переносит из стиля только выбранные разделы, остальное в кадре не трогает.
+    /// Copies only the selected groups from the style; leaves the rest of the frame untouched.
     mutating func merge(_ s: Adjustments, groups: Set<StyleGroup>) {
         for g in groups {
             switch g {
@@ -123,14 +123,14 @@ extension Adjustments {
         }
     }
 
-    /// Совпадает ли кадр со стилем в его разделах.
+    /// Whether the frame matches the style within the style's groups.
     func matches(_ s: Adjustments, groups: Set<StyleGroup>) -> Bool {
         var a = self
         a.merge(s, groups: groups)
         return a == self
     }
 
-    /// Разделы, в которых что-то изменено.
+    /// Groups that have something changed.
     var changedGroups: Set<StyleGroup> {
         Set(StyleGroup.allCases.filter { g in
             var a = Adjustments(); a.merge(self, groups: [g]); return a != Adjustments()
@@ -171,14 +171,14 @@ struct Style: Codable, Identifiable, Hashable {
         groups = (try? c.decode(Set<StyleGroup>.self, forKey: .groups)) ?? Set(StyleGroup.allCases)
     }
 
-    /// Нужен ли для стиля LUT, которого ещё нет (коллекцию не скачали).
+    /// Whether the style needs a LUT that isn't installed yet (the collection wasn't downloaded).
     var missingLUT: Bool { adj.lut.map { !LUTStore.shared.exists($0) } ?? false }
 }
 
-// MARK: - Хранилища
+// MARK: - Stores
 
 enum AppFolders {
-    /// Стандартное место данных и выбранное в настройках («Хранилище → Папка данных»).
+    /// Default data location, or the one chosen in Settings ("Storage → Data folder").
     static var defaultSupport: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Kadr", isDirectory: true)
     }
@@ -196,7 +196,7 @@ enum AppFolders {
     }
 }
 
-/// Обработка кадров съёмки: <папка>/.kadr/edits.json, ключ — имя файла.
+/// Edits for a shoot's frames: <folder>/.kadr/edits.json, keyed by file name.
 enum EditStore {
     static func file(in folder: URL) -> URL { folder.appendingPathComponent(".kadr/edits.json") }
 
@@ -207,7 +207,7 @@ enum EditStore {
 
     static func save(_ edits: [String: Adjustments], in folder: URL) {
         let f = file(in: folder)
-        // Не заводим .kadr в папках, где ничего не обрабатывали.
+        // Don't create .kadr in folders where nothing was edited.
         if edits.values.allSatisfy(\.isIdentity) && !FileManager.default.fileExists(atPath: f.path) { return }
         try? FileManager.default.createDirectory(at: f.deletingLastPathComponent(), withIntermediateDirectories: true)
         let enc = JSONEncoder()
@@ -229,8 +229,8 @@ enum StyleStore {
     }
 }
 
-/// LUT: .cube (3D) или HaldCLUT .png любого уровня. Разбираем один раз и держим в памяти.
-/// Лежат в папке LUT приложения, в том числе в подпапках-коллекциях.
+/// LUTs: .cube (3D) or HaldCLUT .png of any level. Parsed once and kept in memory.
+/// Stored in the app's LUT folder, including collection subfolders.
 final class LUTStore: @unchecked Sendable {
     static let shared = LUTStore()
     private let lock = NSLock()
@@ -241,7 +241,7 @@ final class LUTStore: @unchecked Sendable {
         return e == "cube" || e == "png"
     }
 
-    /// Относительные пути всех LUT, например «t3mujinpack/… Portra 400.png».
+    /// Relative paths of all LUTs, e.g. "t3mujinpack/… Portra 400.png".
     func list() -> [String] {
         let root = AppFolders.luts
         let en = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
@@ -255,7 +255,7 @@ final class LUTStore: @unchecked Sendable {
 
     func exists(_ name: String) -> Bool { FileManager.default.fileExists(atPath: AppFolders.luts.appendingPathComponent(name).path) }
 
-    /// Человеческое имя: без папки, расширения и префикса коллекции.
+    /// Human-readable name: no folder, extension or collection prefix.
     static func displayName(_ path: String) -> String {
         var n = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
         for prefix in ["t3mujinpack - "] where n.hasPrefix(prefix) { n = String(n.dropFirst(prefix.count)) }
@@ -263,7 +263,7 @@ final class LUTStore: @unchecked Sendable {
         return n
     }
 
-    /// Группа для списка: папка коллекции + категория плёнки.
+    /// Group for the list: collection folder + film category.
     static func group(_ path: String) -> String {
         let folder = (path as NSString).deletingLastPathComponent
         let n = (path as NSString).lastPathComponent
@@ -272,7 +272,7 @@ final class LUTStore: @unchecked Sendable {
         return cat.map { "\(base) · \($0)" } ?? base
     }
 
-    /// Копирует файлы в папку LUT приложения. Возвращает имена принятых.
+    /// Copies files into the app's LUT folder. Returns the names of the accepted ones.
     func importFiles(_ urls: [URL]) -> [String] {
         var ok: [String] = []
         for u in urls where Self.isLUT(u.lastPathComponent) {
@@ -310,7 +310,7 @@ final class LUTStore: @unchecked Sendable {
             if line.hasPrefix("LUT_3D_SIZE"), parts.count > 1 { size = Int(parts[1]) ?? 0; continue }
             if line.hasPrefix("DOMAIN_MIN"), parts.count > 3 { lo = parts[1...3].compactMap { Float($0) }; continue }
             if line.hasPrefix("DOMAIN_MAX"), parts.count > 3 { hi = parts[1...3].compactMap { Float($0) }; continue }
-            if line.first?.isLetter == true { continue }   // TITLE, LUT_1D_SIZE и прочее
+            if line.first?.isLetter == true { continue }   // TITLE, LUT_1D_SIZE and the like
             let rgb = parts.prefix(3).compactMap { Float($0) }
             guard rgb.count == 3 else { continue }
             for i in 0..<3 { values.append((rgb[i] - lo[i]) / max(hi[i] - lo[i], 0.0001)) }
@@ -320,7 +320,7 @@ final class LUTStore: @unchecked Sendable {
         return (size, values.withUnsafeBufferPointer { Data(buffer: $0) })
     }
 
-    /// HaldCLUT уровня L: картинка L³×L³, куб L²; при кубе больше 64 — пересэмплируем до 64.
+    /// HaldCLUT of level L: an L³×L³ image, an L² cube; cubes larger than 64 are resampled to 64.
     private static func parseHald(_ url: URL) -> (size: Int, data: Data)? {
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
               let img = CGImageSourceCreateImageAtIndex(src, 0, nil), img.width == img.height else { return nil }
@@ -333,7 +333,7 @@ final class LUTStore: @unchecked Sendable {
                                   space: CGColorSpace(name: CGColorSpace.sRGB)!,
                                   bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
         ctx.draw(img, in: CGRect(x: 0, y: 0, width: w, height: w))
-        // В HaldCLUT красный меняется быстрее всего — как в кубе Core Image.
+        // In HaldCLUT red changes fastest, same as in a Core Image cube.
         func at(_ r: Int, _ g: Int, _ b: Int, _ ch: Int) -> Float { Float(px[(r + g * n + b * n * n) * 4 + ch]) / 255 }
         let out = min(n, 64)
         var values = [Float](repeating: 1, count: out * out * out * 4)
@@ -360,7 +360,7 @@ final class LUTStore: @unchecked Sendable {
     }
 }
 
-// MARK: - Конвейер обработки
+// MARK: - Processing pipeline
 
 enum EditPipeline {
     static let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
@@ -379,7 +379,7 @@ enum EditPipeline {
     private static let mixKernel = CIColorKernel(source:
         "kernel vec4 mixk(__sample a, __sample b, float k) { return vec4(max(a.rgb + (b.rgb - a.rgb) * k, vec3(0.0)), a.a); }")!
 
-    /// Выравнивание горизонта (с увеличением, чтобы не было пустых углов) и кадрирование.
+    /// Horizon straightening (with zoom so there are no empty corners) and cropping.
     static func geometry(_ input: CIImage, _ a: Adjustments) -> CIImage {
         var img = input
         let e = input.extent
@@ -408,21 +408,21 @@ enum EditPipeline {
     private static let grainKernel = CIColorKernel(source:
         "kernel vec4 grain(__sample s, __sample n, float a) { return vec4(s.rgb * (1.0 + (n.r - 0.5) * a), s.a); }")!
 
-    /// Применяет настройки к линейному изображению (выход CIRAWFilter или превью).
-    /// cameraCube — подобранный профиль «как в камере» (только для проявленного RAW).
-    /// asShotK — баланс белого «как снято» (из RAW); от него считается сдвиг в кельвинах.
+    /// Applies the settings to a linear image (CIRAWFilter output or a preview).
+    /// cameraCube is the fitted "Camera matching" profile (developed RAW only).
+    /// asShotK is the "as shot" white balance (from the RAW); the kelvin shift is relative to it.
     static func apply(_ a: Adjustments, to input: CIImage, cameraCube: (size: Int, data: Data)? = nil, asShotK: Double = 5500) -> CIImage {
         var img = a.hasGeometry ? geometry(input, a) : input
         let e = img.extent
         let longSide = max(e.width, e.height)
 
-        // 1. Линейная часть — как «Основные» в Lightroom: до профиля.
+        // 1. Linear stage, like Lightroom's "Basic" panel: before the profile.
         if a.exposure != 0 {
             img = img.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: a.exposure])
         }
         if a.wbShift != 0 || a.tint != 0 {
-            // Как в Lightroom: «свет был K» → картинка пересчитывается от «как снято». Больше K — теплее.
-            // Знаки проверены замером R/G/B: «+» оттенок — пурпурнее.
+            // As in Lightroom: "the light was K" → the image is recomputed from "as shot". Higher K is warmer.
+            // Signs verified by measuring R/G/B: "+" tint is more magenta.
             let k = min(max(asShotK + a.wbShift, 2000), 50000)
             img = img.applyingFilter("CITemperatureAndTint", parameters: [
                 "inputNeutral": CIVector(x: k, y: 0),
@@ -437,14 +437,14 @@ enum EditPipeline {
             ])
         }
 
-        // 2. Профиль камеры: цвета и тон как в JPEG Sony.
+        // 2. Camera profile: colors and tone as in the Sony JPEG.
         if a.profile == .camera, let cube = cameraCube {
             img = img.applyingFilter("CIColorCubeWithColorSpace", parameters: [
                 "inputCubeDimension": cube.size, "inputCubeData": cube.data, "inputColorSpace": srgb,
             ])
         }
 
-        // 3. Чёткость — локальный контраст крупным радиусом (масштабируется с размером кадра).
+        // 3. Clarity: local contrast with a large radius (scaled with the frame size).
         if a.clarity != 0 {
             let radius = longSide * 0.012
             if a.clarity > 0 {
@@ -455,7 +455,7 @@ enum EditPipeline {
             }
         }
 
-        // 4. Кривая в гамма-пространстве: контраст, «плюсовые» света, «минусовые» тени, матовость.
+        // 4. Curve in gamma space: contrast, "positive" highlights, "negative" shadows, matte.
         let c = a.contrast / 100
         let hUp = max(a.highlights, 0) / 100, sDown = min(a.shadows, 0) / 100
         let f = a.fade / 100
@@ -482,23 +482,23 @@ enum EditPipeline {
             let lutted = img.applyingFilter("CIColorCubeWithColorSpace", parameters: [
                 "inputCubeDimension": cube.size, "inputCubeData": cube.data, "inputColorSpace": srgb,
             ])
-            // 0–100% — смешивание с исходным, 100–200% — усиление разницы, как Amount у профилей Lightroom.
+            // 0–100% blends with the original, 100–200% amplifies the difference, like Amount on Lightroom profiles.
             img = a.lutAmount == 100 ? lutted : (mixKernel.apply(extent: e, arguments: [img, lutted, a.lutAmount / 100]) ?? lutted)
         }
 
-        // 6. Тонирование теней и светов: мягкий свет цветом, маской по яркости.
+        // 6. Shadow and highlight toning: soft light with a color, masked by luminance.
         if a.shadowSat > 0 { img = tone(img, hue: a.shadowHue, sat: a.shadowSat, shadows: true) }
         if a.highlightSat > 0 { img = tone(img, hue: a.highlightHue, sat: a.highlightSat, shadows: false) }
 
-        // 7. Виньетка: плавно от 30% до краёв, на −100 углы почти чёрные, на +100 — почти белые.
+        // 7. Vignette: smooth falloff from 30% to the edges; at −100 the corners are nearly black, at +100 nearly white.
         if a.vignette != 0 {
             img = vignetteKernel.apply(extent: e, roiCallback: { _, r in r }, arguments: [
                 img, CIVector(x: e.midX, y: e.midY), hypot(e.width, e.height) / 2, a.vignette / 100,
             ]) ?? img
         }
 
-        // 8. Зерно: каждый пиксель умножается на 1 ± шум (средняя яркость не меняется — проверено замером).
-        // Шум укрупнён по размеру кадра — одинаково на превью и в экспорте.
+        // 8. Grain: each pixel is multiplied by 1 ± noise (mean brightness is unchanged; verified by measurement).
+        // Noise is scaled up with the frame size, so it looks the same in the preview and in the export.
         if a.grain > 0 {
             let scale = max(1, longSide / 2400)
             let noise = CIFilter(name: "CIRandomGenerator")!.outputImage!
@@ -522,9 +522,9 @@ enum EditPipeline {
         return toned.applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: img, kCIInputMaskImageKey: mask]).cropped(to: e)
     }
 
-    /// Исходник как линейный CIImage. maxSide — уменьшить при проявлении (быстрее), nil — полный размер.
-    /// У RAW повторяем кадрирование камеры: если JPEG камеры другой пропорции (например, съёмка в 4:3),
-    /// обрезаем по центру так же — иначе после первой правки в кадре появлялись бы лишние края.
+    /// The source as a linear CIImage. maxSide downscales during development (faster); nil means full size.
+    /// For RAW we replicate the camera crop: if the camera JPEG has a different aspect ratio (e.g. shot in 4:3),
+    /// we center-crop the same way; otherwise extra edges would appear in the frame after the first edit.
     static func source(_ url: URL, maxSide: CGFloat?) -> CIImage? {
         if ImageStore.rawExtensions.contains(url.pathExtension.lowercased()), let raw = CIRAWFilter(imageURL: url) {
             if let maxSide {
@@ -555,7 +555,7 @@ enum EditPipeline {
         return c.transformed(by: CGAffineTransform(translationX: -c.extent.minX, y: -c.extent.minY))
     }
 
-    /// Текстовый водяной знак поверх кадра.
+    /// Text watermark over the frame.
     static func watermark(_ img: CIImage, text: String, sizePercent: Double, opacity: Double, position: Watermark.Position) -> CIImage {
         let t = text.trimmingCharacters(in: .whitespaces)
         guard !t.isEmpty else { return img }

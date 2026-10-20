@@ -13,7 +13,7 @@ struct ExportSheet: View {
             }
             .padding(24)
             Divider()
-            // Настроек много — прокручиваются, кнопки всегда видны внизу.
+            // Lots of settings: they scroll, while the buttons always stay visible at the bottom.
             ScrollView { settings.padding(24) }
                 .frame(maxHeight: max(420, (NSScreen.main?.visibleFrame.height ?? 900) - 260))
             Divider()
@@ -37,8 +37,8 @@ struct ExportSheet: View {
                 .labelsHidden()
             }
 
-            // Три независимых решения: формат файла → размер в пикселях → качество сжатия.
-            // Ни один пункт не меняет другой «за спиной».
+            // Three independent choices: file format → pixel size → compression quality.
+            // No option changes another one behind your back.
             section(tr("Формат файла")) {
                 Picker("", selection: $lib.export.format) {
                     Text(tr("Оригиналы RAW + XMP")).tag(ExportSettings.Format.original)
@@ -169,7 +169,7 @@ struct ExportSheet: View {
         }
     }
 
-    /// Единственная настройка сжатия: качество JPEG. Размер в пикселях — в пункте «Размер».
+    /// The only compression setting: JPEG quality. Pixel size is under "Size".
     private var quality: some View {
         @Bindable var lib = lib
         let q = Int((lib.export.jpegQuality * 100).rounded())
@@ -192,7 +192,7 @@ struct ExportSheet: View {
         }
     }
 
-    /// Строка выбора размера (один выбор из списка).
+    /// Size option row (single choice from a list).
     private func sizeRow(_ c: SizeChoice) -> some View {
         let on = SizeChoice.current(lib.export) == c
         return Button { c.apply(&lib.export) } label: {
@@ -233,7 +233,7 @@ struct ExportSheet: View {
     }
 }
 
-/// Сводка: во что превратится каждый кадр при выбранном пресете. Видно заранее — без двойной настройки.
+/// Summary: what each frame becomes with the selected preset. Visible up front, no double configuration.
 struct PlanSummary: View {
     @Environment(Library.self) private var lib
 
@@ -265,7 +265,7 @@ struct PlanSummary: View {
     }
 }
 
-/// Размер выгружаемого JPEG — один выбор вместо «пресетов» и отдельного «размера».
+/// Exported JPEG size: one choice instead of "presets" plus a separate "size".
 enum SizeChoice: String, CaseIterable, Identifiable {
     case instagram, story, px2560, px1600, full
     var id: String { rawValue }

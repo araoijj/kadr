@@ -25,7 +25,7 @@ enum ColorLabel: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    /// Клавиши 6–9 как в Lightroom / Capture One.
+    /// Keys 6–9, as in Lightroom / Capture One.
     static func forKey(_ key: Int) -> ColorLabel? {
         switch key {
         case 6: .red
@@ -65,22 +65,22 @@ struct Photo: Identifiable, Equatable {
     var url: URL { id }
     var name: String { id.lastPathComponent }
     var fileSize: Int64
-    var mtime: Double = 0        // время изменения файла — для сверки с индексом
+    var mtime: Double = 0        // file modification time, for checking against the index
 
     var rating: Int = 0          // 0…5
-    var rejected: Bool = false   // в XMP хранится как Rating = -1
+    var rejected: Bool = false   // stored in XMP as Rating = -1
     var label: ColorLabel?
-    var adj = Adjustments()      // обработка (хранится в .kadr/edits.json)
+    var adj = Adjustments()      // edits (stored in .kadr/edits.json)
 
     var exif = ExifInfo()
-    var hash: UInt64?            // dHash превью — для поиска похожих
-    var sharpness: Double?       // дисперсия лапласиана, больше — резче
-    var seriesID: Int?           // номер серии похожих кадров
+    var hash: UInt64?            // preview dHash, for finding similar photos
+    var sharpness: Double?       // variance of the Laplacian; higher is sharper
+    var seriesID: Int?           // series number of similar photos
     var isBestInSeries = false
-    var duplicateOf: URL?        // точная копия другого файла
-    var indexed = false          // анализ есть (из индекса или посчитан сейчас)
-    var cull: CullData?          // данные для отбора (CullAnalysis.swift)
-    var sceneID: Int?            // сцена — часть съёмки без долгих пауз (Scenes.swift)
+    var duplicateOf: URL?        // exact copy of another file
+    var indexed = false          // analysis exists (from the index or computed just now)
+    var cull: CullData?          // culling data (CullAnalysis.swift)
+    var sceneID: Int?            // scene: part of a shoot without long pauses (Scenes.swift)
 
     var lensName: String { exif.lens?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? tr("Объектив не указан") }
     var day: Date? { exif.date.map { Calendar.current.startOfDay(for: $0) } }

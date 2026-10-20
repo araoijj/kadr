@@ -45,7 +45,7 @@ struct ContentView: View {
             return true
         }
         .onAppear {
-            // kadr /путь/к/папке — открыть сразу
+            // kadr /path/to/folder — open it right away
             if lib.folder == nil, CommandLine.arguments.count > 1 {
                 let u = URL(fileURLWithPath: CommandLine.arguments[1])
                 if FileManager.default.fileExists(atPath: u.path) { lib.open(u) }
@@ -150,7 +150,7 @@ enum Theme {
     static let reject = Color(red: 0.93, green: 0.33, blue: 0.31)
 }
 
-// MARK: - Пустой экран
+// MARK: - Empty state
 
 struct EmptyState: View {
     @Environment(Library.self) private var lib
@@ -232,8 +232,8 @@ struct Toast: View {
     }
 }
 
-/// ⌘-клик и Ctrl-клик — добавить кадр к выделению (Ctrl — как привыкли в Windows).
-/// Ctrl-клик на Mac обычно открывает меню, поэтому превращаем его в ⌘-клик; меню — правой кнопкой.
+/// ⌘-click and Ctrl-click add a frame to the selection (Ctrl, as Windows users are used to).
+/// On a Mac, Ctrl-click usually opens a menu, so we turn it into ⌘-click; the menu is on right-click.
 @MainActor
 enum ClickModifiers {
     static func handle(_ e: NSEvent, _ lib: Library) -> NSEvent? {

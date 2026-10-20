@@ -1,5 +1,5 @@
-// Рисует иконку «Кадр»: диафрагма объектива в рамке кадра.
-// Запуск: swift tools/make-icon.swift Resources/AppIcon-1024.png
+// Draws the Kadr icon: a lens aperture inside a frame.
+// Usage: swift tools/make-icon.swift Resources/AppIcon-1024.png
 import AppKit
 import CoreGraphics
 
@@ -15,7 +15,7 @@ let cs = CGColorSpace(name: CGColorSpace.sRGB)!
 let ctx = CGContext(data: nil, width: Int(S), height: Int(S), bitsPerComponent: 8, bytesPerRow: 0,
                     space: cs, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
 
-// Подложка по сетке иконок macOS: 824×824, скругление ~185, без тени.
+// Background per the macOS icon grid: 824×824, corner radius ~185, no shadow.
 let body = CGRect(x: 100, y: 100, width: 824, height: 824)
 let bodyPath = CGPath(roundedRect: body, cornerWidth: 185, cornerHeight: 185, transform: nil)
 ctx.saveGState()
@@ -29,7 +29,7 @@ ctx.setStrokeColor(rgb(0xFFFFFF, 0.08))
 ctx.setLineWidth(4)
 ctx.strokePath()
 
-// Уголки рамки кадра.
+// Frame corners.
 ctx.setStrokeColor(rgb(0xF2F2F4, 0.9))
 ctx.setLineWidth(26)
 ctx.setLineCap(.round)
@@ -42,7 +42,7 @@ for (x, y, dx, dy) in [(m, m, 1.0, 1.0), (S - m, m, -1.0, 1.0), (m, S - m, 1.0, 
     ctx.strokePath()
 }
 
-// Диафрагма: 6 лепестков вокруг шестиугольного отверстия.
+// Aperture: 6 blades around a hexagonal opening.
 let c = CGPoint(x: 512, y: 512)
 let R: CGFloat = 198, rIn: CGFloat = 78
 let colors: [UInt32] = [0xFFC24B, 0xFF8A3D, 0xFF5A5F, 0xE8457F, 0xB04FD8, 0x6F6CFF]
@@ -50,7 +50,7 @@ let v = (0..<6).map { i -> CGPoint in
     let a = CGFloat(i) * .pi / 3 + .pi / 2
     return CGPoint(x: c.x + rIn * cos(a), y: c.y + rIn * sin(a))
 }
-// Луч от вершины v[i] по продолжению ребра v[i-1]→v[i] до окружности.
+// Ray from vertex v[i] along the extension of edge v[i-1]→v[i] to the circle.
 func hit(_ i: Int) -> CGPoint {
     let p = v[i], q = v[(i + 5) % 6]
     var d = CGPoint(x: p.x - q.x, y: p.y - q.y)
@@ -77,7 +77,7 @@ for i in 0..<6 {
     ctx.setFillColor(rgb(colors[i]))
     ctx.fillPath()
 }
-// Зазоры между лепестками и отверстие.
+// Gaps between the blades, and the opening.
 ctx.setStrokeColor(rgb(0x17181C))
 ctx.setLineWidth(11)
 ctx.setLineCap(.butt)
@@ -92,7 +92,7 @@ hole.closeSubpath()
 ctx.addPath(hole)
 ctx.setFillColor(rgb(0x17181C))
 ctx.fillPath()
-// Тонкое кольцо оправы.
+// Thin lens barrel ring.
 ctx.addEllipse(in: CGRect(x: c.x - R - 14, y: c.y - R - 14, width: 2 * (R + 14), height: 2 * (R + 14)))
 ctx.setStrokeColor(rgb(0xFFFFFF, 0.14))
 ctx.setLineWidth(6)

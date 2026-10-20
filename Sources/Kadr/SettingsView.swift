@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Окно «Настройки» (⌘,).
+/// "Settings" window (⌘,).
 struct SettingsView: View {
     var body: some View {
         TabView {
@@ -16,7 +16,7 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Общие
+// MARK: - General
 
 struct GeneralSettings: View {
     @Environment(Library.self) private var lib
@@ -67,7 +67,7 @@ struct GeneralSettings: View {
     }
 }
 
-// MARK: - Хранилище
+// MARK: - Storage
 
 struct StorageSettings: View {
     @State private var stats = StorageStats()
@@ -153,7 +153,7 @@ struct StorageStats: Sendable {
     }
 }
 
-// MARK: - Память и скорость
+// MARK: - Memory and performance
 
 struct PerformanceSettings: View {
     @AppStorage("pref.threads") private var threads = 2
@@ -214,7 +214,7 @@ struct PerformanceSettings: View {
     }
 }
 
-// MARK: - Импорт
+// MARK: - Import
 
 struct ImportSettingsTab: View {
     @Environment(Library.self) private var lib
@@ -248,7 +248,7 @@ struct ImportSettingsTab: View {
     }
 }
 
-// MARK: - Стили и LUT
+// MARK: - Styles and LUTs
 
 struct PresetsSettings: View {
     @Environment(Library.self) private var lib
@@ -291,7 +291,7 @@ struct PresetsSettings: View {
     }
 }
 
-// MARK: - Резервная копия
+// MARK: - Backup
 
 struct BackupSettings: View {
     @AppStorage("pref.lastBackup") private var lastBackup = 0.0
@@ -324,11 +324,11 @@ struct BackupSettings: View {
     }
 }
 
-// MARK: - Действия приложения
+// MARK: - App actions
 
 @MainActor
 enum AppControl {
-    /// Перезапуск «Кадра» (для смены языка и папки данных).
+    /// Relaunches Kadr (to switch the language or the data folder).
     static func relaunch() {
         let path = Bundle.main.bundlePath
         let p = Process()
@@ -370,7 +370,7 @@ enum AppControl {
         relaunch()
     }
 
-    /// Ключи настроек, которые входят в резервную копию.
+    /// Settings keys included in the backup.
     private static let backupKeys = ["exportSettings", "favoriteFolders", "recentFolders", "sortKey", "sortDescending", "groupKey",
                                      "includeSubfolders", "import.base", "import.split", "import.onlyNew", "import.eject"]
 
@@ -416,7 +416,7 @@ enum AppControl {
         try? z.run(); z.waitUntilExit()
         let root = tmp.appendingPathComponent("Kadr")
         guard z.terminationStatus == 0, fm.fileExists(atPath: root.path) else { return tr("Это не копия «Кадра»") }
-        // Стили и LUT дополняют существующие, журналы — тоже; ничего не удаляется.
+        // Styles and LUTs are added to the existing ones, and so are the histories; nothing is deleted.
         for item in (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? [] where item.lastPathComponent != "settings.plist" {
             let dest = AppFolders.support.appendingPathComponent(item.lastPathComponent)
             if (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
@@ -444,7 +444,7 @@ enum AppControl {
         return tr("Восстановлено из \(src.lastPathComponent)")
     }
 
-    /// Сколько памяти занимает процесс (резидентно).
+    /// Memory used by the process (resident).
     static func memoryUsage() -> Int64 {
         var info = mach_task_basic_info()
         var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
@@ -455,7 +455,7 @@ enum AppControl {
     }
 }
 
-/// Модели сетки лица MediaPipe: точнее различают моргание, прищур и взгляд вниз.
+/// MediaPipe face mesh models: better at telling blinks, squints and downward glances apart.
 struct FaceMeshSection: View {
     @Environment(Library.self) private var lib
     @State private var installed = FaceMesh.shared.installed
@@ -478,7 +478,7 @@ struct FaceMeshSection: View {
                     }
                 }
             } else {
-                // Сборка без встроенных моделей — их можно скачать или поставить из файла.
+                // Build without bundled models; they can be downloaded or installed from a file.
                 HStack {
                     if !installed {
                         Button(tr("Скачать")) { download() }.disabled(busy)

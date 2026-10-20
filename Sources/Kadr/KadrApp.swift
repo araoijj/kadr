@@ -8,7 +8,7 @@ struct KadrApp: App {
     init() {
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate(ignoringOtherApps: true)
-        // Встроенная сетка лица — сразу при запуске, фоном.
+        // Bundled face mesh: loaded in the background right at launch.
         Task.detached(priority: .utility) { FaceMesh.shared.installBundledIfNeeded() }
     }
 
@@ -27,7 +27,7 @@ struct KadrApp: App {
                 .preferredColorScheme(.dark)
         }
         .commands {
-            // ⌘Z / ⇧⌘Z — журнал «Кадра»; в текстовых полях — обычная отмена ввода.
+            // ⌘Z / ⇧⌘Z — Kadr's history; in text fields, regular input undo.
             CommandGroup(replacing: .undoRedo) {
                 Button(library.undoTitle.map { tr("Отменить: \($0)") } ?? tr("Отменить")) {
                     if let um = NSApp.keyWindow?.firstResponder as? NSTextView { um.undoManager?.undo() } else { library.undo() }
@@ -99,7 +99,7 @@ struct KadrApp: App {
     }
 }
 
-/// Горячие клавиши без модификаторов — как в Photo Mechanic / Capture One.
+/// Modifier-free hotkeys, as in Photo Mechanic / Capture One.
 @MainActor
 struct KeyHandler {
     static func handle(_ e: NSEvent, _ lib: Library) -> Bool {
@@ -112,16 +112,16 @@ struct KeyHandler {
         if NSApp.keyWindow?.firstResponder is NSTextView || lib.showExport || lib.showImport { return false }
         if lib.cropMode {
             switch e.keyCode {
-            case 36, 76: lib.finishCrop(); return true      // Enter — готово
-            case 53: lib.cancelCrop(); return true          // Esc — отменить
+            case 36, 76: lib.finishCrop(); return true      // Enter: done
+            case 53: lib.cancelCrop(); return true          // Esc: cancel
             default: break
             }
             if ["r", "к"].contains(e.charactersIgnoringModifiers?.lowercased() ?? "") { lib.finishCrop(); return true }
         }
         if lib.tournamentActive {
             switch e.keyCode {
-            case 123: lib.pickTournament(left: true); return true    // ← лучше левый
-            case 124: lib.pickTournament(left: false); return true   // → лучше правый
+            case 123: lib.pickTournament(left: true); return true    // ← left is better
+            case 124: lib.pickTournament(left: false); return true   // → right is better
             case 53: lib.cancelTournament(); return true
             default: break
             }
@@ -140,11 +140,11 @@ struct KeyHandler {
             }
         }
         switch e.keyCode {
-        case 123: lib.move(-1, extend: shift); return true                       // ←  (⇧ — расширить выделение)
+        case 123: lib.move(-1, extend: shift); return true                       // ←  (⇧ extends the selection)
         case 124: lib.move(1, extend: shift); return true                        // →
         case 126: lib.move(lib.loupe ? -1 : -lib.columns, extend: shift); return true // ↑
         case 125: lib.move(lib.loupe ? 1 : lib.columns, extend: shift); return true   // ↓
-        case 49:                                                   // пробел: в отборе — следующий кадр
+        case 49:                                                   // space: next frame in culling
             if lib.culling { lib.move(1) } else { lib.loupe.toggle(); lib.zoom100 = false }
             return true
         case 36: lib.loupe = true; return true                    // Enter

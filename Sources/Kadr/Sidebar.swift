@@ -11,10 +11,10 @@ struct Sidebar: View {
     @AppStorage("sb.analysis") private var showAnalysis = true
     @AppStorage("sb.cull") private var showCull = true
     @AppStorage("sb.scenes") private var showScenes = true
-    @AppStorage("sb.tab") private var tab = 0      // 0 — папки, 1 — фильтры
+    @AppStorage("sb.tab") private var tab = 0      // 0 = folders, 1 = filters
 
     var body: some View {
-        // Две вкладки, чтобы не было «всё навалено»: папки (как в Finder) и фильтры съёмки.
+        // Two tabs so things aren't all piled together: "Folders" (as in Finder) and shooting "Filters".
         VStack(spacing: 0) {
             Picker("", selection: $tab) {
                 Text(tr("Папки")).tag(0)
@@ -30,7 +30,7 @@ struct Sidebar: View {
     private var folders: some View {
         @Bindable var lib = lib
         return List {
-            // Открытая папка — сверху, с подпапками: сразу видно, где лежат снимки.
+            // The open folder at the top, with its subfolders: you can see right away where the photos are.
             if let f = lib.folder {
                 Section(tr("Открыта")) {
                     FolderRow(url: f, icon: "folder.fill")
@@ -168,7 +168,7 @@ struct Sidebar: View {
         }
     }
 
-    /// Строка-переключатель: работает вместе с основным фильтром (например, ★3 и объектив 85 мм).
+    /// Toggle row: works together with the main filter (e.g. ★3 and an 85 mm lens).
     private func toggleRow(_ title: String, icon: String, count: Int, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 6) {

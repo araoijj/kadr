@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Панель внизу, когда выделено несколько снимков: действия сразу над всеми.
+/// Bottom bar shown when several photos are selected: actions for all of them at once.
 struct SelectionBar: View {
     @Environment(Library.self) private var lib
 

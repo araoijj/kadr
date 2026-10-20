@@ -17,7 +17,7 @@ struct LoupeView: View {
                 if lib.cropMode { CropBar().padding(.bottom, 12) } else { ZoomBar().padding(.bottom, 12) }
             }
             .task(id: lib.currentID) {
-                // Готовим RAW текущего кадра заранее, чтобы первый стиль применился сразу.
+                // Prepare the current frame's RAW in advance so the first style applies instantly.
                 guard let u = lib.currentID, ImageStore.rawExtensions.contains(u.pathExtension.lowercased()) else { return }
                 try? await Task.sleep(for: .milliseconds(400))
                 guard !Task.isCancelled else { return }
@@ -83,9 +83,9 @@ struct PreviewImage: View {
     }
 }
 
-/// Кадр без правок: сразу превью камеры, через мгновение — резкое проявление RAW под размер экрана.
-/// Встроенное превью у многих камер 1616 px — на Retina оно растянуто и выглядит мутным.
-/// Профиль «Как в камере» сохраняет цвета JPEG камеры. Следующий кадр проявляется заранее.
+/// Unedited frame: the camera preview right away, then moments later a sharp RAW render sized to the screen.
+/// Many cameras embed a 1616 px preview, which looks stretched and blurry on Retina.
+/// The "Camera matching" profile keeps the camera JPEG colors. The next frame is developed in advance.
 struct SharpPreview: View {
     let photo: Photo
     @Environment(Library.self) private var lib
@@ -106,10 +106,10 @@ struct SharpPreview: View {
         }
         .task(id: photo.id) {
             let url = photo.url
-            try? await Task.sleep(for: .milliseconds(120))   // быстро листают — не проявляем каждый кадр
+            try? await Task.sleep(for: .milliseconds(120))   // fast browsing: don't develop every frame
             guard !Task.isCancelled else { return }
             let side = Self.screenSide
-            // JPEG и прочие — просто читаем под размер экрана (~50 мс).
+            // JPEG and other formats: just read at screen size (~50 ms).
             guard ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) else {
                 if let img = await Task.detached(priority: .userInitiated, operation: { ImageStore.shared.decoded(url, maxSide: side) }).value,
                    !Task.isCancelled { sharp = img; sharpFor = url }
@@ -119,7 +119,7 @@ struct SharpPreview: View {
                 sharp = img; sharpFor = url
             }
             guard !Task.isCancelled else { return }
-            // Следующий кадр очереди — заранее, чтобы при листании вперёд он сразу был резким.
+            // Next frame in the queue, in advance, so it's already sharp when browsing forward.
             let vis = lib.visible
             if let i = vis.firstIndex(where: { $0.id == photo.id }), i + 1 < vis.count, vis[i + 1].adj.isIdentity,
                ImageStore.rawExtensions.contains(vis[i + 1].url.pathExtension.lowercased()) {
@@ -133,15 +133,15 @@ struct SharpPreview: View {
     }
 }
 
-/// Полное проявление RAW, 1 пиксель снимка = 1 пиксель экрана. Тянуть мышью / скроллить.
-/// Кадр, проявленный из RAW с обработкой. Пока считается первый раз — показываем превью.
+/// Full RAW render, 1 image pixel = 1 screen pixel. Drag with the mouse / scroll.
+/// Frame developed from RAW with edits. Shows the preview while the first render is in progress.
 struct EditedImage: View {
     let photo: Photo
     let adj: Adjustments
-    var channel = "loupe"          // у «до» в шторке свой канал, чтобы два рендера не вытесняли друг друга
+    var channel = "loupe"          // "before" in the split view has its own channel so the two renders don't evict each other
     @State private var image: CGImage?
     @State private var shownFor: URL?
-    @State private var exact = false      // показан точный RAW, а не быстрый вариант по превью
+    @State private var exact = false      // the exact RAW is shown, not the fast preview-based version
     @State private var rendering = false
 
     var body: some View {
@@ -170,7 +170,7 @@ struct EditedImage: View {
         .task(id: ThumbKey(url: photo.url, adj: adj)) {
             if shownFor != photo.url { image = nil; exact = false; shownFor = photo.url }
             let url = photo.url, a = adj
-            // Пока точного RAW нет — сразу показываем обработку поверх превью камеры (десятки мс).
+            // Until the exact RAW is ready, show the edits over the camera preview right away (tens of ms).
             if !exact, let quick = await Task.detached(priority: .userInitiated, operation: { Renderer.shared.thumbnail(url, a, size: 1600) }).value {
                 image = quick
             }

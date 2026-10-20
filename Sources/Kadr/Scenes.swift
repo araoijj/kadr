@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 
-/// Сцена — часть съёмки без долгих пауз (сборы, церемония, банкет).
+/// A scene is a part of a shoot without long pauses (getting ready, ceremony, reception).
 struct SceneInfo: Identifiable, Hashable {
     let id: Int
     let start: Date
@@ -17,9 +17,9 @@ struct SceneInfo: Identifiable, Hashable {
 }
 
 extension Library {
-    // MARK: - Сцены
+    // MARK: - Scenes
 
-    /// Новая сцена — после паузы дольше заданной (по умолчанию 10 минут). Кадры без даты — в одну сцену.
+    /// A new scene starts after a pause longer than the threshold (10 minutes by default). Frames without a date go into one scene.
     func computeScenes() {
         let gap = Double(Prefs.sceneGapMinutes) * 60
         let order = photos.indices.sorted {
@@ -39,16 +39,16 @@ extension Library {
         scenes = info.keys.sorted().map { SceneInfo(id: $0, start: info[$0]!.0, end: info[$0]!.1, count: info[$0]!.2) }
     }
 
-    /// Сколько кадров сцены уже решено (оставлено или в браке).
+    /// How many frames of the scene are already decided (kept or rejected).
     func sceneProgress(_ s: SceneInfo) -> Int {
         photos.filter { $0.sceneID == s.id && ($0.rejected || $0.rating > 0) }.count
     }
 
-    // MARK: - Турнир
+    // MARK: - Tournament
 
     var tournamentActive: Bool { !tournamentAll.isEmpty }
 
-    /// Длинная серия (или выделенные): два кадра рядом, выбираете лучший, победитель остаётся.
+    /// Long series (or a selection): two frames side by side, you pick the better one, the winner stays.
     func startTournament() {
         var ids: [URL]
         if multiSelected { ids = targets.map(\.id) }
@@ -66,7 +66,7 @@ extension Library {
         comparing = true
     }
 
-    /// ← — лучше левый, → — лучше правый.
+    /// ← means the left one is better, → the right one.
     func pickTournament(left: Bool) {
         guard tournamentActive, compareIDs.count == 2 else { return }
         let winner = left ? compareIDs[0] : compareIDs[1]

@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Просмотр кадра с масштабом: «вписать», 25–800%, щипок, ⌘+колёсико, перетаскивание, навигатор.
-/// При увеличении проявляется только видимый кусок RAW в полном разрешении — с текущей обработкой.
+/// Zoomable frame view: "Fit", 25–800%, pinch, ⌘+scroll wheel, drag to pan, navigator.
+/// When zoomed in, only the visible part of the RAW is developed at full resolution, with the current edits.
 struct ZoomableLoupe: View {
     let photo: Photo
     @Environment(Library.self) private var lib
@@ -24,7 +24,7 @@ struct ZoomableLoupe: View {
             let pane = geo.size
             let px = pixelSize
             let backing = NSScreen.main?.backingScaleFactor ?? 2
-            let fit = min((pane.width - 40) / px.width, (pane.height - 40) / px.height) * backing   // «вписать» в долях 100%
+            let fit = min((pane.width - 40) / px.width, (pane.height - 40) / px.height) * backing   // "Fit" as a fraction of 100%
             ZStack {
                 LoupeAnchor()
                 if let z = lib.loupeZoom {
@@ -34,7 +34,7 @@ struct ZoomableLoupe: View {
                         .padding(20)
                         .contentShape(Rectangle())
                         .onTapGesture(count: 2, coordinateSpace: .local) { loc in
-                            // Двойной клик — 100% в точку клика.
+                            // Double-click zooms to 100% at the click point.
                             let shown = CGSize(width: px.width * fit / backing, height: px.height * fit / backing)
                             let origin = CGPoint(x: (pane.width - shown.width) / 2, y: (pane.height - shown.height) / 2)
                             let p = CGPoint(x: (loc.x - origin.x) / shown.width, y: (loc.y - origin.y) / shown.height)
@@ -56,7 +56,7 @@ struct ZoomableLoupe: View {
         .photoContextMenu(photo)
     }
 
-    /// Кадр без увеличения: JPEG камеры, а при правках — проявленный RAW.
+    /// Unzoomed frame: the camera JPEG, or the developed RAW when there are edits.
     @ViewBuilder private var fitted: some View {
         if lib.splitCompare && !photo.adj.isIdentity {
             SplitFit(photo: photo, aspect: pixelSize.width / pixelSize.height)
@@ -67,13 +67,13 @@ struct ZoomableLoupe: View {
         }
     }
 
-    /// Размер кадра в пикселях после кадрирования камеры и поворота.
+    /// Frame size in pixels after the in-camera crop and rotation.
     private var pixelSize: CGSize {
         let s = lib.pixelSize(photo)
         return CGSize(width: s.width * photo.adj.cropW, height: s.height * photo.adj.cropH)
     }
 
-    // MARK: - Увеличенный кадр
+    // MARK: - Zoomed frame
 
     private func zoomed(pane: CGSize, px: CGSize, zoom: CGFloat, backing: CGFloat) -> some View {
         let shown = CGSize(width: px.width * zoom / backing, height: px.height * zoom / backing)
@@ -81,13 +81,13 @@ struct ZoomableLoupe: View {
         let visible = CGRect(x: c.x - min(1, pane.width / shown.width) / 2, y: c.y - min(1, pane.height / shown.height) / 2,
                              width: min(1, pane.width / shown.width), height: min(1, pane.height / shown.height))
         let outPx = CGSize(width: (visible.width * shown.width * backing).rounded(), height: (visible.height * shown.height * backing).rounded())
-        func place(_ r: CGRect) -> CGRect {   // доли кадра → точки на экране
+        func place(_ r: CGRect) -> CGRect {   // frame fractions → screen points
             CGRect(x: pane.width / 2 + (r.minX - c.x) * shown.width, y: pane.height / 2 + (r.minY - c.y) * shown.height,
                    width: r.width * shown.width, height: r.height * shown.height)
         }
         let whole = place(CGRect(x: 0, y: 0, width: 1, height: 1))
         return ZStack(alignment: .topLeading) {
-            // Подложка — весь кадр в низком разрешении, сразу (пока считается резкий кусок).
+            // Backdrop: the whole frame at low resolution, shown immediately (while the sharp tile is being rendered).
             if let low = Renderer.shared.cachedThumbnail(photo.url, adj, size: 1600) ?? ImageStore.shared.cachedPreview(photo.url) {
                 Image(decorative: low, scale: 1).resizable().interpolation(.medium)
                     .frame(width: whole.width, height: whole.height)
@@ -143,7 +143,7 @@ struct ZoomableLoupe: View {
             }
         }
         .task(id: RegionKey(url: photo.url, adj: adj, region: visible, pixels: outPx)) {
-            try? await Task.sleep(for: .milliseconds(25))   // при перетаскивании не считаем каждый шаг
+            try? await Task.sleep(for: .milliseconds(25))   // don't re-render on every step while dragging
             guard !Task.isCancelled else { return }
             rendering = true
             if let img = await Renderer.shared.renderRegion(photo.url, adj, region: visible, pixels: outPx) {
@@ -155,7 +155,7 @@ struct ZoomableLoupe: View {
         }
     }
 
-    /// Центр не даёт увести кадр за край.
+    /// Keeps the center from pushing the frame past the edge.
     private func clampCenter(_ c: CGPoint, shown: CGSize, pane: CGSize) -> CGPoint {
         func axis(_ v: CGFloat, _ img: CGFloat, _ view: CGFloat) -> CGFloat {
             guard img > view else { return 0.5 }
@@ -181,7 +181,7 @@ struct RegionKey: Hashable {
     static func == (a: RegionKey, b: RegionKey) -> Bool { a.hashValue == b.hashValue }
 }
 
-/// Миниатюра в углу с рамкой видимой области; клик или перетаскивание — перейти туда.
+/// Corner thumbnail with a box around the visible area; click or drag to jump there.
 struct Navigator: View {
     let photo: Photo
     let visible: CGRect
@@ -211,7 +211,7 @@ struct Navigator: View {
     }
 }
 
-/// Панель масштаба под кадром.
+/// Zoom bar below the frame.
 struct ZoomBar: View {
     @Environment(Library.self) private var lib
 
@@ -255,7 +255,7 @@ struct ZoomBar: View {
     }
 }
 
-/// Невидимая точка привязки: по ней прокрутка колёсиком/трекпадом понимает, что курсор над кадром.
+/// Invisible anchor point that lets wheel/trackpad scrolling know the cursor is over the frame.
 struct LoupeAnchor: NSViewRepresentable {
     @MainActor static weak var view: NSView?
     func makeNSView(context: Context) -> NSView {
@@ -270,7 +270,7 @@ struct LoupeAnchor: NSViewRepresentable {
     }
 }
 
-/// Прокрутка над кадром: при увеличении — сдвиг, с ⌘ или ⌥ — масштаб.
+/// Scrolling over the frame: pans when zoomed in, zooms with ⌘ or ⌥.
 @MainActor
 enum ScrollZoom {
     static func handle(_ e: NSEvent, _ lib: Library) -> NSEvent? {
@@ -289,7 +289,7 @@ enum ScrollZoom {
     }
 }
 
-/// Шторка в режиме «вписать»: «после» целиком, «до» — слева от линии.
+/// Before/After split in "Fit" mode: "after" fills the frame, "before" shows to the left of the line.
 struct SplitFit: View {
     let photo: Photo
     let aspect: CGFloat
@@ -314,7 +314,7 @@ struct SplitFit: View {
     }
 }
 
-/// Линия шторки с ручкой и подписями; тянуть — двигать. Положение — доля ширины кадра/окна.
+/// Split line with a handle and labels; drag to move it. Position is a fraction of the frame/window width.
 struct SplitHandle: View {
     let width: CGFloat
     let height: CGFloat

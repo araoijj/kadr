@@ -2,29 +2,29 @@ import CoreGraphics
 import Foundation
 import Vision
 
-/// Лицо на кадре: рамка в долях кадра (y — сверху вниз), качество, открытость глаз, резкость.
+/// A face in the frame: box in frame fractions (y from top to bottom), quality, eye openness, sharpness.
 struct FaceInfo: Codable, Sendable, Hashable {
     var x: Double, y: Double, w: Double, h: Double
-    var quality: Double?        // встроенная оценка macOS 0…1: резкость, поворот, свет лица
-    var eyes: Double?           // открытость глаз: высота/ширина контура (открытые ~0,3–0,45)
-    var sharpness: Double?      // резкость в области лица
-    var px: Double?             // ширина лица в пикселях превью: мелкие лица для глаз и резкости ненадёжны
-    var blink: Double?          // моргание обоих глаз по сетке лица MediaPipe 0…1 (закрыты ≥ ~0,42), если модели установлены
-    var squint: Double?         // прищур по MediaPipe: улыбка и солнце — не моргание
-    var lookDown: Double?       // взгляд вниз по MediaPipe
-    var pitch: Double?          // наклон головы от macOS, градусы (> 0 — голова опущена)
+    var quality: Double?        // built-in macOS score 0…1: sharpness, pose, face lighting
+    var eyes: Double?           // eye openness: contour height/width (open ~0.3–0.45)
+    var sharpness: Double?      // sharpness within the face area
+    var px: Double?             // face width in preview pixels: small faces are unreliable for eyes and sharpness
+    var blink: Double?          // blink of both eyes from the MediaPipe face mesh 0…1 (closed ≥ ~0.42), if the models are installed
+    var squint: Double?         // squint from MediaPipe: smiles and sun, not a blink
+    var lookDown: Double?       // downward gaze from MediaPipe
+    var pitch: Double?          // head pitch from macOS, degrees (> 0 means the head is lowered)
 
-    /// Лицо годится для оценки глаз и резкости: крупное и повёрнуто к камере.
-    /// Калибровка на 2032 кадрах: у лиц мельче ~180 px открытость глаз и резкость меряются заметно хуже.
+    /// The face is usable for eye and sharpness checks: large and turned toward the camera.
+    /// Calibrated on 2032 frames: for faces smaller than ~180 px, eye openness and sharpness are measured noticeably worse.
     var reliable: Bool { (px ?? 0) >= 180 && (quality ?? 0) >= 0.35 }
 
-    /// Глаза измерены сеткой MediaPipe. Фильтр «качества лица» macOS тут не нужен: при закрытых глазах
-    /// macOS сама занижает качество (~0,3), а профиль и затылок сетка отсекает сама.
+    /// Eyes were measured by the MediaPipe mesh. The macOS "face quality" filter isn't needed here: with closed eyes
+    /// macOS lowers the quality itself (~0.3), and the mesh rejects profiles and the backs of heads on its own.
     var meshUsable: Bool { blink != nil && (px ?? 0) >= 120 }
-    /// Глаза открыты: по MediaPipe, если замер есть, иначе по контуру от macOS.
+    /// Eyes are open: per MediaPipe if there is a measurement, otherwise per the macOS contour.
     var eyesOpen: Bool { blink.map { $0 < 0.3 } ?? ((eyes ?? 0.3) >= 0.22) }
-    /// Глаза закрыты (порог — от строгости, 0…1). Калибровка на 2032 кадрах: у морганий оба глаза ≥ 0,42
-    /// и «взгляд вниз» ≥ 0,5; «взгляд вниз» ~0 при «закрытых» — тёмные очки.
+    /// Eyes are closed (threshold depends on strictness, 0…1). Calibrated on 2032 frames: on blinks both eyes are ≥ 0.42
+    /// and "look down" is ≥ 0.5; "look down" ~0 with "closed" eyes means dark glasses.
     func eyesShut(_ st: Double = 0.5) -> Bool {
         guard let blink else { return (eyes ?? 0.3) < 0.12 + 0.04 * st }
         return blink >= 0.45 - 0.1 * st && (lookDown ?? 1) >= 0.35
@@ -33,20 +33,20 @@ struct FaceInfo: Codable, Sendable, Hashable {
     var rect: CGRect { CGRect(x: x, y: y, width: w, height: h) }
 }
 
-/// Всё, что нужно для отбора: считается фоном по встроенному превью и хранится в индексе.
+/// Everything Culling needs: computed in the background from the embedded preview and stored in the index.
 struct CullData: Codable, Sendable, Hashable {
     var faces: [FaceInfo] = []
-    var subject: CGRectCodable?     // главный объект, если лиц нет
-    var subjectSharpness: Double?   // резкость лучшего лица или главного объекта
-    var clipHigh = 0.0              // доля пересвеченных пикселей
-    var clipLow = 0.0               // доля «в ноль» в тенях
-    var meanLuma: Double?           // средняя яркость 0…1 (для недосвета)
-    var brightLuma: Double?         // яркость 95-го процентиля: есть ли в кадре светлые места
-    var subjectClip: Double?        // пересвет на лице или главном объекте (белое небо за спиной — не брак)
-    var horizon: Double?            // наклон горизонта, градусы
-    var aesthetics: Double?         // эстетика кадра по оценке macOS (−1…1)
-    var utility = false             // служебный кадр: экран, документ, случайный снимок
-    var mesh: Bool?                 // глаза мерили сеткой лица MediaPipe (после установки моделей кадры с лицами пересчитываются)
+    var subject: CGRectCodable?     // main subject, if there are no faces
+    var subjectSharpness: Double?   // sharpness of the best face or the main subject
+    var clipHigh = 0.0              // fraction of blown-out pixels
+    var clipLow = 0.0               // fraction of crushed shadows
+    var meanLuma: Double?           // mean luminance 0…1 (for underexposure)
+    var brightLuma: Double?         // 95th-percentile luminance: whether the frame has any bright areas
+    var subjectClip: Double?        // overexposure on the face or main subject (white sky behind is not a defect)
+    var horizon: Double?            // horizon tilt, degrees
+    var aesthetics: Double?         // frame aesthetics as scored by macOS (−1…1)
+    var utility = false             // utility frame: screen, document, accidental shot
+    var mesh: Bool?                 // eyes were measured by the MediaPipe face mesh (frames with faces are reanalyzed after the models are installed)
 }
 
 struct CGRectCodable: Codable, Sendable, Hashable {
@@ -55,8 +55,8 @@ struct CGRectCodable: Codable, Sendable, Hashable {
 }
 
 enum CullAnalyzer {
-    /// ~25 мс на кадр после первого запуска (модели macOS загружаются ~1 с один раз).
-    /// На macOS 14 — без распознавания (резкость по центру, пересвет и провалы).
+    /// ~25 ms per frame after the first run (macOS models load once, ~1 s).
+    /// On macOS 14 there is no recognition (center sharpness, overexposure and crushed shadows only).
     static func analyze(_ img: CGImage) async -> CullData {
         if #available(macOS 15.0, *) { return await analyzeVision(img) }
         var d = CullData()
@@ -68,14 +68,14 @@ enum CullAnalyzer {
     @available(macOS 15.0, *)
     private static func analyzeVision(_ img: CGImage) async -> CullData {
         var d = CullData()
-        // Vision считает от левого нижнего угла — переводим в «сверху вниз».
+        // Vision measures from the bottom-left corner; convert to top-to-bottom.
         func topDown(_ r: CGRect) -> CGRect { CGRect(x: r.minX, y: 1 - r.maxY, width: r.width, height: r.height) }
 
         let marks = (try? await DetectFaceLandmarksRequest().perform(on: img)) ?? []
         let quality = (try? await DetectFaceCaptureQualityRequest().perform(on: img)) ?? []
         for f in marks {
             let r = topDown(f.boundingBox.cgRect)
-            // Качество — от второго запроса, по ближайшему центру рамки.
+            // Quality comes from the second request, matched by the nearest box center.
             let q = quality.min { a, b in
                 dist(topDown(a.boundingBox.cgRect), r) < dist(topDown(b.boundingBox.cgRect), r)
             }.flatMap { $0.captureQuality.map { Double($0.score) } }
@@ -93,13 +93,13 @@ enum CullAnalyzer {
             face.sharpness = ImageStore.shared.sharpness(img, region: r)
             d.faces.append(face)
         }
-        d.faces.sort { $0.w * $0.h > $1.w * $1.h }   // крупные лица — первыми
-        // Глаза — сеткой лица MediaPipe (~12 мс на лицо): отличает моргание от прищура и взгляда вниз.
+        d.faces.sort { $0.w * $0.h > $1.w * $1.h }   // largest faces first
+        // Eyes via the MediaPipe face mesh (~12 ms per face): tells a blink apart from a squint or a downward gaze.
         let mesh = FaceMesh.shared
         if !d.faces.isEmpty, mesh.available {
             d.mesh = true
             for i in d.faces.indices.prefix(6) where (d.faces[i].px ?? 0) >= 40 {
-                // Сетка не нашла лицо — почти всегда профиль: глаза по нему не судим (контур от macOS тут тоже врёт).
+                // The mesh didn't find a face: almost always a profile, so we don't judge the eyes (the macOS contour is wrong here too).
                 guard let e = mesh.eyes(img, face: d.faces[i].rect) else { d.faces[i].eyes = nil; continue }
                 d.faces[i].blink = e.blink
                 d.faces[i].squint = e.squint
@@ -114,8 +114,8 @@ enum CullAnalyzer {
             let r = topDown(CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!))
             d.subject = CGRectCodable(x: r.minX, y: r.minY, w: r.width, h: r.height)
         }
-        // Резкость «главного»: лучшее из крупных лиц к камере, иначе объект внимания, иначе центр кадра.
-        // Мелкое лицо при замере растягивается и всегда выглядит «размытым»; затылок — тоже не лицо.
+        // Sharpness of the "main" subject: the best of the large camera-facing faces, otherwise the saliency object, otherwise the frame center.
+        // A small face gets stretched when measured and always looks "blurry"; the back of a head isn't a face either.
         if let best = d.faces.filter(\.reliable).compactMap(\.sharpness).max() {
             d.subjectSharpness = best
         } else if let s = d.subject {
@@ -137,7 +137,7 @@ enum CullAnalyzer {
         return d
     }
 
-    /// Доля пересвета внутри области кадра.
+    /// Fraction of overexposed pixels within a frame region.
     static func clipping(_ img: CGImage, region r: CGRect) -> Double? {
         let px = CGRect(x: r.minX * CGFloat(img.width), y: r.minY * CGFloat(img.height),
                         width: r.width * CGFloat(img.width), height: r.height * CGFloat(img.height)).integral
@@ -147,7 +147,7 @@ enum CullAnalyzer {
 
     private static func dist(_ a: CGRect, _ b: CGRect) -> CGFloat { hypot(a.midX - b.midX, a.midY - b.midY) }
 
-    /// Доля выбитых светов и провалов и средняя яркость — по уменьшенному превью.
+    /// Fraction of blown highlights and crushed shadows plus mean luminance, from a downscaled preview.
     static func clipping(_ img: CGImage) -> (Double, Double, Double, Double) {
         let w = 320, h = max(1, Int(Double(w) * Double(img.height) / Double(img.width)))
         var px = [UInt8](repeating: 0, count: w * h * 4)

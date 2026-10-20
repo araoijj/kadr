@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Оборачивает русские строки интерфейса в tr("…") и выгружает шаблоны для перевода.
+"""Wraps Russian UI strings in tr("…") and exports templates for translation.
 
-  python3 tools/i18n.py wrap      — обернуть (повторный запуск безопасен)
-  python3 tools/i18n.py extract   — tools/i18n/templates.json: русские шаблоны ({} вместо \\(…))
-  python3 tools/i18n.py build     — Sources/Kadr/Translations.swift из tools/i18n/all.json
-Новая строка интерфейса: wrap → extract → добавить перевод в all.json → build.
+  python3 tools/i18n.py wrap      — wrap strings (safe to re-run)
+  python3 tools/i18n.py extract   — tools/i18n/templates.json: Russian templates ({} in place of \\(…))
+  python3 tools/i18n.py build     — Sources/Kadr/Translations.swift from tools/i18n/all.json
+New UI string: wrap → extract → add the translation to all.json → build.
 """
 import json, os, re, sys
 
@@ -13,19 +13,19 @@ SRC = os.path.join(ROOT, 'Sources', 'Kadr')
 OUT = os.path.join(ROOT, 'tools', 'i18n')
 SKIP_FILES = {'Translations.swift', 'I18n.swift'}
 CYR = re.compile(r'[А-Яа-яЁё]')
-# Не переводить: файловые имена, служебные ключи коллекций, буквы раскладки.
+# Do not translate: file names, internal collection keys, keyboard layout letters.
 KEEP = {'_Отклонённые', 'Documents/Фотосессии', 'Мои стили|Базовые', 'Мои стили', 'Базовые', 'Портрет', 'Пейзаж', 'Кино', 'Чёрно-белые', 'Плёнка'}
 
 def literals(code):
-    """Строковые литералы "…" (не тройные), с вложенными \\( … "…" … ). Возвращает (start, end, body)."""
+    """String literals "…" (not triple-quoted), including nested \\( … "…" … ). Returns (start, end, body)."""
     i, n, out = 0, len(code), []
     while i < n:
         c = code[i]
-        if code.startswith('//', i):            # комментарий до конца строки
+        if code.startswith('//', i):            # comment until end of line
             j = code.find('\n', i); i = n if j < 0 else j; continue
-        if code.startswith('"""', i):           # многострочный литерал — пропускаем
+        if code.startswith('"""', i):           # multi-line literal: skip
             j = code.find('"""', i + 3); i = n if j < 0 else j + 3; continue
-        if c == '#' and code.startswith('#"', i):  # сырой литерал
+        if c == '#' and code.startswith('#"', i):  # raw literal
             j = code.find('"#', i + 2); i = n if j < 0 else j + 2; continue
         if c == '"':
             j = i + 1
@@ -33,7 +33,7 @@ def literals(code):
                 if code[j] == '\\' and j + 1 < n and code[j + 1] == '(':
                     depth, j = 1, j + 2
                     while j < n and depth:
-                        if code[j] == '"':        # вложенная строка внутри интерполяции
+                        if code[j] == '"':        # nested string inside an interpolation
                             j += 1
                             while j < n and code[j] != '"':
                                 j += 2 if code[j] == '\\' else 1
@@ -49,12 +49,12 @@ def literals(code):
 
 def wanted(body, code, start):
     if not CYR.search(body) or body in KEEP: return False
-    if len(body) <= 2: return False                         # клавиши: "ч", "я"…
-    if code[max(0, start - 3):start] == 'tr(': return False  # уже обёрнуто
+    if len(body) <= 2: return False                         # keys: "ч", "я"…
+    if code[max(0, start - 3):start] == 'tr(': return False  # already wrapped
     return True
 
 def runtime(body):
-    """Литерал Swift → строка во время работы, интерполяции → {}."""
+    """Swift literal → runtime string, interpolations → {}."""
     out, i = [], 0
     while i < len(body):
         if body.startswith('\\(', i):
@@ -95,7 +95,7 @@ def extract():
             if code[max(0, s - 3):s] == 'tr(' and CYR.search(body):
                 t = runtime(body)
                 if t not in seen: seen.append(t)
-    # Служебные ключи, которые показываются через tr(переменная): названия коллекций стилей.
+    # Internal keys shown via tr(variable): style collection names.
     for k in ['Мои стили', 'Базовые', 'Портрет', 'Пейзаж', 'Кино', 'Чёрно-белые', 'Плёнка']:
         if k not in seen: seen.append(k)
     json.dump(seen, open(os.path.join(OUT, 'templates.json'), 'w'), ensure_ascii=False, indent=1)
@@ -105,12 +105,12 @@ def swift_str(s):
     return '"' + s.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\t', '\\t') + '"'
 
 def build():
-    """Translations.swift из tools/i18n/all.json: {русский шаблон: [en, es, it]}."""
+    """Translations.swift from tools/i18n/all.json: {Russian template: [en, es, it]}."""
     tpl = json.load(open(os.path.join(OUT, 'templates.json')))
     allt = json.load(open(os.path.join(OUT, 'all.json')))
     missing = [t for t in tpl if t not in allt]
     if missing: print(f'нет перевода для {len(missing)}:', missing[:10])
-    lines = ['// Сгенерировано tools/i18n.py build — не править руками; переводы — в tools/i18n/all.json.', '',
+    lines = ['// Generated by tools/i18n.py build — do not edit by hand; translations live in tools/i18n/all.json.', '',
              'enum Translations {']
     for li, lang in enumerate(['en', 'es', 'it']):
         lines.append(f'    static let {lang}: [String: String] = [')

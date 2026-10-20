@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// Гистограмма по каналам R, G, B и яркости — как в Capture One.
+/// Histogram of the R, G, B and luminance channels, as in Capture One.
 struct HistogramData: Equatable {
     var r = [Double](repeating: 0, count: 256)
     var g = [Double](repeating: 0, count: 256)
     var b = [Double](repeating: 0, count: 256)
     var l = [Double](repeating: 0, count: 256)
-    var clippedShadows = 0.0      // доля пикселей с каналом ≤ 1
-    var clippedHighlights = 0.0   // доля с каналом ≥ 254
+    var clippedShadows = 0.0      // fraction of pixels with a channel ≤ 1
+    var clippedHighlights = 0.0   // fraction with a channel ≥ 254
 
     static func compute(_ img: CGImage) -> HistogramData {
         let w = 320, h = max(1, Int(Double(w) * Double(img.height) / Double(img.width)))
@@ -29,10 +29,10 @@ struct HistogramData: Equatable {
         let n = Double(w * h)
         d.clippedHighlights = Double(hi) / n
         d.clippedShadows = Double(lo) / n
-        // Масштаб по 99-му перцентилю столбцов — чтобы один пик не сплющивал всё остальное.
+        // Scale by the 99th percentile of the bins, so a single peak doesn't flatten everything else.
         let all = (d.r + d.g + d.b).sorted()
         let top = max(all[Int(Double(all.count - 1) * 0.99)], 1)
-        // Сглаживание по 5 соседним столбцам: у 8-битного превью иначе получается «гребёнка».
+        // Smooth over 5 neighboring bins: otherwise an 8-bit preview produces a "comb".
         func norm(_ a: [Double]) -> [Double] {
             (0..<256).map { i in
                 let r = max(0, i - 2)...min(255, i + 2)
@@ -53,7 +53,7 @@ struct HistogramView: View {
             ZStack(alignment: .top) {
                 RoundedRectangle(cornerRadius: 6).fill(.black.opacity(0.45))
                 Canvas { ctx, size in
-                    for x in [0.25, 0.5, 0.75] {   // сетка по четвертям
+                    for x in [0.25, 0.5, 0.75] {   // grid at quarters
                         var p = Path(); p.move(to: CGPoint(x: size.width * x, y: 0)); p.addLine(to: CGPoint(x: size.width * x, y: size.height))
                         ctx.stroke(p, with: .color(.white.opacity(0.07)))
                     }
@@ -87,7 +87,7 @@ struct HistogramView: View {
         .task(id: photo.map { ThumbKey(url: $0.url, adj: $0.adj) }) {
             guard let p = photo else { return }
             let url = p.url, adj = p.adj
-            // Считаем по превью с той же обработкой — быстро и совпадает с тем, что на экране.
+            // Compute from the preview with the same edits: fast, and it matches what's on screen.
             let d = await Task.detached(priority: .utility) { () -> HistogramData? in
                 Renderer.shared.thumbnail(url, adj, size: 480).map(HistogramData.compute)
             }.value

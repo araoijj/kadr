@@ -2,14 +2,14 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// Доступ к файловой системе: избранные и недавние папки, подключённые диски и карты памяти.
+/// File system access: favorite and recent folders, connected drives and memory cards.
 @MainActor
 @Observable
 final class FolderBrowser {
     var favorites: [URL] = []
     var recent: [URL] = []
     var volumes: [URL] = []
-    /// Вызывается, когда подключили новую карту камеры (в корне есть DCIM).
+    /// Called when a new camera card is connected (has DCIM at the root).
     var onCardMounted: ((URL) -> Void)?
     private var scannedOnce = false
 
@@ -28,7 +28,7 @@ final class FolderBrowser {
             .map { URL(fileURLWithPath: $0) }
             .filter { FileManager.default.fileExists(atPath: $0.path) }
         refreshVolumes()
-        // Вставили карту памяти или диск — список обновится сам.
+        // A memory card or drive was inserted; the list updates by itself.
         let nc = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didMountNotification, NSWorkspace.didUnmountNotification] {
             nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
@@ -45,7 +45,7 @@ final class FolderBrowser {
                 let v = try? u.resourceValues(forKeys: Set(keys))
                 return v?.volumeIsRootFileSystem != true && v?.volumeIsBrowsable != false
             }
-        // При запуске уже вставленные карты плашку не вызывают — только новые подключения.
+        // Cards already inserted at launch don't trigger the banner; only new connections do.
         if scannedOnce {
             for v in volumes where !before.contains(v) && CardImporter.isCameraCard(v) { onCardMounted?(v) }
         }
@@ -71,7 +71,7 @@ final class FolderBrowser {
         return (try? u.resourceValues(forKeys: [.localizedNameKey]).localizedName) ?? u.lastPathComponent
     }
 
-    /// Вложенные папки: без скрытых, пакетов (.app, .photoslibrary) и служебных.
+    /// Subfolders, excluding hidden ones, packages (.app, .photoslibrary) and system folders.
     nonisolated static func subfolders(of u: URL) -> [URL] {
         let keys: Set<URLResourceKey> = [.isDirectoryKey, .isPackageKey]
         return ((try? FileManager.default.contentsOfDirectory(at: u, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles])) ?? [])
@@ -82,7 +82,7 @@ final class FolderBrowser {
             .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
     }
 
-    /// Сколько снимков лежит прямо в папке (без вложенных).
+    /// Number of photos directly in the folder (not in subfolders).
     nonisolated static func photoCount(in u: URL) -> Int {
         ((try? FileManager.default.contentsOfDirectory(atPath: u.path)) ?? [])
             .filter { ImageStore.rawExtensions.contains(($0 as NSString).pathExtension.lowercased()) || ImageStore.imageExtensions.contains(($0 as NSString).pathExtension.lowercased()) }
@@ -90,7 +90,7 @@ final class FolderBrowser {
     }
 }
 
-/// Строка папки в дереве: клик — открыть, треугольник — показать вложенные.
+/// Folder row in the tree: click to open, disclosure triangle to show subfolders.
 struct FolderRow: View {
     let url: URL
     var title: String?

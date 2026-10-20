@@ -1,18 +1,18 @@
 import Foundation
 
-/// Перевод интерфейса. Исходный язык — русский; словари en/es/it — в Translations.swift.
-/// tr() принимает уже собранную строку: точное совпадение или шаблон с {} на месте подстановок
-/// («Выделено {}» → «Selected {}»), поэтому строки с числами и именами переводятся без доработки кода.
+/// UI localization. The source language is Russian; the en/es/it dictionaries are in Translations.swift.
+/// tr() takes an already-built string: an exact match or a template with {} in place of substitutions
+/// ("Выделено {}" → "Selected {}"), so strings with numbers and names get translated without code changes.
 enum I18n {
     static let supported = ["ru", "en", "es", "it"]
 
-    /// Даты — на языке интерфейса, а не системы.
+    /// Dates use the UI language, not the system one.
     static let locale = Locale(identifier: lang)
 
-    /// Название приложения: по-русски «Кадр», на других языках — Kadr. («Кадр» в словаре — это «кадр» фотографии.)
+    /// App name: "Кадр" in Russian, Kadr in other languages. ("Кадр" in the dictionary is a photo "frame".)
     static var appName: String { lang == "ru" ? "Кадр" : "Kadr" }
 
-    /// Язык выбирается при запуске: из настроек или системы (неизвестный системный — английский).
+    /// The language is chosen at launch: from settings or the system (an unknown system language falls back to English).
     static let lang: String = {
         let p = Prefs.language
         if p != "system", supported.contains(p) { return p }
@@ -29,7 +29,7 @@ enum I18n {
         }
     }()
 
-    /// Шаблоны с подстановками: длинные (точнее) — первыми.
+    /// Templates with substitutions: longer (more specific) ones first.
     private static let templates: [(NSRegularExpression, String)] = table
         .filter { $0.key.contains("{}") && $0.key != "{}" }
         .sorted { $0.key.count > $1.key.count }
@@ -62,7 +62,7 @@ enum I18n {
         return r
     }
 
-    /// {} — по порядку, {1} {2} — по номеру (если в переводе другой порядок слов).
+    /// {} are filled in order, {1} {2} by index (when the translation uses a different word order).
     private static func fill(_ t: String, _ caps: [String]) -> String {
         var r = t
         for (i, c) in caps.enumerated() { r = r.replacingOccurrences(of: "{\(i + 1)}", with: c) }
@@ -74,5 +74,5 @@ enum I18n {
     }
 }
 
-/// Перевести строку интерфейса.
+/// Translates a UI string.
 @inline(__always) func tr(_ s: String) -> String { I18n.translate(s) }

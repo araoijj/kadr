@@ -1,18 +1,18 @@
 import Foundation
 import Observation
 
-/// Свободная коллекция LUT, которую можно скачать прямо из «Кадра».
+/// A free LUT collection that can be downloaded right from Kadr.
 struct LUTCollection: Sendable {
     let folder: String
     let title: String
     let author: String
     let license: String
     let page: URL
-    let listAPI: URL        // GitHub API: содержимое папки с HaldCLUT
+    let listAPI: URL        // GitHub API: contents of the HaldCLUT folder
     let licenseRaw: URL
     let filePrefix: String
 
-    /// 51 эмуляция плёнки João Almeida — MIT. https://github.com/t3mujin/t3mujinpack
+    /// 51 film emulations by João Almeida, MIT. https://github.com/t3mujin/t3mujinpack
     static let t3mujin = LUTCollection(
         folder: "t3mujinpack",
         title: tr("Плёнка: t3mujinpack"),
@@ -69,7 +69,7 @@ final class CollectionDownloader {
                     }
                     done += 1
                 }
-                // Лицензия и авторство — рядом с файлами.
+                // License and attribution go next to the files.
                 if let (lic, _) = try? await URLSession.shared.data(from: c.licenseRaw) {
                     try? lic.write(to: c.localFolder.appendingPathComponent("LICENSE.txt"))
                 }
