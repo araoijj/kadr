@@ -81,6 +81,24 @@ struct EditPanel: View {
 
     private func sliders(_ p: Photo) -> some View {
         VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Кадр").font(.headline)
+                    if p.adj.hasGeometry { Circle().fill(Color.accentColor).frame(width: 6, height: 6) }
+                    Spacer()
+                    if p.adj.hasGeometry {
+                        Button("Сбросить") { lib.resetCrop() }.buttonStyle(.plain).font(.caption).foregroundStyle(Color.accentColor)
+                    }
+                }
+                Button { lib.cropMode ? lib.finishCrop() : lib.startCrop() } label: {
+                    Label(lib.cropMode ? "Готово (Enter)" : "Кадрировать и выровнять (R)", systemImage: "crop")
+                        .frame(maxWidth: .infinity)
+                }
+                .controlSize(.large)
+                Text(p.adj.hasCrop ? "Формат: \(CropFormat.byID(p.adj.cropAspect)?.title ?? "свободный")" + (p.adj.angle != 0 ? String(format: " · горизонт %+.1f°", p.adj.angle) : "")
+                     : "Форматы Instagram: пост 4:5, квадрат, сторис 9:16, горизонтальный 1.91:1.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             section("Профиль", .profile, p) {
                 Picker("", selection: Binding(get: { p.adj.profile }, set: { v in var a = p.adj; a.profile = v; lib.setAdjustments(a) })) {
                     Text("Как в камере").tag(Adjustments.Profile.camera)
@@ -215,7 +233,12 @@ struct EditPanel: View {
                     Spacer()
                     Button("Убрать") { var a = p.adj; a.lut = nil; lib.setAdjustments(a) }.controlSize(.small)
                 }
-                slider("Сила", "slider.horizontal.below.square.filled.and.square", \.lutAmount, p, range: 0...100, defaultValue: 100)
+                slider("Сила", "slider.horizontal.below.square.filled.and.square", \.lutAmount, p, range: 0...200, defaultValue: 100) { "\(Int($0))%" }
+                HStack {
+                    Text("0 — без LUT, 100 — как задумано, 200 — усиленно").font(.caption2).foregroundStyle(.secondary)
+                    Spacer()
+                    LUTPeek()
+                }
             }
             ForEach(LUTCollection.all, id: \.folder) { c in
                 if c.installedCount == 0 { collectionCard(c) }
@@ -490,5 +513,30 @@ struct StylePreview: View {
             if let c = Renderer.shared.cachedThumbnail(url, a, size: 220) { image = c; return }
             image = await Task.detached(priority: .utility) { Renderer.shared.thumbnail(url, a, size: 220) }.value
         }
+    }
+}
+
+/// Зажмите, чтобы увидеть кадр без LUT, — отпустите, чтобы вернуть.
+struct LUTPeek: View {
+    @Environment(Library.self) private var lib
+    @State private var saved: Adjustments?
+
+    var body: some View {
+        Text("Сравнить")
+            .font(.caption.weight(.medium))
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Capsule().fill(saved != nil ? Color.accentColor.opacity(0.4) : .white.opacity(0.1)))
+            .gesture(DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    guard saved == nil, let a = lib.current?.adj else { return }
+                    saved = a
+                    var b = a; b.lutAmount = 0
+                    lib.setAdjustments(b)
+                }
+                .onEnded { _ in
+                    if let a = saved { lib.setAdjustments(a) }
+                    saved = nil
+                })
+            .help("Зажмите — без LUT")
     }
 }

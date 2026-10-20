@@ -28,11 +28,26 @@ struct Adjustments: Codable, Equatable, Hashable {
     var vignette: Double = 0      // − затемнить края, + осветлить
     var grain: Double = 0         // 0…100
     var lut: String?              // путь в папке LUT (.cube или HaldCLUT .png)
-    var lutAmount: Double = 100   // 0…100
+    var lutAmount: Double = 100   // 0…200: больше 100 — усиление эффекта LUT
+
+    // Кадрирование: прямоугольник в долях кадра (y — сверху вниз) и выравнивание горизонта, градусы.
+    var cropX: Double = 0
+    var cropY: Double = 0
+    var cropW: Double = 1
+    var cropH: Double = 1
+    var angle: Double = 0
+    var cropAspect: String?       // выбранный формат в панели (для подсветки), на картинку не влияет
+
+    var hasCrop: Bool { cropX != 0 || cropY != 0 || cropW != 1 || cropH != 1 }
+    var hasGeometry: Bool { hasCrop || angle != 0 }
+    var cropRect: CGRect {
+        get { CGRect(x: cropX, y: cropY, width: cropW, height: cropH) }
+        set { cropX = newValue.minX; cropY = newValue.minY; cropW = newValue.width; cropH = newValue.height }
+    }
 
     static let none = Adjustments()
     /// Без изменений: всё по умолчанию и LUT не выбран (его сила тогда не важна).
-    var isIdentity: Bool { var a = self; a.lutAmount = 100; return a == .none }
+    var isIdentity: Bool { var a = self; a.lutAmount = 100; a.cropAspect = nil; return a == .none }
 }
 
 extension Adjustments {
@@ -56,6 +71,9 @@ extension Adjustments {
         vignette = v(.vignette) ?? 0; grain = v(.grain) ?? 0
         lut = try? c.decodeIfPresent(String.self, forKey: .lut)
         lutAmount = v(.lutAmount) ?? 100
+        cropX = v(.cropX) ?? 0; cropY = v(.cropY) ?? 0; cropW = v(.cropW) ?? 1; cropH = v(.cropH) ?? 1
+        angle = v(.angle) ?? 0
+        cropAspect = try? c.decodeIfPresent(String.self, forKey: .cropAspect)
     }
 }
 
@@ -339,14 +357,43 @@ enum EditPipeline {
         }
         """)!
 
+    private static let mixKernel = CIColorKernel(source:
+        "kernel vec4 mixk(__sample a, __sample b, float k) { return vec4(max(a.rgb + (b.rgb - a.rgb) * k, vec3(0.0)), a.a); }")!
+
+    /// Выравнивание горизонта (с увеличением, чтобы не было пустых углов) и кадрирование.
+    static func geometry(_ input: CIImage, _ a: Adjustments) -> CIImage {
+        var img = input
+        let e = input.extent
+        if a.angle != 0 {
+            let t: CGFloat = CGFloat(abs(a.angle)) * .pi / 180
+            let w: CGFloat = e.width, h: CGFloat = e.height
+            let c: CGFloat = cos(t), sn: CGFloat = sin(t)
+            let sx: CGFloat = (w * c + h * sn) / w
+            let sy: CGFloat = (w * sn + h * c) / h
+            let s: CGFloat = max(sx, sy)
+            let rot: CGFloat = CGFloat(-a.angle) * .pi / 180
+            var tr = CGAffineTransform(translationX: -e.midX, y: -e.midY)
+            tr = tr.concatenating(CGAffineTransform(rotationAngle: rot))
+            tr = tr.concatenating(CGAffineTransform(scaleX: s, y: s))
+            tr = tr.concatenating(CGAffineTransform(translationX: e.midX, y: e.midY))
+            img = img.clampedToExtent().transformed(by: tr).cropped(to: e)
+        }
+        if a.hasCrop {
+            let r = CGRect(x: e.minX + a.cropX * e.width, y: e.minY + (1 - a.cropY - a.cropH) * e.height,
+                           width: a.cropW * e.width, height: a.cropH * e.height).integral
+            img = img.cropped(to: r).transformed(by: CGAffineTransform(translationX: -r.minX, y: -r.minY))
+        }
+        return img
+    }
+
     private static let grainKernel = CIColorKernel(source:
         "kernel vec4 grain(__sample s, __sample n, float a) { return vec4(s.rgb * (1.0 + (n.r - 0.5) * a), s.a); }")!
 
     /// Применяет настройки к линейному изображению (выход CIRAWFilter или превью).
     /// cameraCube — подобранный профиль «как в камере» (только для проявленного RAW).
     static func apply(_ a: Adjustments, to input: CIImage, cameraCube: (size: Int, data: Data)? = nil) -> CIImage {
-        var img = input
-        let e = input.extent
+        var img = a.hasGeometry ? geometry(input, a) : input
+        let e = img.extent
         let longSide = max(e.width, e.height)
 
         // 1. Линейная часть — как «Основные» в Lightroom: до профиля.
@@ -413,9 +460,8 @@ enum EditPipeline {
             let lutted = img.applyingFilter("CIColorCubeWithColorSpace", parameters: [
                 "inputCubeDimension": cube.size, "inputCubeData": cube.data, "inputColorSpace": srgb,
             ])
-            img = a.lutAmount >= 100 ? lutted : img.applyingFilter("CIDissolveTransition", parameters: [
-                kCIInputTargetImageKey: lutted, kCIInputTimeKey: a.lutAmount / 100,
-            ])
+            // 0–100% — смешивание с исходным, 100–200% — усиление разницы, как Amount у профилей Lightroom.
+            img = a.lutAmount == 100 ? lutted : (mixKernel.apply(extent: e, arguments: [img, lutted, a.lutAmount / 100]) ?? lutted)
         }
 
         // 6. Тонирование теней и светов: мягкий свет цветом, маской по яркости.

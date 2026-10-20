@@ -81,6 +81,14 @@ struct KeyHandler {
         if !e.modifierFlags.intersection([.command, .control, .option]).isEmpty { return false }
         let shift = e.modifierFlags.contains(.shift)
         if NSApp.keyWindow?.firstResponder is NSTextView || lib.showExport || lib.showImport { return false }
+        if lib.cropMode {
+            switch e.keyCode {
+            case 36, 76: lib.finishCrop(); return true      // Enter — готово
+            case 53: lib.cancelCrop(); return true          // Esc — отменить
+            default: break
+            }
+            if ["r", "к"].contains(e.charactersIgnoringModifiers?.lowercased() ?? "") { lib.finishCrop(); return true }
+        }
         if lib.comparing {
             switch e.keyCode {
             case 123, 126: lib.compareMove(-1); return true
@@ -125,6 +133,7 @@ struct KeyHandler {
         case "\\": lib.showOriginal.toggle()
         case "s", "ы": lib.quickSend()
         case "c", "с": lib.startCompare()
+        case "r", "к": lib.startCrop()
         default: return false
         }
         return true

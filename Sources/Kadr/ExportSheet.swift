@@ -37,6 +37,34 @@ struct ExportSheet: View {
                 .labelsHidden()
             }
 
+            section("Пресет") {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                    ForEach(ExportPreset.allCases) { pr in
+                        Button {
+                            lib.export.preset = pr
+                            if pr != .custom { lib.export.format = .jpeg; lib.export.applyEdits = true }
+                            if pr == .web { lib.export.jpegQuality = 0.85 }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(pr.title).font(.callout.weight(.medium))
+                                Text(pr.subtitle).font(.caption).foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(8)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(lib.export.preset == pr ? Color.accentColor.opacity(0.3) : .white.opacity(0.05)))
+                            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(lib.export.preset == pr ? Color.accentColor : .clear))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                if lib.export.preset.size != nil {
+                    Toggle("Если формат кадра другой — кадрировать по центру (иначе вписать)", isOn: $lib.export.presetCrop)
+                    Text("Совет: точнее — заранее кадрировать в «Кадре» (R) нужным форматом, тогда центр не понадобится.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+
+            if lib.export.preset == .custom {
             section("Формат") {
                 Picker("", selection: $lib.export.format) {
                     Text("Оригиналы RAW + XMP").tag(ExportSettings.Format.original)
@@ -66,10 +94,12 @@ struct ExportSheet: View {
                         Text("\(Int(lib.export.jpegQuality * 100))%")
                             .monospacedDigit().foregroundStyle(.secondary).frame(width: 40)
                     }
-                    Toggle("С обработкой и стилями из «Кадра»", isOn: $lib.export.applyEdits)
+                    Toggle("С обработкой, стилями и кадрированием из «Кадра»", isOn: $lib.export.applyEdits)
                     Text("Проявление движком macOS; правки Capture One не переносятся. ~1–2 с на кадр.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+            }
+
             }
 
             section("Имя файла") {
@@ -93,7 +123,7 @@ struct ExportSheet: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
-            if lib.export.format == .jpeg {
+            if lib.export.format == .jpeg || lib.export.preset != .custom {
                 section("Водяной знак") {
                     Toggle("Добавить текст на фото", isOn: $lib.export.watermarkOn)
                     if lib.export.watermarkOn {

@@ -41,11 +41,11 @@ final class Renderer: @unchecked Sendable {
             queue.async {
                 guard self.current(channel) == gen, pixels.width >= 1, pixels.height >= 1, region.width > 0 else { cont.resume(returning: nil); return }
                 guard var base = self.base(url, maxSide: 3200) else { cont.resume(returning: nil); return }
-                if pixels.width / region.width > base.extent.width * 1.05, let full = self.base(url, maxSide: nil) { base = full }
+                if pixels.width / region.width > base.extent.width * adj.cropW * 1.05, let full = self.base(url, maxSide: nil) { base = full }
                 guard self.current(channel) == gen else { cont.resume(returning: nil); return }
                 let cube = adj.profile == .camera ? CameraMatch.shared.cube(for: url) : nil
                 let out = EditPipeline.apply(adj, to: base, cameraCube: cube)
-                let e = base.extent
+                let e = out.extent   // уже после кадрирования
                 let r = CGRect(x: e.minX + region.minX * e.width, y: e.minY + (1 - region.maxY) * e.height,
                                width: region.width * e.width, height: region.height * e.height)
                 let k = pixels.width / r.width

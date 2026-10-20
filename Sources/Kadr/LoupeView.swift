@@ -8,12 +8,14 @@ struct LoupeView: View {
         VStack(spacing: 0) {
             ZStack {
                 if let p = lib.current {
-                    ZoomableLoupe(photo: p)
+                    if lib.cropMode { CropEditor(photo: p) } else { ZoomableLoupe(photo: p) }
                     overlay(p)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(alignment: .bottom) { ZoomBar().padding(.bottom, 12) }
+            .overlay(alignment: .bottom) {
+                if lib.cropMode { CropBar().padding(.bottom, 12) } else { ZoomBar().padding(.bottom, 12) }
+            }
             .task(id: lib.currentID) {
                 // Готовим RAW текущего кадра заранее, чтобы первый стиль применился сразу.
                 guard let u = lib.currentID, ImageStore.rawExtensions.contains(u.pathExtension.lowercased()) else { return }

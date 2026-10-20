@@ -136,6 +136,46 @@ final class Library {
         scheduleEditsSave()
     }
 
+    // MARK: - Кадрирование
+
+    var cropMode = false
+    private var cropBackup: Adjustments?
+
+    func startCrop() {
+        guard current != nil else { return }
+        cropBackup = current?.adj
+        comparing = false
+        loupe = true
+        setZoom(nil)
+        inspectorTab = .edit
+        cropMode = true
+    }
+
+    func finishCrop() {
+        cropMode = false
+        cropBackup = nil
+    }
+
+    func cancelCrop() {
+        if let b = cropBackup { setAdjustments(b) }
+        cropMode = false
+        cropBackup = nil
+    }
+
+    func resetCrop() {
+        guard var a = current?.adj else { return }
+        a.cropRect = CGRect(x: 0, y: 0, width: 1, height: 1)
+        a.angle = 0
+        a.cropAspect = nil
+        setAdjustments(a)
+    }
+
+    /// Для массовых правок из других файлов (кадрирование серии).
+    func setAdjustmentsRaw(_ i: Int, _ a: Adjustments) {
+        photos[i].adj = a
+        scheduleEditsSave()
+    }
+
     /// Стиль, вставка и сброс — на все выделенные.
     private func setAdjustmentsForTargets(_ change: (inout Adjustments) -> Void) {
         for t in targets {

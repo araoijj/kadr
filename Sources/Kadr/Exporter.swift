@@ -3,6 +3,39 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
+/// Готовые размеры для соцсетей. Instagram сжимает всё шире 1080 px — отдаём ровно его размеры.
+enum ExportPreset: String, Codable, CaseIterable, Identifiable {
+    case custom, igPost, igSquare, igStory, igLandscape, web
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .custom: "Свои настройки"
+        case .igPost: "Instagram пост 4:5"
+        case .igSquare: "Instagram квадрат"
+        case .igStory: "Сторис / Reels 9:16"
+        case .igLandscape: "Instagram горизонтальный"
+        case .web: "Сайт / Telegram"
+        }
+    }
+
+    /// Точный размер в пикселях; nil — по длинной стороне.
+    var size: (w: Int, h: Int)? {
+        switch self {
+        case .igPost: (1080, 1350)
+        case .igSquare: (1080, 1080)
+        case .igStory: (1080, 1920)
+        case .igLandscape: (1080, 566)
+        default: nil
+        }
+    }
+
+    var subtitle: String {
+        if let s = size { return "\(s.w) × \(s.h)" }
+        return self == .web ? "2560 px, качество 85%" : "формат, размер и качество — вручную"
+    }
+}
+
 /// Настройки сохранения — запоминаются между запусками.
 struct ExportSettings: Codable, Equatable {
     enum Scope: String, Codable, CaseIterable { case visible, rated, selected = "current" }
@@ -23,6 +56,8 @@ struct ExportSettings: Codable, Equatable {
     var watermarkSize = 3.0       // % от длинной стороны
     var watermarkOpacity = 0.6
     var watermarkPosition: Watermark.Position = .bottomRight
+    var preset: ExportPreset = .custom
+    var presetCrop = true         // если формат кадра другой — кадрировать по центру (иначе вписать)
 
     static let key = "exportSettings"
 
@@ -46,6 +81,8 @@ struct ExportSettings: Codable, Equatable {
         watermarkSize = (try? c.decode(Double.self, forKey: .watermarkSize)) ?? def.watermarkSize
         watermarkOpacity = (try? c.decode(Double.self, forKey: .watermarkOpacity)) ?? def.watermarkOpacity
         watermarkPosition = (try? c.decode(Watermark.Position.self, forKey: .watermarkPosition)) ?? def.watermarkPosition
+        preset = (try? c.decode(ExportPreset.self, forKey: .preset)) ?? def.preset
+        presetCrop = (try? c.decode(Bool.self, forKey: .presetCrop)) ?? def.presetCrop
     }
 
     static func load() -> ExportSettings {
@@ -128,10 +165,15 @@ enum Exporter {
 
     /// Проявление RAW → обработка → водяной знак → JPEG sRGB с EXIF исходника.
     private static func writeJPEG(_ item: ExportItem, to target: URL, _ s: ExportSettings) -> Bool {
-        guard var img = EditPipeline.source(item.url, maxSide: s.longSide > 0 ? CGFloat(s.longSide) : nil) else { return false }
+        // Сколько пикселей нужно от RAW: с запасом на своё кадрирование.
+        var maxSide: CGFloat? = s.longSide > 0 ? CGFloat(s.longSide) : nil
+        if let p = s.preset.size { maxSide = CGFloat(max(p.w, p.h)) / CGFloat(max(min(item.adj.cropW, item.adj.cropH), 0.2)) * 1.3 }
+        if s.preset == .web { maxSide = 2560 / CGFloat(max(item.adj.cropW, item.adj.cropH, 0.2)) * 1.1 }
+        guard var img = EditPipeline.source(item.url, maxSide: maxSide) else { return false }
         // Без обработки — всё равно с профилем «как в камере», чтобы цвета совпадали с превью.
         let adj = s.applyEdits ? item.adj : Adjustments()
         img = EditPipeline.apply(adj, to: img, cameraCube: adj.profile == .camera ? CameraMatch.shared.cube(for: item.url) : nil)
+        img = fitToPreset(img, s)
         if s.watermarkOn {
             img = EditPipeline.watermark(img, text: s.watermarkText, sizePercent: s.watermarkSize,
                                          opacity: s.watermarkOpacity, position: s.watermarkPosition)
@@ -154,6 +196,35 @@ enum Exporter {
         }
         CGImageDestinationAddImage(dest, cg, props as CFDictionary)
         return CGImageDestinationFinalize(dest)
+    }
+
+    /// Под точный размер соцсети: кадрирование по центру до нужного формата (или вписывание) и масштаб.
+    static func fitToPreset(_ input: CIImage, _ s: ExportSettings) -> CIImage {
+        var img = input
+        if s.preset == .web {
+            let k = 2560 / max(img.extent.width, img.extent.height)
+            if k < 1 { img = img.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k]) }
+            return img
+        }
+        guard let size = s.preset.size else { return img }
+        let target = CGFloat(size.w) / CGFloat(size.h)
+        let e = img.extent
+        // Кадрируем до точного формата всегда: даже своё 4:5 после округления пикселей бывает 0,802.
+        if s.presetCrop || abs(e.width / e.height - target) / target < 0.01 {
+            let r = e.width / e.height > target
+                ? CGRect(x: e.midX - e.height * target / 2, y: e.minY, width: e.height * target, height: e.height)
+                : CGRect(x: e.minX, y: e.midY - e.width / target / 2, width: e.width, height: e.width / target)
+            img = img.cropped(to: r.integral).transformed(by: CGAffineTransform(translationX: -r.integral.minX, y: -r.integral.minY))
+        }
+        let k = min(CGFloat(size.w) / img.extent.width, CGFloat(size.h) / img.extent.height)
+        img = img.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k])
+        // Формат совпадает — доводим до точных пикселей (1080×1350, а не 1080×1349).
+        let e2 = img.extent
+        if abs(e2.width / e2.height - target) / target < 0.01 {
+            img = img.transformed(by: CGAffineTransform(scaleX: CGFloat(size.w) / e2.width, y: CGFloat(size.h) / e2.height))
+            return img.cropped(to: CGRect(x: 0, y: 0, width: size.w, height: size.h))
+        }
+        return img.cropped(to: CGRect(x: 0, y: 0, width: e2.width.rounded(.down), height: e2.height.rounded(.down)))
     }
 
     private static func uniqueURL(_ url: URL) -> URL {

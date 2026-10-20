@@ -69,7 +69,7 @@ struct ZoomableLoupe: View {
         guard long > 0, short > 0 else { return CGSize(width: 1600 * a, height: 1600) }
         var w = a >= 1 ? long : short, h = a >= 1 ? short : long
         if abs(w / h - a) / a > 0.02 { if a < w / h { w = h * a } else { h = w / a } }
-        return CGSize(width: w, height: h)
+        return CGSize(width: w * photo.adj.cropW, height: h * photo.adj.cropH)
     }
 
     // MARK: - Увеличенный кадр
