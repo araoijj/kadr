@@ -8,7 +8,7 @@ enum PhotoFilter: Hashable {
     case label(ColorLabel)
     case duplicates
     // Culling
-    case suspects, undecided, leaders
+    case suspects, undecided, leaders, smiling
     case reason(CullReason)
     case scene(Int)
 
@@ -27,6 +27,7 @@ enum PhotoFilter: Hashable {
         case .leaders: tr("Быстрый проход")
         case .reason(let r): r.title
         case .scene(let id): tr("Сцена \(id)")
+        case .smiling: tr("Улыбаются")
         }
     }
 
@@ -45,6 +46,7 @@ enum PhotoFilter: Hashable {
         case .leaders: "hare"
         case .reason(let r): r.icon
         case .scene: "film.stack"
+        case .smiling: "face.smiling"
         }
     }
 }
@@ -687,6 +689,7 @@ final class Library {
         case .leaders: !p.rejected && (p.seriesID == nil || p.isBestInSeries) && p.duplicateOf == nil
         case .reason(let r): verdict(p).reasons.contains(r)
         case .scene(let id): p.sceneID == id
+        case .smiling: !p.rejected && (p.cull?.faces.contains { $0.meshUsable && ($0.smile ?? 0) >= 0.5 } ?? false)
         }
     }
 
@@ -869,7 +872,9 @@ final class Library {
     /// The photo needs AI analysis: it hasn't had one yet, or its face eyes were measured the old way before the MediaPipe face mesh was installed.
     func needsAI(_ p: Photo, mesh: Bool = FaceMesh.shared.installed) -> Bool {
         guard let c = p.cull else { return true }
-        return mesh && c.mesh != true && !c.faces.isEmpty
+        // Faces measured before the face mesh was installed, or before smiles were measured.
+        if c.tags == nil || c.print == nil { return true }   // analyzed before tags and feature prints
+        return mesh && !c.faces.isEmpty && (c.mesh != true || c.faces.contains { $0.blink != nil && $0.smile == nil })
     }
 
     var aiPending: Int {

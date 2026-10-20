@@ -328,6 +328,8 @@ struct EditPanel: View {
                 .help(tr("Показать снимок камеры без обработки (клавиша \\)"))
             Button { lib.copyAdjustments() } label: { Image(systemName: "doc.on.doc") }
                 .help(tr("Копировать обработку (⌘⇧C)"))
+            Button { lib.matchToCurrent() } label: { Image(systemName: "equal.square") }
+                .help(tr("Выровнять экспозицию и баланс выделенных (или серии) по этому кадру (⌥⌘M)"))
             Button { lib.pasteAdjustments() } label: { Image(systemName: "doc.on.clipboard") }
                 .disabled(lib.copiedAdj == nil)
                 .help(tr("Вставить обработку на выделенные (⌘⇧V)"))

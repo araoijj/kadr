@@ -126,6 +126,7 @@ struct Sidebar: View {
                     if lib.aiOn {
                         row(.suspects, tint: .orange)
                         row(.leaders, tint: .green)
+                        if lib.count(.smiling) > 0 { row(.smiling, tint: .yellow) }
                         ForEach(CullReason.allCases.filter { lib.count(.reason($0)) > 0 }) { r in
                             row(.reason(r), tint: r.isDefect ? .orange : .yellow)
                         }

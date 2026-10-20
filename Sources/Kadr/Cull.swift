@@ -143,6 +143,8 @@ extension Library {
             r += big.compactMap(\.quality).reduce(0, +) / Double(big.count) * 15
         }
         if let a = c.aesthetics { r += (a + 1) / 2 * 15 }
+        // A smile (MediaPipe) — a plus when choosing the best of a burst: same pose, better expression.
+        if let sm = big.compactMap(\.smile).max() { r += sm * 10 }
         // Overexposure "adds sharpness" (hard transitions); without a penalty a blown frame would win.
         if c.clipHigh > 0.05 { r -= 30 }
         if (c.meanLuma ?? 0.5) < 0.08 { r -= 30 }
@@ -276,5 +278,50 @@ extension Library {
     func writeSidecar(_ i: Int) {
         let p = photos[i]
         try? Sidecar.write(.init(rating: p.rating, rejected: p.rejected, label: p.label), for: p.url)
+    }
+}
+
+// MARK: - Why: the numbers behind each finding
+
+extension Library {
+    /// Typical sharpness of reliable faces in the photo's scene (or the whole folder).
+    func medianFaceSharpness(_ p: Photo) -> Double? {
+        let m = p.sceneID.flatMap { sceneMedians[$0]?.face } ?? cullMedianFaceSharpness
+        return m > 0 ? m : nil
+    }
+
+    /// One line per reason with the measured value and the threshold at the current strictness —
+    /// shown on hover over the reason tag, like Lightroom's Culling Info.
+    func explain(_ r: CullReason, _ p: Photo) -> String {
+        let st = cullStrictness
+        guard let c = p.cull else { return r == .duplicate ? tr("Точная копия другого файла (тот же размер, время и картинка)") : r.title }
+        func pct(_ v: Double) -> Int { Int((v * 100).rounded()) }
+        switch r {
+        case .blur:
+            let byFace = c.faces.contains(where: \.reliable)
+            let local = p.sceneID.flatMap { sceneMedians[$0] }
+            let median = (byFace ? local?.face : local?.other) ?? (byFace ? cullMedianFaceSharpness : cullMedianSharpness)
+            let rel = median > 0 ? (c.subjectSharpness ?? 0) / median : 0
+            return tr("Резкость \(byFace ? tr("лица") : tr("объекта")): \(pct(rel))% от обычной для сцены; брак ниже \(pct(0.18 + 0.27 * st))%")
+        case .blink, .eyesClosed:
+            let f = c.faces.filter(\.meshUsable).max { ($0.blink ?? 0) < ($1.blink ?? 0) }
+            let b = f?.blink.map { String(format: "%.2f", $0) } ?? "—"
+            return r == .blink
+                ? tr("Оба глаза закрыты (моргание \(b), порог \(String(format: "%.2f", 0.45 - 0.1 * st))); в серии есть кадр в той же позе с открытыми глазами")
+                : tr("Оба глаза закрыты (моргание \(b)) — кадр без пары с открытыми глазами, может быть задумано")
+        case .overexposed:
+            return tr("Пересвет: на лице или объекте \(pct(c.subjectClip ?? 0))% (порог \(pct(0.40 - 0.15 * st))%), во всём кадре \(pct(c.clipHigh))% (порог \(pct(0.45 - 0.15 * st))%)")
+        case .underexposed:
+            return tr("Средняя яркость \(pct(c.meanLuma ?? 0))%, светлые места \(pct(c.brightLuma ?? 0))%, провалы в чёрное \(pct(c.clipLow))%")
+        case .tilted:
+            return tr("Горизонт завален на \(String(format: "%.1f°", abs(c.horizon ?? 0)))")
+        case .utility:
+            return tr("Похоже на служебный снимок: экран, документ, случайный кадр")
+        case .duplicate:
+            return tr("Точная копия другого файла (тот же размер, время и картинка)")
+        case .weakerInSeries:
+            let best = p.seriesID.flatMap { seriesBestSharpness[$0] } ?? 0
+            return tr("Резкость \(pct(best > 0 ? (c.subjectSharpness ?? 0) / best : 0))% от лучшего кадра серии")
+        }
     }
 }

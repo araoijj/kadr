@@ -224,7 +224,7 @@ struct CullOverlay: View {
                     tag(tr("Оставлено") + " " + String(repeating: "★", count: photo.rating), "checkmark.circle.fill", .green)
                 }
                 if lib.aiOn {
-                    ForEach(v.reasons) { r in tag(r.title, r.icon, r.isDefect ? .orange : .yellow) }
+                    ForEach(v.reasons) { r in tag(r.title, r.icon, r.isDefect ? .orange : .yellow).help(lib.explain(r, photo)) }
                     if photo.isBestInSeries { tag(tr("Лучший в серии"), "sparkles", Theme.star) }
                     if v.reasons.contains(.underexposed) {
                         Button { lib.brightenDark() } label: { tag(tr("Осветлить"), "sun.max", .accentColor) }
@@ -305,6 +305,14 @@ struct FaceCrop: View {
                 Spacer()
                 if let q = face.quality { Text("\(Int(q * 100))%").font(.caption.monospacedDigit()).foregroundStyle(.secondary).help(tr("Качество лица по оценке macOS")) }
             }
+            // The numbers behind the verdict, like Lightroom's Culling Info.
+            HStack(spacing: 8) {
+                if let b = face.blink { stat("eye", String(format: "%.2f", b), tr("Моргание (MediaPipe): закрыты ≥ 0.4")) }
+                if let sm = face.smile { stat("face.smiling", String(format: "%.2f", sm), tr("Улыбка (MediaPipe): явная ≥ 0.5")) }
+                if let s = face.sharpness, let m = lib.medianFaceSharpness(photo), m > 0 {
+                    stat("scope", "\(Int((s / m * 100).rounded()))%", tr("Резкость лица относительно обычной для сцены"))
+                }
+            }
         }
         .task(id: ThumbKey(url: photo.url, adj: photo.adj)) {
             // Face in the cropped image's coordinates; a square around the face at ~100% (380 px on Retina).
@@ -320,6 +328,10 @@ struct FaceCrop: View {
             let px = Library.cullFacePixels
             image = await Renderer.shared.renderRegion(photo.url, a, region: r, pixels: CGSize(width: px, height: px), channel: "face-\(index)")
         }
+    }
+
+    private func stat(_ icon: String, _ value: String, _ help: String) -> some View {
+        Label(value, systemImage: icon).font(.caption2.monospacedDigit()).foregroundStyle(.secondary).help(help)
     }
 }
 
