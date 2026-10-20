@@ -59,6 +59,9 @@ struct KadrApp: App {
                 Button(tr("Масштаб 100%")) { library.loupe = true; library.setZoom(1, at: library.loupeCenter) }.keyboardShortcut("1")
                 Divider()
             }
+            CommandGroup(replacing: .help) {
+                Button(tr("Горячие клавиши")) { library.showShortcuts = true }.keyboardShortcut("/", modifiers: .command)
+            }
             CommandMenu(tr("Обработка")) {
                 Button(tr("Копировать обработку")) { library.copyAdjustments() }
                     .keyboardShortcut("c", modifiers: [.command, .shift])
@@ -125,6 +128,9 @@ struct KeyHandler {
             }
             if ["a", "ф"].contains(e.charactersIgnoringModifiers?.lowercased() ?? "") { lib.autoCropCurrent(); return true }   // A: auto crop
             if ["r", "к"].contains(e.charactersIgnoringModifiers?.lowercased() ?? "") { lib.finishCrop(); return true }
+        }
+        if e.charactersIgnoringModifiers == "?" || (shift && e.keyCode == 44) {   // ? — Shift + the "/" key on any layout
+            lib.showShortcuts = true; return true
         }
         if lib.tournamentActive {
             switch e.keyCode {
