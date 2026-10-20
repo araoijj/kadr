@@ -189,6 +189,10 @@ final class Library {
     var styles: [Style] = Style.builtIns + StyleStore.load()
     var luts: [String] = LUTStore.shared.list()
     var copiedAdj: Adjustments?
+    /// With several photos selected, sliders change all of them.
+    var syncEdits = Prefs.d.object(forKey: "pref.syncEdits") as? Bool ?? true {
+        didSet { Prefs.d.set(syncEdits, forKey: "pref.syncEdits") }
+    }
     private var copiedAsShotK: Double?   // as-shot white balance of the photo the settings were copied from
     let collections = CollectionDownloader()
 
@@ -204,13 +208,22 @@ final class Library {
     }
     private var saveEditsTask: Task<Void, Never>?
 
-    /// Sliders affect only the current photo (like the primary variant in Capture One).
+    /// Sliders change the current photo; with several photos selected and "Apply to all selected" on,
+    /// the changed settings go to the whole selection (like Lightroom's Auto Sync). Crop stays per photo.
     func setAdjustments(_ a: Adjustments) {
         guard let id = currentID, let i = index[id] else { return }
         let old = photos[i].adj
         guard old != a else { return }
-        let before = snapshot([id])
+        let others = syncEdits && multiSelected && !cropMode ? selection.filter { $0 != id && index[$0] != nil } : []
+        let before = snapshot([id] + others)
         photos[i].adj = a
+        if !others.isEmpty {
+            let srcK = old.wbShift != a.wbShift ? ImageStore.shared.asShotK(id) : nil
+            for o in others {
+                guard let j = index[o] else { continue }
+                photos[j].adj = photos[j].adj.syncing(from: old, to: a, asShotK: srcK, target: o)
+            }
+        }
         scheduleEditsSave()
         // Don't record steps while cropping; one step is recorded on "Done".
         if !cropMode {

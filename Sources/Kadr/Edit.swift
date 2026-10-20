@@ -109,6 +109,24 @@ enum StyleGroup: String, Codable, CaseIterable, Identifiable {
 }
 
 extension Adjustments {
+    private static let syncedNumbers: [WritableKeyPath<Adjustments, Double>] = [
+        \.exposure, \.tint, \.contrast, \.highlights, \.shadows, \.fade, \.clarity, \.vibrance, \.saturation,
+        \.shadowHue, \.shadowSat, \.highlightHue, \.highlightSat, \.vignette, \.grain, \.lutAmount,
+    ]
+
+    /// Applies what changed between `old` and `new` (on another photo) to this photo: changed settings take
+    /// the new value, the rest stay. White balance carries the absolute kelvin; crop and horizon are not synced.
+    func syncing(from old: Adjustments, to new: Adjustments, asShotK srcK: Double?, target: URL) -> Adjustments {
+        var r = self
+        for kp in Self.syncedNumbers where old[keyPath: kp] != new[keyPath: kp] { r[keyPath: kp] = new[keyPath: kp] }
+        if old.profile != new.profile { r.profile = new.profile }
+        if old.lut != new.lut { r.lut = new.lut }
+        if old.wbShift != new.wbShift, let srcK {
+            r.wbShift = ((srcK + new.wbShift - ImageStore.shared.asShotK(target)) / 10).rounded() * 10
+        }
+        return r
+    }
+
     /// Copies only the selected groups from the style; leaves the rest of the frame untouched.
     mutating func merge(_ s: Adjustments, groups: Set<StyleGroup>) {
         for g in groups {
