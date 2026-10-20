@@ -15,6 +15,9 @@ struct Inspector: View {
             .labelsHidden()
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
+            HistogramView(photo: lib.current)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
             Divider()
             switch lib.inspectorTab {
             case .info: InfoPanel()
@@ -26,55 +29,59 @@ struct Inspector: View {
 
 struct EditPanel: View {
     @Environment(Library.self) private var lib
-    @State private var naming = false
-    @State private var styleName = ""
-    @AppStorage("ep.open") private var openGroupsRaw = "Базовые"
+    @State private var newStyle = false
+    @State private var renaming: Style?
+    @State private var renameText = ""
+    @AppStorage("ep.open") private var openGroupsRaw = "Мои стили|Базовые"
     @AppStorage("ep.tab") private var tab = 0
 
     var body: some View {
-        ScrollView {
-            if let p = lib.current {
-                VStack(alignment: .leading, spacing: 18) {
-                    if lib.multiSelected {
-                        Label("Стили, вставка и сброс — для \(lib.targets.count) выделенных. Ползунки — для текущего кадра.",
-                              systemImage: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(Color.accentColor)
-                    }
-                    Picker("", selection: $tab) {
-                        Text("Настройки").tag(0)
-                        Text("Стили").tag(1)
-                        Text("LUT").tag(2)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-
-                    switch tab {
-                    case 1: stylesTab
-                    case 2: lutTab(p)
-                    default: sliders(p)
-                    }
-                    actions(p)
-                }
-                .padding(16)
-            } else {
-                Text("Нет выбранного снимка").foregroundStyle(.secondary).padding()
+        VStack(spacing: 0) {
+            Picker("", selection: $tab) {
+                Text("Настройки").tag(0)
+                Text("Стили").tag(1)
+                Text("LUT").tag(2)
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            ScrollView {
+                if let p = lib.current {
+                    VStack(alignment: .leading, spacing: 20) {
+                        if lib.multiSelected {
+                            Label("Стили, вставка и сброс — для \(lib.targets.count) выделенных. Ползунки — для текущего кадра.",
+                                  systemImage: "checkmark.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        switch tab {
+                        case 1: stylesTab(p)
+                        case 2: lutTab(p)
+                        default: sliders(p)
+                        }
+                    }
+                    .padding(16)
+                } else {
+                    Text("Нет выбранного снимка").foregroundStyle(.secondary).padding()
+                }
+            }
+            Divider()
+            if let p = lib.current { actions(p).padding(12) }
         }
-        .alert("Сохранить как стиль", isPresented: $naming) {
-            TextField("Название", text: $styleName)
-            Button("Сохранить") { lib.saveStyle(named: styleName) }
-            Button("Отмена", role: .cancel) {}
-        } message: {
-            Text("Текущие настройки кадра станут стилем в коллекции «Мои стили».")
+        .sheet(isPresented: $newStyle) { NewStyleSheet().environment(lib) }
+        .alert("Переименовать стиль", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+            TextField("Название", text: $renameText)
+            Button("Готово") { if let st = renaming { lib.renameStyle(st, to: renameText) }; renaming = nil }
+            Button("Отмена", role: .cancel) { renaming = nil }
         }
     }
 
     // MARK: - Настройки
 
     private func sliders(_ p: Photo) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
-            group("Профиль") {
+        VStack(alignment: .leading, spacing: 22) {
+            section("Профиль", .profile, p) {
                 Picker("", selection: Binding(get: { p.adj.profile }, set: { v in var a = p.adj; a.profile = v; lib.setAdjustments(a) })) {
                     Text("Как в камере").tag(Adjustments.Profile.camera)
                     Text("Стандартный macOS").tag(Adjustments.Profile.standard)
@@ -83,39 +90,37 @@ struct EditPanel: View {
                 .labelsHidden()
                 Text(p.adj.profile == .camera
                      ? "Цвета подобраны по JPEG камеры — правки начинаются с привычной картинки."
-                     : "Проявление RAW движком macOS: свои цвета, может отличаться от камеры.")
+                     : "Проявление RAW движком macOS: свои цвета, могут отличаться от камеры.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            group("Свет") {
-                slider("Экспозиция", \.exposure, p, range: -3...3, step: 0.05) { String(format: "%+.2f EV", $0) }
-                slider("Контраст", \.contrast, p)
-                slider("Света", \.highlights, p)
-                slider("Тени", \.shadows, p)
-                slider("Чёткость", \.clarity, p)
-                slider("Матовость", \.fade, p, range: 0...100)
+            section("Свет", .light, p) {
+                slider("Экспозиция", "sun.max", \.exposure, p, range: -3...3, step: 0.05) { String(format: "%+.2f EV", $0) }
+                slider("Контраст", "circle.lefthalf.filled", \.contrast, p)
+                slider("Света", "sun.max.fill", \.highlights, p)
+                slider("Тени", "moon.fill", \.shadows, p)
+                slider("Чёткость", "triangle", \.clarity, p)
+                slider("Матовость", "cloud.fog", \.fade, p, range: 0...100)
             }
-            group("Цвет") {
-                slider("Температура", \.temperature, p, tint: .orange)
-                slider("Оттенок", \.tint, p, tint: .pink)
-                slider("Красочность", \.vibrance, p)
-                slider("Насыщенность", \.saturation, p)
+            section("Цвет", .color, p) {
+                slider("Температура", "thermometer.medium", \.temperature, p, gradient: [.blue, .gray, .orange])
+                slider("Оттенок", "drop", \.tint, p, gradient: [.green, .gray, .pink])
+                slider("Красочность", "paintpalette", \.vibrance, p)
+                slider("Насыщенность", "drop.fill", \.saturation, p, gradient: [.gray, .red])
             }
-            group("Тонирование") {
+            section("Тонирование", .toning, p) {
                 hueSlider("Тени", hue: \.shadowHue, sat: \.shadowSat, p)
                 hueSlider("Света", hue: \.highlightHue, sat: \.highlightSat, p)
             }
-            group("Эффекты") {
-                slider("Виньетка", \.vignette, p)
-                slider("Зерно", \.grain, p, range: 0...100)
+            section("Эффекты", .effects, p) {
+                slider("Виньетка", "circle.dashed", \.vignette, p, gradient: [.black, .gray, .white])
+                slider("Зерно", "circle.grid.3x3", \.grain, p, range: 0...100)
             }
         }
     }
 
     // MARK: - Стили
 
-    private var openGroups: Set<String> {
-        get { Set(openGroupsRaw.split(separator: "|").map(String.init)) }
-    }
+    private var openGroups: Set<String> { Set(openGroupsRaw.split(separator: "|").map(String.init)) }
 
     private func toggleGroup(_ g: String) {
         var s = openGroups
@@ -123,8 +128,17 @@ struct EditPanel: View {
         openGroupsRaw = s.sorted().joined(separator: "|")
     }
 
-    private var stylesTab: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func stylesTab(_ p: Photo) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Button { newStyle = true } label: {
+                Label("Новый стиль из текущих настроек…", systemImage: "plus.circle.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(p.adj.isIdentity)
+            .help(p.adj.isIdentity ? "Сначала настройте кадр ползунками" : "Сохранить настройки кадра как свой пресет")
+
             ForEach(lib.styleGroups, id: \.name) { g in
                 VStack(alignment: .leading, spacing: 8) {
                     Button { toggleGroup(g.name) } label: {
@@ -142,42 +156,50 @@ struct EditPanel: View {
                         if g.name == "Плёнка" && g.styles.contains(where: \.missingLUT) {
                             collectionCard(.t3mujin)
                         }
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
-                            ForEach(g.styles) { st in styleChip(st) }
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                            ForEach(g.styles) { st in styleChip(st, p) }
                         }
                     }
                 }
             }
-            Button {
-                styleName = ""
-                naming = true
-            } label: {
-                Label("Сохранить текущие настройки как стиль…", systemImage: "plus")
-                    .font(.caption)
+            HStack {
+                Button("Экспорт своих…") { lib.exportStyles() }
+                Button("Импорт…") { lib.importStyles() }
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.accentColor)
-            .disabled(lib.current?.adj.isIdentity ?? true)
+            .controlSize(.small)
         }
     }
 
-    private func styleChip(_ st: Style) -> some View {
-        let active = lib.current?.adj == st.adj
+    private func styleChip(_ st: Style, _ p: Photo) -> some View {
+        let active = st.groups.count < StyleGroup.allCases.count ? p.adj.matches(st.adj, groups: st.groups) && !p.adj.isIdentity : p.adj == st.adj
+        var result = p.adj
+        result.merge(st.adj, groups: st.groups)
         return Button { lib.applyStyle(st) } label: {
             VStack(spacing: 4) {
-                StylePreview(photo: lib.current, adj: st.adj)
-                Text(st.name).font(.caption).lineLimit(1)
+                StylePreview(photo: p, adj: result)
+                HStack(spacing: 3) {
+                    if active { Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.accentColor) }
+                    Text(st.name).lineLimit(1)
+                }
+                .font(.caption)
             }
             .padding(4)
             .background(RoundedRectangle(cornerRadius: 6).fill(active ? Color.accentColor.opacity(0.3) : .white.opacity(0.05)))
-            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(active ? Color.accentColor : .clear, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(active ? Color.accentColor : .clear, lineWidth: 1.5))
         }
         .buttonStyle(.plain)
         .disabled(st.missingLUT)
         .opacity(st.missingLUT ? 0.4 : 1)
-        .help(st.missingLUT ? "Скачайте коллекцию плёнки" : "Применить к выделенным")
+        .help(st.missingLUT ? "Скачайте коллекцию плёнки" :
+              st.groups.count < StyleGroup.allCases.count ? "Меняет только: " + st.groups.map(\.title).sorted().joined(separator: ", ") : "Применить к выделенным")
         .contextMenu {
-            if !st.builtIn { Button("Удалить стиль", role: .destructive) { lib.deleteStyle(st) } }
+            Button("Применить") { lib.applyStyle(st) }
+            if !st.builtIn {
+                Divider()
+                Button("Обновить из текущего кадра") { lib.updateStyle(st) }
+                Button("Переименовать…") { renameText = st.name; renaming = st }
+                Button("Удалить стиль", role: .destructive) { lib.deleteStyle(st) }
+            }
         }
     }
 
@@ -185,13 +207,13 @@ struct EditPanel: View {
 
     private func lutTab(_ p: Photo) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            if p.adj.lut != nil {
+            if let lut = p.adj.lut {
                 HStack {
-                    Text(LUTStore.displayName(p.adj.lut!)).font(.callout.weight(.semibold)).lineLimit(1)
+                    Text(LUTStore.displayName(lut)).font(.callout.weight(.semibold)).lineLimit(1)
                     Spacer()
                     Button("Убрать") { var a = p.adj; a.lut = nil; lib.setAdjustments(a) }.controlSize(.small)
                 }
-                slider("Сила", \.lutAmount, p, range: 0...100, defaultValue: 100)
+                slider("Сила", "slider.horizontal.below.square.filled.and.square", \.lutAmount, p, range: 0...100, defaultValue: 100)
             }
             ForEach(LUTCollection.all, id: \.folder) { c in
                 if c.installedCount == 0 { collectionCard(c) }
@@ -217,8 +239,9 @@ struct EditPanel: View {
 
     private func lutChip(_ name: String, _ p: Photo) -> some View {
         let active = p.adj.lut == name
-        var preview = Adjustments()
+        var preview = p.adj
         preview.lut = name
+        if preview.lutAmount == 0 { preview.lutAmount = 100 }
         return Button {
             var a = p.adj
             a.lut = active ? nil : name
@@ -227,11 +250,15 @@ struct EditPanel: View {
         } label: {
             VStack(spacing: 4) {
                 StylePreview(photo: p, adj: preview)
-                Text(LUTStore.displayName(name)).font(.caption2).lineLimit(1)
+                HStack(spacing: 3) {
+                    if active { Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.accentColor) }
+                    Text(LUTStore.displayName(name)).lineLimit(1)
+                }
+                .font(.caption2)
             }
             .padding(4)
             .background(RoundedRectangle(cornerRadius: 6).fill(active ? Color.accentColor.opacity(0.3) : .white.opacity(0.05)))
-            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(active ? Color.accentColor : .clear, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(active ? Color.accentColor : .clear, lineWidth: 1.5))
         }
         .buttonStyle(.plain)
         .help(LUTStore.displayName(name))
@@ -258,95 +285,186 @@ struct EditPanel: View {
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.1)))
     }
 
-    // MARK: - Действия
+    // MARK: - Действия (всегда внизу панели)
 
     private func actions(_ p: Photo) -> some View {
         @Bindable var lib = lib
-        return VStack(alignment: .leading, spacing: 10) {
-            Divider()
-            HStack(spacing: 8) {
-                Button { lib.copyAdjustments() } label: { Label("Копировать", systemImage: "doc.on.doc") }
-                    .help("⌘⇧C")
-                Button { lib.pasteAdjustments() } label: { Label("Вставить", systemImage: "doc.on.clipboard") }
-                    .disabled(lib.copiedAdj == nil)
-                    .help("⌘⇧V — на все выделенные")
-            }
-            .controlSize(.small)
-            HStack(spacing: 8) {
-                Button(role: .destructive) { lib.resetAdjustments() } label: { Label("Сбросить", systemImage: "arrow.counterclockwise") }
-                    .disabled(lib.targets.allSatisfy(\.adj.isIdentity))
-                Toggle(isOn: $lib.showOriginal) { Text("До") }
-                    .toggleStyle(.button)
-                    .help("Показать снимок камеры без обработки (клавиша \\)")
-            }
-            .controlSize(.small)
+        return HStack(spacing: 6) {
+            Toggle(isOn: $lib.showOriginal) { Label("До", systemImage: "rectangle.lefthalf.inset.filled") }
+                .toggleStyle(.button)
+                .help("Показать снимок камеры без обработки (клавиша \\)")
+            Button { lib.copyAdjustments() } label: { Image(systemName: "doc.on.doc") }
+                .help("Копировать обработку (⌘⇧C)")
+            Button { lib.pasteAdjustments() } label: { Image(systemName: "doc.on.clipboard") }
+                .disabled(lib.copiedAdj == nil)
+                .help("Вставить обработку на выделенные (⌘⇧V)")
+            Button { newStyle = true } label: { Image(systemName: "plus.square.on.square") }
+                .disabled(p.adj.isIdentity)
+                .help("Сохранить как стиль")
+            Spacer()
+            Button(role: .destructive) { lib.resetAdjustments() } label: { Image(systemName: "arrow.counterclockwise") }
+                .help("Сбросить всю обработку (⌥⌘R)")
+                .disabled(lib.targets.allSatisfy(\.adj.isIdentity))
         }
+        .controlSize(.regular)
     }
 
     // MARK: - Компоненты
 
-    private func group<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.subheadline.weight(.semibold))
+    /// Раздел с заголовком; если в нём есть правки — кнопка «сбросить раздел».
+    private func section<C: View>(_ title: String, _ group: StyleGroup, _ p: Photo, @ViewBuilder _ content: () -> C) -> some View {
+        let changed = p.adj.changedGroups.contains(group)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(title).font(.headline)
+                if changed { Circle().fill(Color.accentColor).frame(width: 6, height: 6).help("В разделе есть правки") }
+                Spacer()
+                if changed {
+                    Button("Сбросить") {
+                        var a = p.adj
+                        a.merge(Adjustments(), groups: [group])
+                        lib.setAdjustments(a)
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(Color.accentColor)
+                }
+            }
             content()
         }
     }
 
-    /// Ползунок. Двойной клик по названию — сброс.
-    private func slider(_ title: String, _ key: WritableKeyPath<Adjustments, Double>, _ p: Photo,
+    /// Ползунок: значок, название, значение, кнопка сброса; двойной клик по названию — тоже сброс.
+    private func slider(_ title: String, _ icon: String, _ key: WritableKeyPath<Adjustments, Double>, _ p: Photo,
                         range: ClosedRange<Double> = -100...100, step: Double = 1, defaultValue: Double = 0,
-                        tint: Color? = nil, format: ((Double) -> String)? = nil) -> some View {
+                        gradient: [Color]? = nil, format: ((Double) -> String)? = nil) -> some View {
         let value = p.adj[keyPath: key]
+        let changed = value != defaultValue
         let binding = Binding<Double>(get: { value }, set: { v in
             var a = p.adj
             a[keyPath: key] = (v / step).rounded() * step
             lib.setAdjustments(a)
         })
-        return VStack(alignment: .leading, spacing: 2) {
-            HStack {
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .frame(width: 18)
+                    .foregroundStyle(changed ? Color.accentColor : .secondary)
                 Text(title)
-                    .font(.callout)
-                    .foregroundStyle(value == defaultValue ? .secondary : .primary)
+                    .font(.body)
+                    .foregroundStyle(changed ? .primary : .secondary)
                     .onTapGesture(count: 2) { binding.wrappedValue = defaultValue }
-                    .help("Двойной клик — сбросить")
                 Spacer()
                 Text(format?(value) ?? (value == 0 ? "0" : String(format: range.lowerBound < 0 ? "%+.0f" : "%.0f", value)))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .font(.callout.monospacedDigit().weight(changed ? .semibold : .regular))
+                    .foregroundStyle(changed ? .primary : .secondary)
+                Button { binding.wrappedValue = defaultValue } label: {
+                    Image(systemName: "arrow.uturn.backward.circle.fill")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .opacity(changed ? 1 : 0)
+                .disabled(!changed)
+                .help("Сбросить")
             }
-            Slider(value: binding, in: range)
-                .controlSize(.small)
-                .tint(tint ?? .accentColor)
+            ZStack {
+                if let gradient {
+                    LinearGradient(colors: gradient, startPoint: .leading, endPoint: .trailing)
+                        .frame(height: 4).clipShape(Capsule()).opacity(0.7).padding(.horizontal, 2)
+                }
+                Slider(value: binding, in: range)
+                    .tint(gradient == nil ? .accentColor : .clear)
+            }
         }
     }
 
     /// Тонирование: оттенок (цветная полоса) и сила.
     private func hueSlider(_ title: String, hue: WritableKeyPath<Adjustments, Double>, sat: WritableKeyPath<Adjustments, Double>, _ p: Photo) -> some View {
         let h = p.adj[keyPath: hue], s = p.adj[keyPath: sat]
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(title).font(.callout).foregroundStyle(s == 0 ? .secondary : .primary)
-                    .onTapGesture(count: 2) { var a = p.adj; a[keyPath: sat] = 0; lib.setAdjustments(a) }
-                Circle().fill(Color(hue: h / 360, saturation: max(0.15, s / 100), brightness: 0.9)).frame(width: 10, height: 10)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Circle().fill(Color(hue: h / 360, saturation: max(0.15, s / 100), brightness: 0.9)).frame(width: 14, height: 14)
+                Text(title).font(.body).foregroundStyle(s == 0 ? .secondary : .primary)
                 Spacer()
-                Text(s == 0 ? "выкл" : "\(Int(h))° · \(Int(s))").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                Text(s == 0 ? "выкл" : "\(Int(h))° · сила \(Int(s))").font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                Button { var a = p.adj; a[keyPath: sat] = 0; lib.setAdjustments(a) } label: { Image(systemName: "arrow.uturn.backward.circle.fill") }
+                    .buttonStyle(.plain).foregroundStyle(.secondary).opacity(s == 0 ? 0 : 1).disabled(s == 0)
             }
             ZStack {
-                LinearGradient(colors: stride(from: 0.0, through: 1.0, by: 1 / 6).map { Color(hue: $0, saturation: 0.7, brightness: 0.9) },
+                LinearGradient(colors: stride(from: 0.0, through: 1.0, by: 1 / 6).map { Color(hue: $0, saturation: 0.75, brightness: 0.95) },
                                startPoint: .leading, endPoint: .trailing)
-                    .frame(height: 4).clipShape(Capsule()).padding(.horizontal, 6)
+                    .frame(height: 6).clipShape(Capsule()).padding(.horizontal, 2)
                 Slider(value: Binding(get: { h }, set: { v in
                     var a = p.adj
                     a[keyPath: hue] = v.rounded()
-                    if a[keyPath: sat] == 0 { a[keyPath: sat] = 25 }
+                    if a[keyPath: sat] == 0 { a[keyPath: sat] = 30 }
                     lib.setAdjustments(a)
                 }), in: 0...360)
-                .controlSize(.small)
                 .tint(.clear)
             }
-            Slider(value: Binding(get: { s }, set: { v in var a = p.adj; a[keyPath: sat] = v.rounded(); lib.setAdjustments(a) }), in: 0...100)
-                .controlSize(.small)
+            HStack(spacing: 6) {
+                Text("Сила").font(.caption).foregroundStyle(.secondary).frame(width: 34, alignment: .leading)
+                Slider(value: Binding(get: { s }, set: { v in var a = p.adj; a[keyPath: sat] = v.rounded(); lib.setAdjustments(a) }), in: 0...100)
+            }
         }
+    }
+}
+
+/// Окно «Новый стиль» — как «Новый пресет» в Lightroom: название, коллекция и какие разделы сохранять.
+struct NewStyleSheet: View {
+    @Environment(Library.self) private var lib
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var collection = "Мои стили"
+    @State private var groups: Set<StyleGroup> = []
+
+    var body: some View {
+        let changed = lib.current?.adj.changedGroups ?? []
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Новый стиль").font(.title2.weight(.semibold))
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Название").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                TextField("Например, «Мой свадебный»", text: $name).textFieldStyle(.roundedBorder)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Коллекция").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                HStack {
+                    TextField("Мои стили", text: $collection).textFieldStyle(.roundedBorder)
+                    Menu("Выбрать") {
+                        ForEach(lib.userCollections, id: \.self) { c in Button(c) { collection = c } }
+                    }
+                    .fixedSize()
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Что сохранить в стиль").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                ForEach(StyleGroup.allCases) { g in
+                    Toggle(isOn: Binding(get: { groups.contains(g) }, set: { if $0 { groups.insert(g) } else { groups.remove(g) } })) {
+                        HStack {
+                            Text(g.title)
+                            if changed.contains(g) { Text("изменено").font(.caption).foregroundStyle(Color.accentColor) }
+                        }
+                    }
+                    .toggleStyle(.checkbox)
+                }
+                Text("Невыбранные разделы стиль не трогает: например, стиль только с «Цвет» сохранит вашу экспозицию.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            HStack {
+                Spacer()
+                Button("Отмена") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Сохранить стиль") {
+                    lib.createStyle(name: name, groups: groups, collection: collection)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || groups.isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 420)
+        .onAppear { groups = changed.isEmpty ? Set(StyleGroup.allCases) : changed }
     }
 }
 
@@ -363,7 +481,7 @@ struct StylePreview: View {
                 Image(decorative: image, scale: 1).resizable().aspectRatio(contentMode: .fill)
             }
         }
-        .frame(height: 64)
+        .frame(height: 70)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .task(id: photo.map { ThumbKey(url: $0.url, adj: adj) }) {
             guard let url = photo?.url else { return }

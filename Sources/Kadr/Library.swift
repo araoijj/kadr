@@ -94,8 +94,69 @@ final class Library {
     }
 
     func applyStyle(_ st: Style) {
-        setAdjustmentsForTargets { $0 = st.adj }
+        setAdjustmentsForTargets { $0.merge(st.adj, groups: st.groups) }
         flash("Стиль «\(st.name)»" + countSuffix)
+    }
+
+    /// Новый стиль из текущего кадра: только выбранные разделы.
+    func createStyle(name: String, groups: Set<StyleGroup>, collection: String) {
+        guard let p = current else { return }
+        let n = name.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty, !groups.isEmpty else { return }
+        let col = collection.trimmingCharacters(in: .whitespaces).isEmpty ? "Мои стили" : collection
+        styles.removeAll { !$0.builtIn && $0.name == n && $0.collection == col }
+        styles.append(Style(name: n, adj: p.adj, groups: groups, collection: col))
+        StyleStore.save(styles)
+        flash("Стиль «\(n)» сохранён")
+    }
+
+    /// Перезаписать свой стиль текущими настройками кадра (разделы стиля сохраняются).
+    func updateStyle(_ st: Style) {
+        guard let p = current, let i = styles.firstIndex(where: { $0.id == st.id }), !st.builtIn else { return }
+        styles[i].adj = p.adj
+        StyleStore.save(styles)
+        flash("Стиль «\(st.name)» обновлён")
+    }
+
+    func renameStyle(_ st: Style, to name: String) {
+        guard let i = styles.firstIndex(where: { $0.id == st.id }), !st.builtIn else { return }
+        let n = name.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty else { return }
+        styles[i].name = n
+        StyleStore.save(styles)
+    }
+
+    var userCollections: [String] {
+        Array(Set(styles.filter { !$0.builtIn }.map(\.collection) + ["Мои стили"])).sorted()
+    }
+
+    /// Свои стили в файл .kadrstyles — чтобы перенести на другой Mac или поделиться.
+    func exportStyles() {
+        let mine = styles.filter { !$0.builtIn }
+        guard !mine.isEmpty else { flash("Своих стилей пока нет"); return }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "Мои стили.kadrstyles"
+        panel.message = "Экспорт своих стилей (\(mine.count))"
+        guard panel.runModal() == .OK, let u = panel.url, let d = try? JSONEncoder().encode(mine) else { return }
+        try? d.write(to: u, options: .atomic)
+        flash("Экспортировано стилей: \(mine.count)")
+    }
+
+    func importStyles() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.init(filenameExtension: "kadrstyles") ?? .json, .json]
+        panel.message = "Файл со стилями .kadrstyles"
+        guard panel.runModal() == .OK, let u = panel.url, let d = try? Data(contentsOf: u),
+              let list = try? JSONDecoder().decode([Style].self, from: d) else { return }
+        var added = 0
+        for var st in list {
+            st.id = UUID()
+            styles.removeAll { !$0.builtIn && $0.name == st.name && $0.collection == st.collection }
+            styles.append(st)
+            added += 1
+        }
+        StyleStore.save(styles)
+        flash("Импортировано стилей: \(added)")
     }
 
     func copyAdjustments() {

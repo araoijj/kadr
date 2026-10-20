@@ -59,12 +59,59 @@ extension Adjustments {
     }
 }
 
+/// Разделы настроек — как в окне «Новый пресет» Lightroom: в стиль можно сохранить только часть.
+enum StyleGroup: String, Codable, CaseIterable, Identifiable {
+    case profile, light, color, toning, effects, lut
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .profile: "Профиль"
+        case .light: "Свет"
+        case .color: "Цвет"
+        case .toning: "Тонирование"
+        case .effects: "Эффекты"
+        case .lut: "LUT"
+        }
+    }
+}
+
+extension Adjustments {
+    /// Переносит из стиля только выбранные разделы, остальное в кадре не трогает.
+    mutating func merge(_ s: Adjustments, groups: Set<StyleGroup>) {
+        for g in groups {
+            switch g {
+            case .profile: profile = s.profile
+            case .light: exposure = s.exposure; contrast = s.contrast; highlights = s.highlights; shadows = s.shadows; clarity = s.clarity; fade = s.fade
+            case .color: temperature = s.temperature; tint = s.tint; vibrance = s.vibrance; saturation = s.saturation
+            case .toning: shadowHue = s.shadowHue; shadowSat = s.shadowSat; highlightHue = s.highlightHue; highlightSat = s.highlightSat
+            case .effects: vignette = s.vignette; grain = s.grain
+            case .lut: lut = s.lut; lutAmount = s.lutAmount
+            }
+        }
+    }
+
+    /// Совпадает ли кадр со стилем в его разделах.
+    func matches(_ s: Adjustments, groups: Set<StyleGroup>) -> Bool {
+        var a = self
+        a.merge(s, groups: groups)
+        return a == self
+    }
+
+    /// Разделы, в которых что-то изменено.
+    var changedGroups: Set<StyleGroup> {
+        Set(StyleGroup.allCases.filter { g in
+            var a = Adjustments(); a.merge(self, groups: [g]); return a != Adjustments()
+        })
+    }
+}
+
 struct Style: Codable, Identifiable, Hashable {
     var id = UUID()
     var name: String
     var adj: Adjustments
     var builtIn = false
     var collection = "Мои стили"
+    var groups: Set<StyleGroup> = Set(StyleGroup.allCases)
 
     init(_ name: String, _ collection: String, builtIn: Bool = true, _ build: (inout Adjustments) -> Void) {
         self.name = name
@@ -73,9 +120,11 @@ struct Style: Codable, Identifiable, Hashable {
         self.adj = Adjustments(build)
     }
 
-    init(name: String, adj: Adjustments) {
+    init(name: String, adj: Adjustments, groups: Set<StyleGroup> = Set(StyleGroup.allCases), collection: String = "Мои стили") {
         self.name = name
         self.adj = adj
+        self.groups = groups
+        self.collection = collection
         builtIn = false
     }
 
@@ -86,6 +135,7 @@ struct Style: Codable, Identifiable, Hashable {
         adj = try c.decode(Adjustments.self, forKey: .adj)
         builtIn = false
         collection = (try? c.decode(String.self, forKey: .collection)) ?? "Мои стили"
+        groups = (try? c.decode(Set<StyleGroup>.self, forKey: .groups)) ?? Set(StyleGroup.allCases)
     }
 
     /// Нужен ли для стиля LUT, которого ещё нет (коллекцию не скачали).
@@ -278,6 +328,17 @@ final class LUTStore: @unchecked Sendable {
 enum EditPipeline {
     static let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
 
+    private static let vignetteKernel = CIKernel(source: """
+        kernel vec4 vignette(sampler s, vec2 c, float radius, float amount) {
+            vec4 p = sample(s, samplerCoord(s));
+            float d = distance(destCoord(), c) / radius;
+            float k = smoothstep(0.3, 1.0, d);
+            k = k * k * (3.0 - 2.0 * k);
+            vec3 rgb = amount < 0.0 ? p.rgb * (1.0 + amount * 0.95 * k) : p.rgb + (vec3(1.0) - p.rgb) * amount * 0.9 * k;
+            return vec4(rgb, p.a);
+        }
+        """)!
+
     private static let grainKernel = CIColorKernel(source:
         "kernel vec4 grain(__sample s, __sample n, float a) { return vec4(s.rgb * (1.0 + (n.r - 0.5) * a), s.a); }")!
 
@@ -361,14 +422,11 @@ enum EditPipeline {
         if a.shadowSat > 0 { img = tone(img, hue: a.shadowHue, sat: a.shadowSat, shadows: true) }
         if a.highlightSat > 0 { img = tone(img, hue: a.highlightHue, sat: a.highlightSat, shadows: false) }
 
-        // 7. Виньетка.
+        // 7. Виньетка: плавно от 30% до краёв, на −100 углы почти чёрные, на +100 — почти белые.
         if a.vignette != 0 {
-            img = img.applyingFilter("CIVignetteEffect", parameters: [
-                kCIInputCenterKey: CIVector(x: e.midX, y: e.midY),
-                kCIInputRadiusKey: hypot(e.width, e.height) * 0.42,
-                kCIInputIntensityKey: -a.vignette / 100,
-                "inputFalloff": 0.6,
-            ])
+            img = vignetteKernel.apply(extent: e, roiCallback: { _, r in r }, arguments: [
+                img, CIVector(x: e.midX, y: e.midY), hypot(e.width, e.height) / 2, a.vignette / 100,
+            ]) ?? img
         }
 
         // 8. Зерно: каждый пиксель умножается на 1 ± шум (средняя яркость не меняется — проверено замером).

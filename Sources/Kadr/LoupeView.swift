@@ -28,6 +28,14 @@ struct LoupeView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .task(id: lib.currentID) {
+                // Готовим RAW текущего кадра заранее, чтобы первый стиль применился сразу.
+                guard let u = lib.currentID, ImageStore.rawExtensions.contains(u.pathExtension.lowercased()) else { return }
+                try? await Task.sleep(for: .milliseconds(400))
+                guard !Task.isCancelled else { return }
+                let screen = NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560
+                Renderer.shared.prewarm(u, maxSide: min(screen, 3200))
+            }
             Filmstrip()
         }
     }
@@ -96,6 +104,8 @@ struct EditedImage: View {
     let adj: Adjustments
     @State private var image: CGImage?
     @State private var shownFor: URL?
+    @State private var exact = false      // показан точный RAW, а не быстрый вариант по превью
+    @State private var rendering = false
 
     var body: some View {
         Group {
@@ -109,10 +119,31 @@ struct EditedImage: View {
                 PreviewImage(photo: photo)
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if rendering && !exact {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Проявляю RAW…").font(.caption)
+                }
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(.black.opacity(0.6), in: Capsule())
+                .padding(10)
+            }
+        }
         .task(id: ThumbKey(url: photo.url, adj: adj)) {
-            if shownFor != photo.url { image = nil; shownFor = photo.url }
+            if shownFor != photo.url { image = nil; exact = false; shownFor = photo.url }
+            let url = photo.url, a = adj
+            // Пока точного RAW нет — сразу показываем обработку поверх превью камеры (десятки мс).
+            if !exact, let quick = await Task.detached(priority: .userInitiated, operation: { Renderer.shared.thumbnail(url, a, size: 1600) }).value {
+                image = quick
+            }
+            rendering = true
             let screen = NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560
-            if let img = await Renderer.shared.render(photo.url, adj, maxSide: min(screen, 3200)) { image = img }
+            if let img = await Renderer.shared.render(url, a, maxSide: min(screen, 3200)) {
+                image = img
+                exact = true
+            }
+            rendering = false
         }
     }
 }

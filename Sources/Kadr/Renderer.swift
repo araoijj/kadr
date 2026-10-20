@@ -33,6 +33,14 @@ final class Renderer: @unchecked Sendable {
         }
     }
 
+    /// Заранее проявляет RAW и подбирает профиль камеры — первая правка будет мгновенной.
+    func prewarm(_ url: URL, maxSide: CGFloat) {
+        queue.async {
+            _ = self.base(url, maxSide: maxSide)
+            _ = CameraMatch.shared.cube(for: url)
+        }
+    }
+
     /// Миниатюра с обработкой: фильтры поверх встроенного превью (быстро, близко к итогу).
     func thumbnail(_ url: URL, _ adj: Adjustments, size: CGFloat = 640) -> CGImage? {
         let key = "\(url.path)|\(adj.hashValue)|\(Int(size))" as NSString
