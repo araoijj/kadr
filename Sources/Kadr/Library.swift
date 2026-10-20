@@ -102,9 +102,30 @@ final class Library {
 
     private var index: [URL: Int] = [:]
 
+    // Журнал изменений (History.swift).
+    var history: [HistoryEntry] = []
+    var historyPos = 0                  // сколько шагов применено; дальше — отменённые, их можно вернуть
+    var historyPaused = false
+    private var historySaveTask: Task<Void, Never>?
+
+    func photo(_ id: URL) -> Photo? { index[id].map { photos[$0] } }
+
+    func scheduleHistorySave() {
+        historySaveTask?.cancel()
+        guard let folder else { return }
+        let h = history, pos = historyPos
+        historySaveTask = Task {
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            await Task.detached(priority: .utility) { HistoryStore.save(h, pos, for: folder) }.value
+        }
+    }
+
+    func saveEditsSoon() { scheduleEditsSave() }
+
     // MARK: - Обработка
 
-    enum InspectorTab: Hashable { case info, edit }
+    enum InspectorTab: Hashable { case info, edit, history }
     var inspectorTab: InspectorTab = .info {
         didSet {
             // Обрабатывать удобнее на большом кадре — из сетки переходим в просмотр.
@@ -132,8 +153,16 @@ final class Library {
     /// Ползунки двигают только текущий кадр (как основной вариант в Capture One).
     func setAdjustments(_ a: Adjustments) {
         guard let id = currentID, let i = index[id] else { return }
+        let old = photos[i].adj
+        guard old != a else { return }
+        let before = snapshot([id])
         photos[i].adj = a
         scheduleEditsSave()
+        // Во время кадрирования шаги не пишем — один шаг при «Готово».
+        if !cropMode {
+            let d = describeChange(old, a, url: id)
+            record(d.title, before: before, key: "\(id.path)|\(d.key)")
+        }
     }
 
     // MARK: - Кадрирование
@@ -152,18 +181,28 @@ final class Library {
     }
 
     func finishCrop() {
+        if let b = cropBackup, let id = currentID, let p = photo(id) {
+            var s = PhotoState(p); s.adj = b
+            cropMode = false
+            let d = describeChange(b, p.adj, url: id)
+            record(d.key == "angle" || d.key == "Горизонт" ? d.title : "Кадрирование " + (CropFormat.byID(p.adj.cropAspect)?.title ?? "свободное"),
+                   before: [id: s])
+        }
         cropMode = false
         cropBackup = nil
     }
 
     func cancelCrop() {
-        if let b = cropBackup { setAdjustments(b) }
+        if let b = cropBackup { withoutHistory { setAdjustments(b) } }
         cropMode = false
         cropBackup = nil
     }
 
     func resetCrop() {
         guard var a = current?.adj else { return }
+        let wasCrop = cropMode
+        cropMode = false
+        defer { cropMode = wasCrop }
         a.cropRect = CGRect(x: 0, y: 0, width: 1, height: 1)
         a.angle = 0
         a.cropAspect = nil
@@ -177,16 +216,18 @@ final class Library {
     }
 
     /// Стиль, вставка и сброс — на все выделенные.
-    private func setAdjustmentsForTargets(_ change: (inout Adjustments) -> Void) {
+    private func setAdjustmentsForTargets(_ title: String, _ change: (inout Adjustments) -> Void) {
+        let before = snapshot(targets.map(\.id))
         for t in targets {
             guard let i = index[t.id] else { continue }
             change(&photos[i].adj)
         }
         scheduleEditsSave()
+        record(title + countSuffix, before: before)
     }
 
     func applyStyle(_ st: Style) {
-        setAdjustmentsForTargets { $0.merge(st.adj, groups: st.groups) }
+        setAdjustmentsForTargets("Стиль «\(st.name)»") { $0.merge(st.adj, groups: st.groups) }
         flash("Стиль «\(st.name)»" + countSuffix)
     }
 
@@ -259,12 +300,12 @@ final class Library {
 
     func pasteAdjustments() {
         guard let a = copiedAdj else { flash("Сначала скопируйте обработку (⌘⇧C)"); return }
-        setAdjustmentsForTargets { $0 = a }
+        setAdjustmentsForTargets("Вставка обработки") { $0 = a }
         flash("Обработка вставлена" + countSuffix)
     }
 
     func resetAdjustments() {
-        setAdjustmentsForTargets { $0 = .none }
+        setAdjustmentsForTargets("Сброс к исходнику") { $0 = .none }
         flash("Обработка сброшена" + countSuffix)
     }
 
@@ -403,6 +444,8 @@ final class Library {
     /// Оставить кадр в фокусе, остальные сравниваемые — отклонить.
     func rejectOthersInCompare() {
         guard let keep = currentID else { return }
+        let before = snapshot(compareIDs)
+        defer { record("Оставлен \(keep.lastPathComponent)", before: before) }
         var n = 0
         for id in compareIDs {
             guard let i = index[id] else { continue }
@@ -600,6 +643,7 @@ final class Library {
         photos.sort { $0.url.path.localizedStandardCompare($1.url.path) == .orderedAscending }
         reindex()
         focus(visible.first?.id)
+        (history, historyPos) = HistoryStore.load(url)
         loading = false
         startAnalysis()
     }
@@ -850,7 +894,7 @@ final class Library {
 
     func setRating(_ r: Int) {
         let many = multiSelected
-        update { $0.rating = r; $0.rejected = false }
+        update(r == 0 ? "Оценка снята" : String(repeating: "★", count: r)) { $0.rating = r; $0.rejected = false }
         flash((r == 0 ? "Оценка снята" : String(repeating: "★", count: r)) + countSuffix)
         if !many { advanceIfNeeded() }
     }
@@ -858,20 +902,22 @@ final class Library {
     func toggleReject() {
         let many = multiSelected
         let reject = !targets.allSatisfy(\.rejected)
-        update { $0.rejected = reject }
+        update(reject ? "Отклонено" : "Возвращено") { $0.rejected = reject }
         flash((reject ? "Отклонено" : "Возвращено") + countSuffix)
         if reject && !many { advanceIfNeeded() }
     }
 
     func toggleLabel(_ l: ColorLabel) {
         let clear = targets.allSatisfy { $0.label == l }
-        update { $0.label = clear ? nil : l }
+        update(clear ? "Метка снята" : "Метка: \(l.title)") { $0.label = clear ? nil : l }
         flash((clear ? "Метка снята" : l.title) + countSuffix)
     }
 
     private var countSuffix: String { multiSelected ? " · \(targets.count) шт." : "" }
 
-    private func update(_ change: (inout Photo) -> Void) {
+    private func update(_ title: String? = nil, _ change: (inout Photo) -> Void) {
+        let before = snapshot(targets.map(\.id))
+        defer { if let title { record(title + countSuffix, before: before) } }
         var failed = 0
         for t in targets {
             guard let i = index[t.id] else { continue }

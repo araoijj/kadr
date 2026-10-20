@@ -19,6 +19,20 @@ struct KadrApp: App {
         }
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
+            // ⌘Z / ⇧⌘Z — журнал «Кадра»; в текстовых полях — обычная отмена ввода.
+            CommandGroup(replacing: .undoRedo) {
+                Button(library.undoTitle.map { "Отменить: \($0)" } ?? "Отменить") {
+                    if let um = NSApp.keyWindow?.firstResponder as? NSTextView { um.undoManager?.undo() } else { library.undo() }
+                }
+                .keyboardShortcut("z")
+                Button(library.redoTitle.map { "Вернуть: \($0)" } ?? "Вернуть") {
+                    if let um = NSApp.keyWindow?.firstResponder as? NSTextView { um.undoManager?.redo() } else { library.redo() }
+                }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                Divider()
+                Button("Журнал изменений") { library.showInfo = true; library.inspectorTab = .history }
+                    .keyboardShortcut("y")
+            }
             CommandGroup(replacing: .newItem) {
                 Button("Открыть папку…") { library.chooseFolder() }
                     .keyboardShortcut("o")

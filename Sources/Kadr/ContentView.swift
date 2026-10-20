@@ -66,6 +66,14 @@ struct ContentView: View {
             Button { lib.chooseFolder() } label: { Label("Открыть", systemImage: "folder") }
                 .help("Открыть папку (⌘O)")
         }
+        ToolbarItemGroup(placement: .navigation) {
+            Button { lib.undo() } label: { Label("Отменить", systemImage: "arrow.uturn.backward") }
+                .disabled(!lib.canUndo)
+                .help(lib.undoTitle.map { "Отменить: \($0) (⌘Z)" } ?? "Нечего отменять")
+            Button { lib.redo() } label: { Label("Вернуть", systemImage: "arrow.uturn.forward") }
+                .disabled(!lib.canRedo)
+                .help(lib.redoTitle.map { "Вернуть: \($0) (⇧⌘Z)" } ?? "Нечего возвращать")
+        }
         ToolbarItem(placement: .navigation) {
             Button { lib.showImport = true } label: { Label("Импорт", systemImage: "sdcard") }
                 .help("Импорт с карты памяти (⌘I)")

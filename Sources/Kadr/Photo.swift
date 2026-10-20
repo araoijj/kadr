@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-enum ColorLabel: String, CaseIterable, Identifiable {
+enum ColorLabel: String, CaseIterable, Identifiable, Codable {
     case red = "Red", yellow = "Yellow", green = "Green", blue = "Blue", purple = "Purple"
     var id: String { rawValue }
 

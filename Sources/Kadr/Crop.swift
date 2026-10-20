@@ -77,6 +77,8 @@ extension Library {
     /// То же кадрирование — на все выделенные (например, 4:5 на всю серию для Instagram).
     func applyCropToTargets() {
         guard let src = current?.adj else { return }
+        let before = snapshot(targets.map(\.id))
+        defer { record("Кадрирование на \(targets.count) кадров", before: before) }
         for t in targets where t.id != currentID {
             guard let i = photos.firstIndex(where: { $0.id == t.id }) else { continue }
             var a = photos[i].adj

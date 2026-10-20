@@ -10,6 +10,7 @@ struct Inspector: View {
             Picker("", selection: $lib.inspectorTab) {
                 Text("Инфо").tag(Library.InspectorTab.info)
                 Text("Обработка").tag(Library.InspectorTab.edit)
+                Text("Журнал").tag(Library.InspectorTab.history)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -22,6 +23,7 @@ struct Inspector: View {
             switch lib.inspectorTab {
             case .info: InfoPanel()
             case .edit: EditPanel()
+            case .history: HistoryPanel()
             }
         }
     }
@@ -571,10 +573,10 @@ struct LUTPeek: View {
                     guard saved == nil, let a = lib.current?.adj else { return }
                     saved = a
                     var b = a; b.lutAmount = 0
-                    lib.setAdjustments(b)
+                    lib.withoutHistory { lib.setAdjustments(b) }
                 }
                 .onEnded { _ in
-                    if let a = saved { lib.setAdjustments(a) }
+                    if let a = saved { lib.withoutHistory { lib.setAdjustments(a) } }
                     saved = nil
                 })
             .help("Зажмите — без LUT")
