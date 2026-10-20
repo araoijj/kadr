@@ -147,6 +147,7 @@ struct KeyHandler {
         case "\\": lib.showOriginal.toggle()
         case "s", "ы": lib.quickSend()
         case "c", "с": lib.startCompare()
+        case "y", "н": lib.splitCompare.toggle(); if lib.splitCompare { lib.loupe = true }
         case "r", "к": lib.startCrop()
         default: return false
         }

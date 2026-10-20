@@ -46,6 +46,16 @@ struct Adjustments: Codable, Equatable, Hashable {
     }
 
     static let none = Adjustments()
+    /// «До» для шторки: без цвета и тона, но с той же рамкой и горизонтом — половинки совпадают.
+    var beforeVersion: Adjustments {
+        var b = Adjustments()
+        b.profile = profile
+        b.cropRect = cropRect
+        b.angle = angle
+        b.cropAspect = cropAspect
+        return b
+    }
+
     /// Без изменений: всё по умолчанию и LUT не выбран (его сила тогда не важна).
     var isIdentity: Bool { var a = self; a.lutAmount = 100; a.cropAspect = nil; return a == .none }
 }

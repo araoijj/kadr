@@ -88,6 +88,7 @@ struct PreviewImage: View {
 struct EditedImage: View {
     let photo: Photo
     let adj: Adjustments
+    var channel = "loupe"          // у «до» в шторке свой канал, чтобы два рендера не вытесняли друг друга
     @State private var image: CGImage?
     @State private var shownFor: URL?
     @State private var exact = false      // показан точный RAW, а не быстрый вариант по превью
@@ -125,7 +126,7 @@ struct EditedImage: View {
             }
             rendering = true
             let screen = NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560
-            if let img = await Renderer.shared.render(url, a, maxSide: min(screen, 3200)) {
+            if let img = await Renderer.shared.render(url, a, maxSide: min(screen, 3200), channel: channel) {
                 image = img
                 exact = true
             }

@@ -49,6 +49,8 @@ final class Library {
     var loupeCenter = CGPoint(x: 0.5, y: 0.5)      // центр видимой области в долях кадра (y — сверху вниз)
     var fitZoom: CGFloat = 0.25                    // масштаб режима «Вписать» (его считает просмотр)
     var loupeDisplay: CGSize = .zero               // размер кадра на экране при текущем масштабе, точки
+    var splitCompare = false                       // шторка «до / после» (Y)
+    var splitPos: CGFloat = 0.5                    // положение шторки, доля ширины
     static let zoomSteps: [CGFloat] = [0.25, 0.5, 1, 2, 4]
 
     var zoom100: Bool {

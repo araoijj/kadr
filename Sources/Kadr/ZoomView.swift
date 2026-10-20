@@ -11,6 +11,11 @@ struct ZoomableLoupe: View {
     @State private var detailFor: URL?
     @State private var dragStart: CGPoint?
     @State private var rendering = false
+    @State private var before: CGImage?
+    @State private var beforeRegion: CGRect = .zero
+    @State private var beforeFor: URL?
+
+    private var split: Bool { lib.splitCompare && !photo.adj.isIdentity && !lib.showOriginal }
 
     private var adj: Adjustments { lib.showOriginal ? Adjustments() : photo.adj }
 
@@ -53,7 +58,9 @@ struct ZoomableLoupe: View {
 
     /// Кадр без увеличения: JPEG камеры, а при правках — проявленный RAW.
     @ViewBuilder private var fitted: some View {
-        if photo.adj.isIdentity || lib.showOriginal {
+        if lib.splitCompare && !photo.adj.isIdentity {
+            SplitFit(photo: photo, aspect: pixelSize.width / pixelSize.height)
+        } else if photo.adj.isIdentity || lib.showOriginal {
             PreviewImage(photo: photo)
         } else {
             EditedImage(photo: photo, adj: photo.adj)
@@ -92,6 +99,14 @@ struct ZoomableLoupe: View {
                     .frame(width: r.width, height: r.height)
                     .offset(x: r.minX, y: r.minY)
             }
+            if split, let before, beforeFor == photo.url {
+                let r = place(beforeRegion)
+                Image(decorative: before, scale: 1).resizable().interpolation(zoom >= 1 ? .none : .high)
+                    .frame(width: r.width, height: r.height)
+                    .offset(x: r.minX, y: r.minY)
+                    .mask(alignment: .topLeading) { Rectangle().frame(width: pane.width * lib.splitPos, height: pane.height) }
+            }
+            if split { SplitHandle(width: pane.width, height: pane.height) }
         }
         .frame(width: pane.width, height: pane.height, alignment: .topLeading)
         .contentShape(Rectangle())
@@ -117,6 +132,16 @@ struct ZoomableLoupe: View {
         }
         .onAppear { lib.loupeDisplay = shown }
         .onChange(of: shown) { _, s in lib.loupeDisplay = s }
+        .task(id: split ? RegionKey(url: photo.url, adj: photo.adj.beforeVersion, region: visible, pixels: outPx) : nil) {
+            guard split else { return }
+            try? await Task.sleep(for: .milliseconds(25))
+            guard !Task.isCancelled else { return }
+            if let img = await Renderer.shared.renderRegion(photo.url, photo.adj.beforeVersion, region: visible, pixels: outPx, channel: "region-before") {
+                before = img
+                beforeRegion = visible
+                beforeFor = photo.url
+            }
+        }
         .task(id: RegionKey(url: photo.url, adj: adj, region: visible, pixels: outPx)) {
             try? await Task.sleep(for: .milliseconds(25))   // при перетаскивании не считаем каждый шаг
             guard !Task.isCancelled else { return }
@@ -195,6 +220,14 @@ struct ZoomBar: View {
         HStack(spacing: 4) {
             Button { lib.zoomOut() } label: { Image(systemName: "minus.magnifyingglass") }
                 .disabled(z == nil).help("Уменьшить (⌘−)")
+            Button { lib.splitCompare.toggle() } label: {
+                Label("До/после", systemImage: "rectangle.split.2x1")
+                    .font(.caption.weight(lib.splitCompare ? .semibold : .regular))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Capsule().fill(lib.splitCompare ? Color.accentColor.opacity(0.35) : .clear))
+            }
+            .help("Шторка «до / после» (Y): тяните линию по кадру")
+            Divider().frame(height: 14)
             level("Вписать", nil, active: z == nil, help: "⌘0 или двойной клик")
             level("50%", 0.5, active: z == 0.5)
             level("100%", 1, active: z == 1, help: "⌘1 или Z")
@@ -253,5 +286,62 @@ enum ScrollZoom {
         guard lib.loupeZoom != nil else { return e }
         lib.pan(dx: e.scrollingDeltaX * k, dy: e.scrollingDeltaY * k)
         return nil
+    }
+}
+
+/// Шторка в режиме «вписать»: «после» целиком, «до» — слева от линии.
+struct SplitFit: View {
+    let photo: Photo
+    let aspect: CGFloat
+    @Environment(Library.self) private var lib
+
+    var body: some View {
+        GeometryReader { geo in
+            let box = geo.size
+            let w = min(box.width, box.height * aspect), h = w / aspect
+            let r = CGRect(x: (box.width - w) / 2, y: (box.height - h) / 2, width: w, height: h)
+            ZStack(alignment: .topLeading) {
+                EditedImage(photo: photo, adj: photo.adj)
+                    .frame(width: w, height: h).offset(x: r.minX, y: r.minY)
+                EditedImage(photo: photo, adj: photo.adj.beforeVersion, channel: "loupe-before")
+                    .frame(width: w, height: h).offset(x: r.minX, y: r.minY)
+                    .mask(alignment: .topLeading) {
+                        Rectangle().frame(width: r.minX + w * lib.splitPos, height: box.height)
+                    }
+                SplitHandle(width: w, height: h).offset(x: r.minX, y: r.minY)
+            }
+        }
+    }
+}
+
+/// Линия шторки с ручкой и подписями; тянуть — двигать. Положение — доля ширины кадра/окна.
+struct SplitHandle: View {
+    let width: CGFloat
+    let height: CGFloat
+    @Environment(Library.self) private var lib
+
+    var body: some View {
+        let x = width * lib.splitPos
+        ZStack(alignment: .topLeading) {
+            Rectangle().fill(Color.white).frame(width: 2, height: height).offset(x: x - 1)
+            Circle().fill(Color.white).frame(width: 30, height: 30)
+                .overlay(Image(systemName: "arrow.left.and.right").font(.caption.weight(.bold)).foregroundStyle(.black))
+                .offset(x: x - 15, y: height / 2 - 15)
+            tag("ДО").offset(x: max(8, x - 50), y: 10).opacity(lib.splitPos > 0.08 ? 1 : 0)
+            tag("ПОСЛЕ").offset(x: min(width - 70, x + 10), y: 10).opacity(lib.splitPos < 0.92 ? 1 : 0)
+        }
+        .frame(width: width, height: height, alignment: .topLeading)
+        .contentShape(Rectangle().offset(x: x - 20).size(width: 40, height: height))
+        .gesture(DragGesture(minimumDistance: 0).onChanged { v in
+            lib.splitPos = min(max(v.location.x / width, 0), 1)
+        })
+        .help("Тяните, чтобы сравнить")
+    }
+
+    private func tag(_ t: String) -> some View {
+        Text(t).font(.caption2.weight(.bold))
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(.black.opacity(0.6), in: Capsule())
+            .foregroundStyle(.white)
     }
 }
