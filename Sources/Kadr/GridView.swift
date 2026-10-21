@@ -66,8 +66,18 @@ struct GridView: View {
         }
         .overlay {
             if list.isEmpty && !lib.photos.isEmpty {
-                ContentUnavailableView(tr("Ничего нет"), systemImage: "line.3.horizontal.decrease.circle",
-                                       description: Text(tr("В фильтре «\(lib.filter.title)» пока нет снимков")))
+                // Empty on purpose (everything in a burst rejected, rejects moved away): the way out is in sight.
+                ContentUnavailableView {
+                    Label(lib.inSeries ? tr("В этой серии не осталось кадров") : tr("Ничего нет"), systemImage: "line.3.horizontal.decrease.circle")
+                } description: {
+                    Text(lib.inSeries ? tr("Все кадры серии в браке или перенесены.") : tr("В фильтре «\(lib.filter.title)» пока нет снимков"))
+                } actions: {
+                    if lib.inSeries {
+                        Button(tr("Назад ко всем кадрам (Esc)")) { lib.leaveSeries() }.buttonStyle(.borderedProminent)
+                    } else {
+                        Button(tr("Показать все кадры")) { lib.showAllPhotos() }.buttonStyle(.borderedProminent)
+                    }
+                }
             }
         }
     }

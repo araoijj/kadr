@@ -16,6 +16,7 @@ struct FilterBar: View {
                 HStack(spacing: 8) {
                     breadcrumb; sortMenu(caption: false); Spacer(minLength: 6); decisionsMenu; more
                     if lib.filter == .rejected { rejectedAction(caption: false) }
+                    if lib.inSeries { backFromSeries(caption: false) }
                     Spacer(minLength: 6); count
                 }
             }
@@ -40,11 +41,24 @@ struct FilterBar: View {
                 decisions(compact: true); stars; more
             }
             if lib.filter == .rejected { rejectedAction(caption: full) }
+            if lib.inSeries { backFromSeries(caption: full) }
             Spacer(minLength: 6)
             if full { chips }
             if full, !lib.loupe { thumbSize }
             count
         }
+    }
+
+    /// A burst is open: the way back to the photos you came from is right here, not only on Esc.
+    private func backFromSeries(caption: Bool) -> some View {
+        Button { lib.leaveSeries() } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.uturn.backward")
+                if caption { Text(tr("Все кадры (Esc)")).lineLimit(1).fixedSize() }
+            }
+        }
+        .controlSize(.small)
+        .help(tr("Выйти из серии — назад к кадрам, из которых вы её открыли (Esc)"))
     }
 
     /// What to do with the rejects once they are reviewed: get them out of the shoot folder.

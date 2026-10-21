@@ -5178,5 +5178,40 @@
   "Select 2–8 photos (⌘-click or drag a box) or stand on a burst photo",
   "Selecciona 2–8 fotos (⌘-clic o un recuadro) o sitúate en una foto de ráfaga",
   "Seleziona 2–8 foto (⌘-clic o un riquadro) o posizionati su una foto di raffica"
+ ],
+ "Все кадры (Esc)": [
+  "All photos (Esc)",
+  "Todas las fotos (Esc)",
+  "Tutte le foto (Esc)"
+ ],
+ "Выйти из серии — назад к кадрам, из которых вы её открыли (Esc)": [
+  "Leave the burst — back to the photos you opened it from (Esc)",
+  "Salir de la ráfaga: volver a las fotos desde las que la abriste (Esc)",
+  "Esci dalla raffica: torna alle foto da cui l’hai aperta (Esc)"
+ ],
+ "В этой серии не осталось кадров": [
+  "Nothing left in this burst",
+  "No queda nada en esta ráfaga",
+  "Non resta nulla in questa raffica"
+ ],
+ "Все кадры серии в браке или перенесены.": [
+  "Every photo of the burst is rejected or moved away.",
+  "Todas las fotos de la ráfaga están descartadas o movidas.",
+  "Tutte le foto della raffica sono scartate o spostate."
+ ],
+ "Назад ко всем кадрам (Esc)": [
+  "Back to All Photos (Esc)",
+  "Volver a todas las fotos (Esc)",
+  "Torna a tutte le foto (Esc)"
+ ],
+ "Показать все кадры": [
+  "Show All Photos",
+  "Mostrar todas las fotos",
+  "Mostra tutte le foto"
+ ],
+ "Назад ко всем кадрам": [
+  "Back to all photos",
+  "De vuelta a todas las fotos",
+  "Di nuovo a tutte le foto"
  ]
 }
