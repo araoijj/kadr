@@ -46,6 +46,11 @@ struct ContentView: View {
             return true
         }
         .onAppear {
+            // A tab bar saved from an earlier launch is restored even with tabbing off: hide it once.
+            DispatchQueue.main.async {
+                for w in NSApp.windows where w.tabGroup?.isTabBarVisible == true { w.toggleTabBar(nil) }
+                for w in NSApp.windows { w.tabbingMode = .disallowed }
+            }
             // kadr /path/to/folder — open it right away
             if lib.folder == nil, CommandLine.arguments.count > 1 {
                 let u = URL(fileURLWithPath: CommandLine.arguments[1])
