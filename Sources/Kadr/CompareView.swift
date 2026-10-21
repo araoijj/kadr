@@ -9,6 +9,7 @@ struct CompareView: View {
         let photos = lib.comparePhotos
         VStack(spacing: 0) {
             toolbar(photos)
+            ToolHint(id: lib.tournamentActive ? "tournament" : "compare")
             GeometryReader { geo in
                 let cols = photos.count <= 2 || geo.size.width > geo.size.height * 2.2 ? photos.count : 2
                 let rows = Int(ceil(Double(photos.count) / Double(max(cols, 1))))
@@ -44,6 +45,7 @@ struct CompareView: View {
             Button(tr("← Левый")) { lib.pickTournament(left: true) }
             Button(tr("Правый →")) { lib.pickTournament(left: false) }.buttonStyle(.borderedProminent)
             Button(tr("Выйти")) { lib.cancelTournament() }
+            HintButton(id: "tournament")
         }
         .controlSize(.small)
         .padding(.horizontal, 14)
@@ -52,19 +54,33 @@ struct CompareView: View {
     }
 
     private func compareBar(_ photos: [Photo]) -> some View {
-        HStack(spacing: 14) {
+        let marked = photos.filter { lib.compareKeep.contains($0.id) }.count
+        return HStack(spacing: 14) {
             Label(tr("Сравнение · \(photos.count)"), systemImage: "rectangle.split.2x1")
                 .font(.callout.weight(.semibold))
-            Text(tr("← → — выбрать кадр · 1–5, X — оценка · Z — зум 100% · тянуть мышью — сдвиг · Esc — выход"))
-                .font(.caption).foregroundStyle(.secondary)
-                .lineLimit(1)
+            Group {
+                if marked == 0 {
+                    Text(tr("Отметьте галочкой кадры, которые оставить (P или пробел)"))
+                } else {
+                    Text(tr("Отмечено: \(marked) из \(photos.count) · Enter — оставить их, остальные отклонить"))
+                        .foregroundStyle(Theme.keep)
+                }
+            }
+            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             Spacer()
+            if marked > 0 {
+                Button(tr("Снять отметки")) { lib.compareKeep = [] }
+            }
             Button {
                 lib.rejectOthersInCompare()
             } label: {
-                Label(tr("Оставить выбранный, остальные отклонить"), systemImage: "checkmark.seal")
+                Label(marked > 0 ? tr("Оставить отмеченные (\(marked)), остальные отклонить") : tr("Оставить активный, остальные отклонить"),
+                      systemImage: "checkmark.seal")
             }
-            .help(tr("Выбранный кадр остаётся, остальные помечаются отклонёнными (X)"))
+            .buttonStyle(.borderedProminent)
+            .tint(marked > 0 ? Theme.keep : .accentColor)
+            .help(tr("Отмеченные кадры получат ★ (если оценки не было), остальные кадры сравнения — отклонены (X). Отменить — ⌘Z"))
+            HintButton(id: "compare")
             Button(tr("Готово")) { lib.stopCompare() }
                 .keyboardShortcut(.cancelAction)
         }
@@ -82,6 +98,9 @@ struct ComparePane: View {
     @State private var image: CGImage?
     @State private var full: CGImage?
     @State private var dragStart: CGPoint?
+
+    private var marked: Bool { lib.compareKeep.contains(photo.id) }
+    private var markable: Bool { !lib.tournamentActive }
 
     var body: some View {
         GeometryReader { geo in
@@ -101,7 +120,7 @@ struct ComparePane: View {
                         .interpolation(lib.compareZoom > 1.5 ? .none : .high)
                         .frame(width: size.width, height: size.height)
                         .position(x: pane.width / 2 + (0.5 - c.x) * size.width, y: pane.height / 2 + (0.5 - c.y) * size.height)
-                        .opacity(photo.rejected ? 0.45 : 1)
+                        .opacity(photo.rejected && !marked ? 0.45 : 1)
                         .onAppear { lib.compareZoom100 = 1 / (fit * (NSScreen.main?.backingScaleFactor ?? 2)) }
                         .gesture(DragGesture(minimumDistance: 2)
                             .onChanged { v in
@@ -119,9 +138,10 @@ struct ComparePane: View {
                     ProgressView()
                 }
                 overlay
+                if markable { keepButton }
             }
             .clipShape(RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(focused ? Color.accentColor : .white.opacity(0.08), lineWidth: focused ? 3 : 1))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(border, lineWidth: marked || focused ? 3 : 1))
             .contentShape(Rectangle())
             .onTapGesture(count: 2) { lib.select(photo); lib.toggleCompareZoom() }
             .onTapGesture { lib.select(photo) }
@@ -144,19 +164,57 @@ struct ComparePane: View {
         }
     }
 
+    private var border: Color {
+        if marked { return Theme.keep }
+        return focused ? Color.accentColor : .white.opacity(0.08)
+    }
+
+    /// Big checkmark in the corner: mark this frame to keep.
+    private var keepButton: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button { lib.toggleCompareKeep(photo.id) } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: marked ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 20, weight: .semibold))
+                        Text(marked ? tr("Оставить") : tr("Отметить"))
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(marked ? Theme.keep : .white)
+                    .padding(.horizontal, 9).padding(.vertical, 5)
+                    .background(.black.opacity(marked ? 0.7 : 0.45), in: Capsule())
+                    .overlay(Capsule().strokeBorder(marked ? Theme.keep : .white.opacity(0.35)))
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .help(tr("Оставить этот кадр (P или пробел для активного)"))
+            }
+            Spacer()
+        }
+        .padding(8)
+    }
+
     private var overlay: some View {
         VStack {
             HStack {
                 Text(photo.name).font(.caption.weight(.medium))
                     .padding(.horizontal, 6).padding(.vertical, 3)
-                    .background(.black.opacity(0.55), in: Capsule())
+                    .background(focused ? Color.accentColor.opacity(0.85) : .black.opacity(0.55), in: Capsule())
                 if photo.isBestInSeries { Badge(text: tr("Самый резкий"), icon: "sparkles", tint: Theme.star) }
                 Spacer()
                 if lib.compareZoom > 1.5 && full == nil { ProgressView().controlSize(.small) }
+                if markable { Color.clear.frame(width: 110, height: 1) }   // room for the keep button
             }
             Spacer()
             HStack(spacing: 8) {
-                if photo.rejected {
+                if marked {
+                    Label(tr("Остаётся"), systemImage: "checkmark.circle.fill").font(.callout.weight(.semibold)).foregroundStyle(Theme.keep)
+                        .padding(.horizontal, 8).padding(.vertical, 3).background(.black.opacity(0.7), in: Capsule())
+                } else if markable && !lib.compareKeep.isEmpty {
+                    Label(tr("Будет отклонён"), systemImage: "xmark.circle").font(.callout.weight(.medium)).foregroundStyle(Theme.reject)
+                        .padding(.horizontal, 8).padding(.vertical, 3).background(.black.opacity(0.7), in: Capsule())
+                } else if photo.rejected {
                     Label(tr("Отклонён"), systemImage: "xmark.circle.fill").font(.callout.weight(.semibold)).foregroundStyle(Theme.reject)
                 }
                 Stars(rating: photo.rating, size: 13)

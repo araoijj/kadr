@@ -473,6 +473,7 @@ struct RemoveBar: View {
                 Button(tr("Убрать (Enter)")) { lib.applyRemove() }.buttonStyle(.borderedProminent)
                     .disabled(lib.removeMask == nil || lib.removeBusy || lib.removeStatus?.blocksApply == true)
                 Button(tr("Выйти из режима")) { lib.finishRemove() }
+                HintButton(id: "remove")
             }
             status
         }

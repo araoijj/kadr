@@ -298,6 +298,7 @@ struct CropBar: View {
                 if lib.multiSelected { Button(tr("На все выделенные")) { lib.applyCropToTargets() } }
                 Button(tr("Отмена")) { lib.cancelCrop() }
                 Button(tr("Готово")) { lib.finishCrop() }.buttonStyle(.borderedProminent)
+                HintButton(id: "crop")
             }
             .controlSize(.small)
         }

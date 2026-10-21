@@ -31,6 +31,7 @@ struct CullView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .top) { ToolHint(id: "cull") }
                 // Faces only if the frame still has room (narrow window: faces are viewed via zoom).
                 if lib.aiOn, g.size.width >= 640, let p = lib.current, !(p.cull?.faces.isEmpty ?? true) {
                     Divider()
@@ -184,7 +185,11 @@ struct CullTopBar: View {
     }
 
     private var summary: some View {
-        Button(tr("Итог…")) { lib.showCullSummary = true }.fixedSize()
+        HStack(spacing: 6) {
+            Button(tr("Итог…")) { lib.showCullSummary = true }
+            HintButton(id: "cull")
+        }
+        .fixedSize()
     }
 
     private var queuePicker: some View {

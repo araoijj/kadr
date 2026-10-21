@@ -4388,5 +4388,215 @@
   "Click an object — AI selects all of it; another click adds a part. Small separate things on a simple background work best: a passer-by, litter, a wire, a sign. Large areas, busy backgrounds and objects overlapping people come out worse.",
   "Haga clic en un objeto: la IA lo selecciona entero; otro clic añade una parte. Funcionan mejor cosas pequeñas y separadas sobre fondo simple: un transeúnte, basura, un cable, una señal. Zonas grandes, fondos complejos y objetos que tapan a personas salen peor.",
   "Fai clic su un oggetto: l'IA lo seleziona tutto; un altro clic aggiunge una parte. Riescono meglio cose piccole e separate su sfondo semplice: un passante, rifiuti, un filo, un cartello. Aree grandi, sfondi complessi e oggetti sovrapposti a persone vengono peggio."
+ ],
+ "Отметьте галочкой кадры, которые оставить (P или пробел)": [
+  "Check the photos to keep (P or Space)",
+  "Marca las fotos que quieres conservar (P o espacio)",
+  "Spunta le foto da tenere (P o spazio)"
+ ],
+ "Отмечено: {} из {} · Enter — оставить их, остальные отклонить": [
+  "Marked: {} of {} · Enter — keep them, reject the rest",
+  "Marcadas: {} de {} · Intro — conservarlas, rechazar el resto",
+  "Segnate: {} di {} · Invio — tienile, scarta le altre"
+ ],
+ "Снять отметки": [
+  "Clear Marks",
+  "Quitar marcas",
+  "Togli i segni"
+ ],
+ "Оставить отмеченные ({}), остальные отклонить": [
+  "Keep Marked ({}), Reject the Rest",
+  "Conservar marcadas ({}), rechazar el resto",
+  "Tieni le segnate ({}), scarta le altre"
+ ],
+ "Оставить активный, остальные отклонить": [
+  "Keep Active, Reject the Rest",
+  "Conservar la activa, rechazar el resto",
+  "Tieni l’attiva, scarta le altre"
+ ],
+ "Отмеченные кадры получат ★ (если оценки не было), остальные кадры сравнения — отклонены (X). Отменить — ⌘Z": [
+  "Marked photos get ★ (if unrated), the other compared photos are rejected (X). Undo — ⌘Z",
+  "Las fotos marcadas reciben ★ (si no tenían valoración), las demás se rechazan (X). Deshacer — ⌘Z",
+  "Le foto segnate ricevono ★ (se senza voto), le altre vengono scartate (X). Annulla — ⌘Z"
+ ],
+ "Отметить": [
+  "Mark",
+  "Marcar",
+  "Segna"
+ ],
+ "Оставить этот кадр (P или пробел для активного)": [
+  "Keep this photo (P or Space for the active one)",
+  "Conservar esta foto (P o espacio para la activa)",
+  "Tieni questa foto (P o spazio per quella attiva)"
+ ],
+ "Остаётся": [
+  "Kept",
+  "Se conserva",
+  "Resta"
+ ],
+ "Будет отклонён": [
+  "Will be rejected",
+  "Se rechazará",
+  "Sarà scartata"
+ ],
+ "Сравнение: как выбрать, что оставить": [
+  "Compare: choosing what to keep",
+  "Comparar: cómo elegir qué conservar",
+  "Confronto: come scegliere cosa tenere"
+ ],
+ "Галочка в углу кадра (или P, пробел) — оставить этот кадр. Можно отметить несколько.": [
+  "The checkmark in a photo’s corner (or P, Space) keeps that photo. You can mark several.",
+  "La marca en la esquina de la foto (o P, espacio) la conserva. Puedes marcar varias.",
+  "La spunta nell’angolo della foto (o P, spazio) la tiene. Puoi segnarne più di una."
+ ],
+ "Enter или «Оставить отмеченные» — отмеченные получат ★, остальные кадры сравнения будут отклонены (X).": [
+  "Enter or “Keep Marked” — marked photos get ★, the other compared photos are rejected (X).",
+  "Intro o «Conservar marcadas»: las marcadas reciben ★ y las demás se rechazan (X).",
+  "Invio o «Tieni le segnate»: le segnate ricevono ★, le altre vengono scartate (X)."
+ ],
+ "Двойной клик или Z — зум 100% сразу во всех кадрах, тянуть мышью — сдвиг.": [
+  "Double-click or Z — 100% zoom in all photos at once; drag to pan.",
+  "Doble clic o Z — zoom al 100% en todas las fotos a la vez; arrastra para desplazar.",
+  "Doppio clic o Z — zoom 100% su tutte le foto insieme; trascina per spostare."
+ ],
+ "Ошиблись — ⌘Z возвращает всё как было.": [
+  "Made a mistake? ⌘Z puts everything back.",
+  "¿Te equivocaste? ⌘Z lo deja todo como estaba.",
+  "Errore? ⌘Z rimette tutto com’era."
+ ],
+ "Турнир: лучший кадр из длинной серии": [
+  "Tournament: the best photo of a long burst",
+  "Torneo: la mejor foto de una ráfaga larga",
+  "Torneo: la foto migliore di una lunga raffica"
+ ],
+ "Кадры сравниваются парами: ← — лучше левый, → — лучше правый.": [
+  "Photos are compared in pairs: ← left is better, → right is better.",
+  "Las fotos se comparan por pares: ← mejor la izquierda, → mejor la derecha.",
+  "Le foto si confrontano a coppie: ← meglio la sinistra, → meglio la destra."
+ ],
+ "Победитель остаётся слева и встречается со следующим кадром серии.": [
+  "The winner stays on the left and meets the next photo of the burst.",
+  "La ganadora queda a la izquierda y se enfrenta a la siguiente foto.",
+  "La vincitrice resta a sinistra e affronta la foto successiva."
+ ],
+ "В конце можно отметить победителя ★ и отклонить остальные — или ничего не менять.": [
+  "At the end you can mark the winner ★ and reject the rest — or change nothing.",
+  "Al final puedes marcar la ganadora con ★ y rechazar el resto, o no cambiar nada.",
+  "Alla fine puoi segnare la vincitrice con ★ e scartare le altre, o non cambiare nulla."
+ ],
+ "Отбор: быстрое решение по каждому кадру": [
+  "Culling: a quick decision on every photo",
+  "Selección: una decisión rápida para cada foto",
+  "Selezione: una decisione rapida su ogni foto"
+ ],
+ "P — оставить, X — брак, U — снять решение; после решения открывается следующий кадр.": [
+  "P — keep, X — reject, U — clear; after a decision the next photo opens.",
+  "P — conservar, X — rechazar, U — quitar decisión; después se abre la siguiente foto.",
+  "P — tieni, X — scarta, U — annulla; dopo la decisione si apre la foto successiva."
+ ],
+ "Очередь сверху выбирает, какие кадры листать: все или только без решения; после AI-анализа — ещё лучшие и возможный брак.": [
+  "The queue at the top picks which photos to go through: all or undecided only; after AI analysis also the best and possible rejects.",
+  "La cola de arriba elige qué fotos recorrer: todas o solo sin decidir; tras el análisis AI, también las mejores y los posibles descartes.",
+  "La coda in alto sceglie quali foto scorrere: tutte o solo senza decisione; dopo l’analisi AI anche le migliori e i possibili scarti."
+ ],
+ "AI-анализ запускается только кнопкой: он подсветит брак и лучшие кадры в сериях, но решаете вы.": [
+  "AI analysis runs only from its button: it highlights rejects and the best photos in bursts, but you decide.",
+  "El análisis AI solo se inicia con su botón: resalta descartes y las mejores fotos de cada ráfaga, pero decides tú.",
+  "L’analisi AI parte solo dal suo pulsante: evidenzia gli scarti e le foto migliori delle raffiche, ma decidi tu."
+ ],
+ "Тяните углы и края рамки, внутри рамки — сдвиг.": [
+  "Drag the corners and edges of the frame; drag inside it to move.",
+  "Arrastra las esquinas y los bordes del marco; dentro, para moverlo.",
+  "Trascina angoli e bordi della cornice; all’interno, per spostarla."
+ ],
+ "A или «Авто» — рамку предложит AI. Формат и горизонт — на панели снизу.": [
+  "A or “Auto” — AI suggests a frame. Format and horizon are on the bar below.",
+  "A o «Auto»: la AI propone un marco. Formato y horizonte, en la barra de abajo.",
+  "A o «Auto»: l’AI propone una cornice. Formato e orizzonte nella barra in basso."
+ ],
+ "Enter — готово, Esc — отмена. Исходный файл не меняется.": [
+  "Enter — done, Esc — cancel. The original file is not changed.",
+  "Intro — listo, Esc — cancelar. El archivo original no se modifica.",
+  "Invio — fatto, Esc — annulla. Il file originale non viene modificato."
+ ],
+ "Убрать объект: для простых случаев": [
+  "Remove Object: for simple cases",
+  "Quitar objeto: para casos sencillos",
+  "Rimuovi oggetto: per casi semplici"
+ ],
+ "Кликните по объекту — AI выделит его красным. Ещё клик — добавить часть (тень, ножки).": [
+  "Click an object — AI highlights it in red. Another click adds a part (shadow, legs).",
+  "Haz clic en un objeto: la AI lo resalta en rojo. Otro clic añade una parte (sombra, patas).",
+  "Clic su un oggetto: l’AI lo evidenzia in rosso. Un altro clic aggiunge una parte (ombra, gambe)."
+ ],
+ "Лучше всего: небольшие отдельные предметы на простом фоне. Большие области и объекты на людях — хуже.": [
+  "Works best on small separate objects on a simple background. Large areas and objects over people work worse.",
+  "Funciona mejor con objetos pequeños y aislados sobre fondo simple. Áreas grandes y objetos sobre personas, peor.",
+  "Funziona meglio con piccoli oggetti isolati su sfondo semplice. Aree grandi e oggetti sulle persone, peggio."
+ ],
+ "Enter — убрать, Esc — сбросить выделение. Исходный файл не меняется.": [
+  "Enter — remove, Esc — clear the selection. The original file is not changed.",
+  "Intro — quitar, Esc — borrar la selección. El archivo original no se modifica.",
+  "Invio — rimuovi, Esc — azzera la selezione. Il file originale non viene modificato."
+ ],
+ "Тяните разделитель: слева «до», справа «после».": [
+  "Drag the divider: “before” on the left, “after” on the right.",
+  "Arrastra el divisor: «antes» a la izquierda, «después» a la derecha.",
+  "Trascina il divisore: «prima» a sinistra, «dopo» a destra."
+ ],
+ "Y — выключить, \\ — показать исходник целиком.": [
+  "Y — turn off, \\ — show the whole original.",
+  "Y — desactivar, \\ — ver el original completo.",
+  "Y — disattiva, \\ — mostra l’originale intero."
+ ],
+ "Понятно": [
+  "Got It",
+  "Entendido",
+  "Ho capito"
+ ],
+ "Больше не показывать подсказки": [
+  "Don’t show hints again",
+  "No volver a mostrar consejos",
+  "Non mostrare più i suggerimenti"
+ ],
+ "Закрыть подсказку": [
+  "Close hint",
+  "Cerrar consejo",
+  "Chiudi suggerimento"
+ ],
+ "Как работает этот инструмент": [
+  "How this tool works",
+  "Cómo funciona esta herramienta",
+  "Come funziona questo strumento"
+ ],
+ "{} кадра": [
+  "{} photos",
+  "{} fotos",
+  "{} foto"
+ ],
+ "Оставлено: {}": [
+  "Kept: {}",
+  "Conservadas: {}",
+  "Tenute: {}"
+ ],
+ "Оставлено: {}, отклонено: {}": [
+  "Kept: {}, rejected: {}",
+  "Conservadas: {}, rechazadas: {}",
+  "Tenute: {}, scartate: {}"
+ ],
+ "Показывать подсказки к инструментам": [
+  "Show tool hints",
+  "Mostrar consejos de herramientas",
+  "Mostra suggerimenti degli strumenti"
+ ],
+ "Показать все снова": [
+  "Show All Again",
+  "Mostrar todos de nuevo",
+  "Mostra di nuovo tutti"
+ ],
+ "Клик по кадру делает его активным (цветная рамка): 1–5 и X ставят оценку ему, ← → переключают.": [
+  "Click a photo to make it active (colored frame): 1–5 and X rate it, ← → switch.",
+  "Haz clic en una foto para activarla (marco de color): 1–5 y X la valoran, ← → cambian.",
+  "Clic su una foto per renderla attiva (cornice colorata): 1–5 e X la valutano, ← → cambiano."
  ]
 }

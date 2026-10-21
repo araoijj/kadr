@@ -24,6 +24,7 @@ struct GeneralSettings: View {
     @AppStorage("pref.language") private var language = "system"
     @AppStorage("pref.reopenLast") private var reopenLast = true
     @AppStorage("pref.cardBanner") private var cardBanner = true
+    @AppStorage(Hints.enabledKey) private var hints = true
     @AppStorage("pref.cullDefault") private var cullDefault = false
     @AppStorage("pref.sceneGap") private var sceneGap = 10
     @State private var startLanguage = Prefs.language
@@ -54,6 +55,11 @@ struct GeneralSettings: View {
                 }
                 Toggle(tr("Переходить к следующему кадру после оценки"), isOn: Binding(get: { lib.autoAdvance }, set: { lib.autoAdvance = $0 }))
                 Toggle(tr("Предлагать импорт при подключении карты памяти"), isOn: $cardBanner)
+                HStack {
+                    Toggle(tr("Показывать подсказки к инструментам"), isOn: $hints)
+                    Spacer()
+                    Button(tr("Показать все снова")) { Hints.resetAll() }
+                }
             }
             Section {
                 Button(tr("Сбросить все настройки…"), role: .destructive) { AppControl.resetAll() }
