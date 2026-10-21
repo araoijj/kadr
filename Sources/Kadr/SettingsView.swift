@@ -381,7 +381,7 @@ enum AppControl {
     }
 
     /// Settings keys included in the backup.
-    private static let backupKeys = ["exportSettings", "favoriteFolders", "recentFolders", "sortKey", "sortDescending", "groupKey",
+    private static let backupKeys = ["exportSettings", "favoriteFolders", "recentFolders", "shoots", "sortKey", "sortDescending", "groupKey",
                                      "includeSubfolders", "import.base", "import.split", "import.onlyNew", "import.eject"]
 
     static func backup() -> String? {

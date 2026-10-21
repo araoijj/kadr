@@ -2,12 +2,16 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// File system access: favorite and recent folders, connected drives and memory cards.
+/// Where photos come from, in three layers:
+/// - `shoots` — the working folders. A folder gets here only when you press "Scan" (or import a card);
+///   opening a shoot never adds anything. Newest on top, reordered by hand.
+/// - `favorites` — bookmarks into the file system: places you go to pick the next shoot.
+/// - the explorer — home, drives, cards: the whole file system, for finding a folder and scanning it.
 @MainActor
 @Observable
 final class FolderBrowser {
     var favorites: [URL] = []
-    var recent: [URL] = []
+    var shoots: [URL] = []
     var volumes: [URL] = []
     /// Folder highlighted in the sidebar tree: one click selects, a double click or "Open" opens it.
     var selected: URL?
@@ -20,20 +24,30 @@ final class FolderBrowser {
     var onCardMounted: ((URL) -> Void)?
     private var scannedOnce = false
 
-    private let favKey = "favoriteFolders", recentKey = "recentFolders"
+    private let favKey = "favoriteFolders", shootsKey = "shoots", recentKey = "recentFolders"
+    static let home = FileManager.default.homeDirectoryForCurrentUser
 
     init() {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = Self.home
         if let saved = UserDefaults.standard.stringArray(forKey: favKey) {
             favorites = saved.map { URL(fileURLWithPath: $0) }
         } else {
-            favorites = ["Pictures", "Documents/Фотосессии", "Desktop", "Downloads"]
+            favorites = ["Pictures", "Documents/Фотосессии"]
                 .map { home.appendingPathComponent($0) }
                 .filter { FileManager.default.fileExists(atPath: $0.path) }
         }
-        recent = (UserDefaults.standard.stringArray(forKey: recentKey) ?? [])
-            .map { URL(fileURLWithPath: $0) }
-            .filter { FileManager.default.fileExists(atPath: $0.path) }
+        if let saved = UserDefaults.standard.stringArray(forKey: shootsKey) {
+            shoots = saved.map { URL(fileURLWithPath: $0) }
+        } else {
+            // First launch of the three-layer sidebar: the old "Continue" list becomes the shoots,
+            // so no progress is lost; the system folders the old favorites started with go away.
+            shoots = (UserDefaults.standard.stringArray(forKey: recentKey) ?? []).map { URL(fileURLWithPath: $0) }
+            let system = Set(["Desktop", "Downloads"].map { home.appendingPathComponent($0).standardizedFileURL })
+            favorites.removeAll { system.contains($0.standardizedFileURL) }
+            UserDefaults.standard.set(favorites.map(\.path), forKey: favKey)
+            UserDefaults.standard.set(shoots.map(\.path), forKey: shootsKey)
+        }
+        shoots = shoots.filter { FileManager.default.fileExists(atPath: $0.path) }
         refreshVolumes()
         // A memory card or drive was inserted; the list updates by itself.
         let nc = NSWorkspace.shared.notificationCenter
@@ -66,25 +80,38 @@ final class FolderBrowser {
         scannedOnce = true
     }
 
-    /// How many recent folders are kept; the sidebar shows the first `recentShown`.
-    static let recentLimit = 12
+    func isShoot(_ u: URL) -> Bool { shoots.contains { $0.standardizedFileURL == u.standardizedFileURL } }
 
-    func addRecent(_ u: URL) {
-        recent.removeAll { $0.standardizedFileURL == u.standardizedFileURL }
-        recent.insert(u, at: 0)
-        recent = Array(recent.prefix(Self.recentLimit))
-        UserDefaults.standard.set(recent.map(\.path), forKey: recentKey)
+    /// A new shoot goes on top; one already in the list stays where you put it.
+    func addShoot(_ u: URL) {
+        guard !isShoot(u) else { return }
+        shoots.insert(u, at: 0)
+        UserDefaults.standard.set(shoots.map(\.path), forKey: shootsKey)
     }
 
-    func removeRecent(_ u: URL) {
-        recent.removeAll { $0.standardizedFileURL == u.standardizedFileURL }
-        UserDefaults.standard.set(recent.map(\.path), forKey: recentKey)
+    func removeShoot(_ u: URL) {
+        shoots.removeAll { $0.standardizedFileURL == u.standardizedFileURL }
+        UserDefaults.standard.set(shoots.map(\.path), forKey: shootsKey)
     }
 
-    /// Forgets every folder except the open one (it would come straight back anyway).
-    func clearRecent(keeping open: URL?) {
-        recent = recent.filter { r in open.map { $0.standardizedFileURL == r.standardizedFileURL } ?? false }
-        UserDefaults.standard.set(recent.map(\.path), forKey: recentKey)
+    func moveShoots(from: IndexSet, to: Int) {
+        shoots.move(fromOffsets: from, toOffset: to)
+        UserDefaults.standard.set(shoots.map(\.path), forKey: shootsKey)
+    }
+
+    /// Forgets every shoot except the open one.
+    func clearShoots(keeping open: URL?) {
+        shoots = shoots.filter { r in open.map { $0.standardizedFileURL == r.standardizedFileURL } ?? false }
+        UserDefaults.standard.set(shoots.map(\.path), forKey: shootsKey)
+    }
+
+    /// Roots of the explorer: home first, then the drives (cards have their own section).
+    var explorerRoots: [URL] { [Self.home] + drives }
+
+    /// Selects a folder in the sidebar (the card shows it) and makes sure the explorer is unfolded.
+    func reveal(_ u: URL) {
+        UserDefaults.standard.set(true, forKey: "sb.explorer")
+        selected = u
     }
 
     func isFavorite(_ u: URL) -> Bool { favorites.contains { $0.standardizedFileURL == u.standardizedFileURL } }
@@ -156,7 +183,8 @@ final class FolderBrowser {
     }
 }
 
-/// Folder row in the tree: click to open, disclosure triangle to show subfolders.
+/// Folder row in the tree: a click selects it (the card below says what's inside and offers Scan),
+/// the disclosure triangle shows subfolders. Nothing here scans by itself.
 struct FolderRow: View {
     let url: URL
     var title: String?
@@ -205,11 +233,11 @@ struct FolderRow: View {
         .padding(.vertical, 1).padding(.horizontal, 4)
         .background(isSelected ? Color.accentColor.opacity(0.22) : .clear, in: RoundedRectangle(cornerRadius: 5))
         .contentShape(Rectangle())
-        .onTapGesture(count: 2) { lib.open(url) }
+        .onTapGesture(count: 2) { expanded.toggle() }
         .onTapGesture { lib.browser.selected = url }
-        .help(tr("Двойной клик — открыть") + "\n" + url.path)
+        .help(url.path)
         .contextMenu {
-            Button(tr("Открыть")) { lib.open(url) }
+            Button(isCurrent ? tr("Открыта") : tr("Сканировать")) { lib.scan(url) }.disabled(isCurrent)
             Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
             Divider()
             Button(lib.browser.isFavorite(url) ? tr("Убрать из избранного") : tr("Добавить в избранное")) { lib.browser.toggleFavorite(url) }

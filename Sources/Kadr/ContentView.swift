@@ -50,7 +50,7 @@ struct ContentView: View {
             guard let u = urls.first else { return false }
             var isDir: ObjCBool = false
             FileManager.default.fileExists(atPath: u.path, isDirectory: &isDir)
-            lib.open(isDir.boolValue ? u : u.deletingLastPathComponent())
+            lib.scan(isDir.boolValue ? u : u.deletingLastPathComponent())
             return true
         }
         .background(WindowTweaks())
@@ -59,9 +59,9 @@ struct ContentView: View {
             // kadr /path/to/folder — open it right away
             if lib.folder == nil, CommandLine.arguments.count > 1 {
                 let u = URL(fileURLWithPath: CommandLine.arguments[1])
-                if FileManager.default.fileExists(atPath: u.path) { lib.open(u) }
+                if FileManager.default.fileExists(atPath: u.path) { lib.scan(u) }
             }
-            if lib.folder == nil, Prefs.reopenLastFolder, let last = lib.browser.recent.first {
+            if lib.folder == nil, Prefs.reopenLastFolder, let last = lib.browser.shoots.first {
                 lib.open(last)
             }
             monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown, .scrollWheel]) { e in
