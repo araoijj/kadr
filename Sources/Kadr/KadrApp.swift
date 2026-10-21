@@ -167,6 +167,8 @@ struct KeyHandler {
             case "x" where !lib.tournamentActive, "ч" where !lib.tournamentActive: lib.toggleCompareReject(); return true
             case "z", "я": lib.toggleCompareZoom(); return true
             case "c", "с": lib.stopCompare(); return true
+            case "=", "+": lib.compareTileStep(1); return true     // bigger frames
+            case "-": lib.compareTileStep(-1); return true
             default: break
             }
         }
