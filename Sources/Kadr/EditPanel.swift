@@ -171,12 +171,15 @@ struct EditPanel: View {
                 }
             }
             section(tr("Профиль"), .profile, p) {
+                // Short names: a segmented control never shrinks below its labels, and the long ones
+                // pushed the whole panel wider than a narrow inspector.
                 Picker("", selection: Binding(get: { p.adj.profile }, set: { v in var a = p.adj; a.profile = v; lib.setAdjustments(a) })) {
-                    Text(tr("Как в камере")).tag(Adjustments.Profile.camera)
-                    Text(tr("Стандартный macOS")).tag(Adjustments.Profile.standard)
+                    Text(tr("Камера")).tag(Adjustments.Profile.camera)
+                    Text("macOS").tag(Adjustments.Profile.standard)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                .help(tr("Камера — цвета как в JPEG камеры; macOS — проявление RAW движком macOS как есть"))
                 Text(p.adj.profile == .camera
                      ? tr("Цвета подобраны по JPEG камеры — правки начинаются с привычной картинки.")
                      : tr("Проявление RAW движком macOS: свои цвета, могут отличаться от камеры."))
@@ -405,11 +408,22 @@ struct EditPanel: View {
             Button { newStyle = true } label: { Image(systemName: "plus.square.on.square") }
                 .disabled(p.adj.isIdentity)
                 .help(tr("Сохранить как стиль"))
-            Spacer()
-            Button(role: .destructive) { lib.resetAdjustments() } label: { Label(tr("Исходник"), systemImage: "arrow.counterclockwise").fixedSize() }
-                .help(tr("Вернуть кадр как снято: сбросить всю обработку и кадрирование (⌥⌘R)"))
-                .disabled(lib.targets.allSatisfy(\.adj.isIdentity))
+            Spacer(minLength: 4)
+            // Caption when there is room, the icon alone in a narrow inspector.
+            ViewThatFits(in: .horizontal) {
+                resetButton(caption: true)
+                resetButton(caption: false)
+            }
         }
+    }
+
+    private func resetButton(caption: Bool) -> some View {
+        Button(role: .destructive) { lib.resetAdjustments() } label: {
+            if caption { Label(tr("Исходник"), systemImage: "arrow.counterclockwise").fixedSize() }
+            else { Image(systemName: "arrow.counterclockwise") }
+        }
+        .help(tr("Вернуть кадр как снято: сбросить всю обработку и кадрирование (⌥⌘R)"))
+        .disabled(lib.targets.allSatisfy(\.adj.isIdentity))
         .controlSize(.regular)
     }
 

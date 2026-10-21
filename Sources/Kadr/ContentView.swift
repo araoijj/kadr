@@ -36,7 +36,7 @@ struct ContentView: View {
             }
             .inspector(isPresented: $lib.showInfo) {
                 Inspector()
-                    .inspectorColumnWidth(min: 300, ideal: 320, max: 420)
+                    .inspectorColumnWidth(min: 260, ideal: 320, max: 420)
             }
         }
         .navigationSplitViewStyle(.balanced)

@@ -5018,5 +5018,10 @@
   "Move to “_Отклонённые”",
   "Mover a «_Отклонённые»",
   "Sposta in «_Отклонённые»"
+ ],
+ "Камера — цвета как в JPEG камеры; macOS — проявление RAW движком macOS как есть": [
+  "Camera — colors as in the camera JPEG; macOS — the RAW developed by the macOS engine as is",
+  "Cámara: colores como en el JPEG de la cámara; macOS: el RAW revelado por el motor de macOS tal cual",
+  "Fotocamera: colori come nel JPEG della fotocamera; macOS: il RAW sviluppato dal motore di macOS così com’è"
  ]
 }
