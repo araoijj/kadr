@@ -66,15 +66,24 @@ final class FolderBrowser {
         scannedOnce = true
     }
 
+    /// How many recent folders are kept; the sidebar shows the first `recentShown`.
+    static let recentLimit = 12
+
     func addRecent(_ u: URL) {
         recent.removeAll { $0.standardizedFileURL == u.standardizedFileURL }
         recent.insert(u, at: 0)
-        recent = Array(recent.prefix(8))
+        recent = Array(recent.prefix(Self.recentLimit))
         UserDefaults.standard.set(recent.map(\.path), forKey: recentKey)
     }
 
     func removeRecent(_ u: URL) {
         recent.removeAll { $0.standardizedFileURL == u.standardizedFileURL }
+        UserDefaults.standard.set(recent.map(\.path), forKey: recentKey)
+    }
+
+    /// Forgets every folder except the open one (it would come straight back anyway).
+    func clearRecent(keeping open: URL?) {
+        recent = recent.filter { r in open.map { $0.standardizedFileURL == r.standardizedFileURL } ?? false }
         UserDefaults.standard.set(recent.map(\.path), forKey: recentKey)
     }
 
@@ -85,9 +94,47 @@ final class FolderBrowser {
         UserDefaults.standard.set(favorites.map(\.path), forKey: favKey)
     }
 
+    /// Adds folders (files are ignored, duplicates too). Returns how many were added.
+    @discardableResult
+    func addFavorites(_ urls: [URL]) -> Int {
+        var n = 0
+        for u in urls where !isFavorite(u) {
+            var isDir: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: u.path, isDirectory: &isDir), isDir.boolValue else { continue }
+            favorites.append(u); n += 1
+        }
+        if n > 0 { UserDefaults.standard.set(favorites.map(\.path), forKey: favKey) }
+        return n
+    }
+
+    func moveFavorites(from: IndexSet, to: Int) {
+        favorites.move(fromOffsets: from, toOffset: to)
+        UserDefaults.standard.set(favorites.map(\.path), forKey: favKey)
+    }
+
+    /// Lets the user pick a folder for the favorites list without opening it.
+    func chooseFavorite() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = true
+        panel.prompt = tr("Добавить")
+        panel.message = tr("Выберите папки для «Избранного»")
+        if panel.runModal() == .OK { addFavorites(panel.urls) }
+    }
+
     static func displayName(_ u: URL) -> String {
         if u.path == FileManager.default.homeDirectoryForCurrentUser.path { return tr("Домой") }
         return (try? u.resourceValues(forKeys: [.localizedNameKey]).localizedName) ?? u.lastPathComponent
+    }
+
+    /// Where the folder lives, short: "~/Pictures/пляж" or "/Volumes/Extreme SSD/Inbox".
+    static func shortPath(_ u: URL) -> String {
+        let p = u.deletingLastPathComponent().path
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        if p == home { return "~" }
+        if p.hasPrefix(home + "/") { return "~" + p.dropFirst(home.count) }
+        return p
     }
 
     /// Subfolders, excluding hidden ones, packages (.app, .photoslibrary) and system folders.
