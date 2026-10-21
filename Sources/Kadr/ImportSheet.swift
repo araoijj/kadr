@@ -91,7 +91,7 @@ struct ImportSheet: View {
                     Button(imp.result == nil ? tr("Отмена") : tr("Закрыть")) { lib.showImport = false }
                         .keyboardShortcut(.cancelAction)
                     Button(tr("Импортировать \(imp.toCopy.count)")) {
-                        imp.start { folder in lib.open(folder) }
+                        imp.start { folder in lib.scan(folder) }
                     }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)

@@ -785,18 +785,24 @@ final class Library {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
-        panel.prompt = tr("Открыть")
+        panel.prompt = tr("Сканировать")
         panel.message = tr("Выберите папку со съёмкой")
-        if panel.runModal() == .OK, let url = panel.url { open(url) }
+        if panel.runModal() == .OK, let url = panel.url { scan(url) }
     }
 
+    /// "Scan": the folder becomes a shoot (top of the sidebar) and opens. The only way in.
+    func scan(_ url: URL) {
+        browser.addShoot(url)
+        open(url)
+    }
+
+    /// Reads the folder and shows it. Doesn't touch the shoots list: that's `scan`.
     func open(_ url: URL) {
         flushEdits()
         analysisTask?.cancel()
         aiTask?.cancel(); aiRunning = false; aiCount = 0
         saveFolderState()
         folder = url
-        browser.addRecent(url)
         filter = .all
         lensFilter = nil
         tagFilter = nil
