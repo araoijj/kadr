@@ -11,6 +11,8 @@ struct FolderState: Codable {
     var total: Int?
     var kept: Int?
     var rejected: Int?
+    /// Gathered together with its subfolders (chosen when scanning).
+    var recursive: Bool?
 
     /// Share of photos with a decision (kept or rejected), 0…1.
     var progress: Double? {
@@ -86,6 +88,7 @@ extension Library {
         let mode = culling ? "cull" : loupe ? "loupe" : "grid"
         guard !photos.isEmpty else { return }
         var s = FolderState(current: current?.url.lastPathComponent, filter: filter.code, mode: mode)
+        s.recursive = includeSubfolders
         if loading {
             // Still reading the folder: keep the counts from last time instead of partial ones.
             let old = FolderState.load(folder)

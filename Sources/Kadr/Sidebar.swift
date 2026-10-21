@@ -2,8 +2,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// Left panel, three layers top to bottom:
-/// - «Съёмки» — what you work on. Only "Scan" puts a folder here; progress and the path on every row.
-/// - «Избранное» — bookmarks into the file system, yours to arrange (⋯ menu, drop from Finder, ★ on a folder).
+/// - «Съёмки» — what you work on. Only "Scan" puts a folder here; progress and the path on every row,
+///   subfolders under the triangle (each can become a shoot of its own).
+/// - «Избранное» — flat bookmarks into the file system. A click unfolds the explorer down to the place.
 /// - «Проводник» — home and drives. A click shows the folder card below with "Scan"; nothing scans by itself.
 /// Filters are in the bar above the photos (FilterBar).
 struct Sidebar: View {
@@ -16,50 +17,61 @@ struct Sidebar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            List {
-                Section(isExpanded: $showShoots) {
-                    if lib.browser.shoots.isEmpty {
-                        Text(tr("Пока пусто. Выберите папку в «Избранном» или «Проводнике» и нажмите «Сканировать»."))
-                            .font(.caption).foregroundStyle(.secondary).selectionDisabled()
+            ScrollViewReader { proxy in
+                List {
+                    Section(isExpanded: $showShoots) {
+                        if lib.browser.shoots.isEmpty {
+                            Text(tr("Пока пусто. Выберите папку в «Избранном» или «Проводнике» и нажмите «Сканировать»."))
+                                .font(.caption).foregroundStyle(.secondary).selectionDisabled()
+                        }
+                        ForEach(lib.browser.shoots, id: \.self) { ShootRow(url: $0) }
+                            .onMove { lib.browser.moveShoots(from: $0, to: $1) }
+                    } header: {
+                        SectionTitle(tr("Съёмки")) {
+                            Text(tr("Папки, с которыми вы работаете. Сюда попадает только то, что вы отсканировали; порядок — перетаскиванием."))
+                            Button(tr("Сканировать папку…")) { lib.chooseFolder() }
+                            Divider()
+                            Button(tr("Убрать все, кроме открытой")) { lib.browser.clearShoots(keeping: lib.folder) }
+                                .disabled(lib.browser.shoots.isEmpty)
+                        }
                     }
-                    ForEach(lib.browser.shoots, id: \.self) { ShootRow(url: $0) }
-                        .onMove { lib.browser.moveShoots(from: $0, to: $1) }
-                } header: {
-                    SectionTitle(tr("Съёмки")) {
-                        Text(tr("Папки, с которыми вы работаете. Сюда попадает только то, что вы отсканировали; порядок — перетаскиванием."))
-                        Button(tr("Сканировать папку…")) { lib.chooseFolder() }
-                        Divider()
-                        Button(tr("Убрать все, кроме открытой")) { lib.browser.clearShoots(keeping: lib.folder) }
-                            .disabled(lib.browser.shoots.isEmpty)
+                    if !lib.browser.cards.isEmpty {
+                        Section(tr("Карты памяти"), isExpanded: $showCards) {
+                            ForEach(lib.browser.cards, id: \.self) { CardRow(url: $0) }
+                        }
+                    }
+                    Section(isExpanded: $showFavorites) {
+                        if lib.browser.favorites.isEmpty {
+                            Text(tr("Закладки на папки, где лежат съёмки. Добавьте через ⋯ или перетащите папку из Finder."))
+                                .font(.caption).foregroundStyle(.secondary).selectionDisabled()
+                        }
+                        ForEach(lib.browser.favorites, id: \.self) { FavoriteRow(url: $0, icon: icon(for: $0)) }
+                            .onMove { lib.browser.moveFavorites(from: $0, to: $1) }
+                    } header: {
+                        SectionTitle(tr("Избранное")) {
+                            Text(tr("Закладки: места, где вы ищете съёмки. Клик открывает это место в «Проводнике»."))
+                            Button(tr("Добавить папку…")) { lib.browser.chooseFavorite() }
+                        }
+                    }
+                    Section(isExpanded: $showExplorer) {
+                        ForEach(lib.browser.explorerRoots, id: \.self) { FolderRow(url: $0, icon: $0 == FolderBrowser.home ? "house" : "externaldrive") }
+                    } header: {
+                        SectionTitle(tr("Проводник")) {
+                            Text(tr("Вся файловая система: домашняя папка и диски. Клик — карточка папки, «Сканировать» — в «Съёмки»."))
+                        }
                     }
                 }
-                if !lib.browser.cards.isEmpty {
-                    Section(tr("Карты памяти"), isExpanded: $showCards) {
-                        ForEach(lib.browser.cards, id: \.self) { CardRow(url: $0) }
-                    }
-                }
-                Section(isExpanded: $showFavorites) {
-                    if lib.browser.favorites.isEmpty {
-                        Text(tr("Закладки на папки, где лежат съёмки. Добавьте через ⋯ или перетащите папку из Finder."))
-                            .font(.caption).foregroundStyle(.secondary).selectionDisabled()
-                    }
-                    ForEach(lib.browser.favorites, id: \.self) { FolderRow(url: $0, icon: icon(for: $0)) }
-                        .onMove { lib.browser.moveFavorites(from: $0, to: $1) }
-                } header: {
-                    SectionTitle(tr("Избранное")) {
-                        Text(tr("Закладки: места, где вы ищете съёмки. Клик по папке — карточка с кнопкой «Сканировать»."))
-                        Button(tr("Добавить папку…")) { lib.browser.chooseFavorite() }
-                    }
-                }
-                Section(isExpanded: $showExplorer) {
-                    ForEach(lib.browser.explorerRoots, id: \.self) { FolderRow(url: $0, icon: $0 == FolderBrowser.home ? "house" : "externaldrive") }
-                } header: {
-                    SectionTitle(tr("Проводник")) {
-                        Text(tr("Вся файловая система: домашняя папка и диски. Клик — карточка папки, «Сканировать» — в «Съёмки»."))
+                .listStyle(.sidebar)
+                .onChange(of: lib.browser.revealTarget) { _, t in
+                    // Rows deep in the tree appear as their parents load; try again once they have.
+                    guard let t else { return }
+                    for delay in [0.15, 0.6, 1.5] {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                            withAnimation { proxy.scrollTo(t, anchor: .center) }
+                        }
                     }
                 }
             }
-            .listStyle(.sidebar)
             .onDrop(of: [.fileURL], isTargeted: $dropTarget) { providers in
                 Task { @MainActor in
                     var urls: [URL] = []
@@ -123,17 +135,37 @@ struct SectionTitle<Items: View>: View {
 }
 
 /// A shoot: one click opens it where you stopped; the bar shows how much is decided,
-/// the caption says where the folder is (two shoots can share a name).
+/// the caption says where the folder is and whether it was gathered with its subfolders.
+/// Subfolders sit under the triangle: a click on one shows its card, so it can become a shoot of its own.
 struct ShootRow: View {
     let url: URL
     @Environment(Library.self) private var lib
     @State private var hover = false
+    @State private var expanded = false
+    @State private var children: [URL]?
 
     var body: some View {
+        Group {
+            if let children, !children.isEmpty {
+                DisclosureGroup(isExpanded: $expanded) {
+                    ForEach(children, id: \.self) { FolderRow(url: $0) }
+                } label: { row }
+            } else {
+                row
+            }
+        }
+        .task(id: url) {
+            let u = url
+            children = await Task.detached(priority: .utility) { FolderBrowser.subfolders(of: u) }.value
+        }
+    }
+
+    private var row: some View {
         let isOpen = lib.folder?.standardizedFileURL == url.standardizedFileURL
         let p = progress(isOpen)
         let fav = lib.browser.isFavorite(url)
-        Button { if !isOpen { lib.open(url) } } label: {
+        let whole = isOpen ? lib.includeSubfolders : (FolderState.load(url)?.recursive ?? false)
+        return Button { if !isOpen { lib.open(url) } } label: {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Image(systemName: isOpen ? "folder.fill" : "folder")
@@ -157,7 +189,10 @@ struct ShootRow: View {
                         .tint(f >= 1 ? .green : .accentColor)
                         .padding(.leading, 22)
                 }
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
+                    if whole {
+                        Image(systemName: "square.stack.3d.down.right").help(tr("Собрана вместе с подпапками"))
+                    }
                     Text(FolderBrowser.shortPath(url)).lineLimit(1).truncationMode(.head).layoutPriority(-1)
                     if let d = p.done { Spacer(minLength: 2); Text(d).monospacedDigit().fixedSize() }
                 }
@@ -169,11 +204,13 @@ struct ShootRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .help(url.path)
+        .help(url.path + (whole ? "\n" + tr("Собрана вместе с подпапками") : ""))
         .contextMenu {
             Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
             Button(tr("Показать в проводнике")) { lib.browser.reveal(url) }
             Button(fav ? tr("Убрать из избранного") : tr("Добавить в избранное")) { lib.browser.toggleFavorite(url) }
+            Divider()
+            Button(whole ? tr("Пересканировать только эту папку") : tr("Пересканировать с подпапками")) { lib.scan(url, recursive: !whole) }
             Divider()
             Button(tr("Убрать из съёмок")) { lib.browser.removeShoot(url) }
         }
@@ -190,6 +227,37 @@ struct ShootRow: View {
         }
         guard total > 0 else { return (nil, nil) }
         return (Double(done) / Double(total), tr("\(done) из \(total)"))
+    }
+}
+
+/// A bookmark: flat, no tree of its own. A click unfolds the explorer down to it and shows its card.
+struct FavoriteRow: View {
+    let url: URL
+    var icon = "folder"
+    @Environment(Library.self) private var lib
+
+    var body: some View {
+        let isSelected = lib.browser.selected?.standardizedFileURL == url.standardizedFileURL
+        Button { lib.browser.reveal(url) } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon).foregroundStyle(.secondary).frame(width: 16)
+                Text(FolderBrowser.displayName(url)).lineLimit(1).truncationMode(.middle)
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 1).padding(.horizontal, 4)
+            .background(isSelected ? Color.accentColor.opacity(0.22) : .clear, in: RoundedRectangle(cornerRadius: 5))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(tr("Открыть это место в «Проводнике»") + "\n" + url.path)
+        .contextMenu {
+            Button(tr("Показать в проводнике")) { lib.browser.reveal(url) }
+            Button(tr("Сканировать")) { lib.scan(url) }
+            Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+            Divider()
+            Button(tr("Убрать из избранного")) { lib.browser.toggleFavorite(url) }
+        }
     }
 }
 
@@ -220,20 +288,21 @@ struct CardRow: View {
             .controlSize(.small)
         }
         .contextMenu {
-            Button(tr("Сканировать как папку")) { lib.scan(url) }
+            Button(tr("Сканировать как папку")) { lib.scan(url, recursive: true) }
             Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
         }
     }
 }
 
-/// The folder selected in the tree: where it is, what's inside, how far culling got, and Scan.
+/// The folder selected in the tree: where it is, what's inside (here and in subfolders), how far
+/// culling got, and how to scan it: this folder alone, or together with its subfolders.
 struct SelectedFolderCard: View {
     let url: URL
     @Environment(Library.self) private var lib
-    @State private var info: (photos: Int, folders: Int)?
+    @State private var info: (here: Int, deep: Int, folders: Int)?
+    private nonisolated static let deepCap = 5000
 
     var body: some View {
-        @Bindable var lib = lib
         let isOpen = lib.folder?.standardizedFileURL == url.standardizedFileURL
         let isShoot = lib.browser.isShoot(url)
         VStack(alignment: .leading, spacing: 8) {
@@ -248,7 +317,9 @@ struct SelectedFolderCard: View {
                 .lineLimit(1).truncationMode(.head).help(url.path)
             Group {
                 if let info {
-                    Text(tr("Фото: \(info.photos)") + (info.folders > 0 ? tr(" · подпапок: \(info.folders)") : ""))
+                    let deep = info.deep >= Self.deepCap ? "\(Self.deepCap)+" : "\(info.deep)"
+                    Text(tr("Здесь: \(info.here)")
+                         + (info.folders > 0 ? tr(" · в подпапках: \(deep) · подпапок: \(info.folders)") : ""))
                 } else {
                     Text(tr("Считаю…"))
                 }
@@ -260,18 +331,34 @@ struct SelectedFolderCard: View {
                 }
                 .controlSize(.mini)
             }
-            Toggle(tr("С вложенными папками"), isOn: $lib.includeSubfolders)
-                .toggleStyle(.checkbox).font(.caption)
-                .help(tr("Показывать снимки из всех подпапок"))
-            HStack {
-                Button(isOpen ? tr("Открыта") : isShoot ? tr("Открыть") : tr("Сканировать")) { lib.scan(url); lib.browser.selected = nil }
-                    .buttonStyle(.borderedProminent).disabled(isOpen)
-                    .help(isShoot ? tr("Папка уже в «Съёмках»") : tr("Папка попадёт в «Съёмки» и откроется"))
+            if isOpen {
+                Text(tr("Открыта сейчас") + (lib.includeSubfolders ? tr(" · с подпапками") : "")).font(.caption).foregroundStyle(.secondary)
+            }
+            HStack(spacing: 6) {
+                if isOpen {
+                    Button(tr("Открыта")) {}.disabled(true)
+                } else if isShoot {
+                    Button(tr("Открыть")) { lib.open(url); lib.browser.selected = nil }
+                        .buttonStyle(.borderedProminent)
+                        .help(tr("Папка уже в «Съёмках»"))
+                } else {
+                    let hereEmpty = info.map { $0.here == 0 } ?? false
+                    let hasDeep = info.map { $0.folders > 0 && $0.deep > 0 } ?? false
+                    Button(tr("Сканировать")) { lib.scan(url, recursive: false); lib.browser.selected = nil }
+                        .prominent(!(hereEmpty && hasDeep))
+                        .disabled(info != nil && hereEmpty)
+                        .help(tr("Только снимки из этой папки → в «Съёмки»"))
+                    if hasDeep {
+                        Button(tr("С подпапками")) { lib.scan(url, recursive: true); lib.browser.selected = nil }
+                            .prominent(hereEmpty)
+                            .help(tr("Снимки из этой папки и всех вложенных одним списком → в «Съёмки»"))
+                    }
+                }
                 Button { lib.browser.toggleFavorite(url) } label: {
                     Image(systemName: lib.browser.isFavorite(url) ? "star.fill" : "star")
                 }
                 .help(lib.browser.isFavorite(url) ? tr("Убрать из избранного") : tr("Добавить в избранное"))
-                Spacer()
+                Spacer(minLength: 0)
             }
             .controlSize(.small)
         }
@@ -279,7 +366,17 @@ struct SelectedFolderCard: View {
         .task(id: url) {
             info = nil
             let u = url
-            info = await Task.detached(priority: .utility) { (FolderBrowser.photoCount(in: u), FolderBrowser.subfolders(of: u).count) }.value
+            info = await Task.detached(priority: .utility) {
+                let folders = FolderBrowser.subfolders(of: u).count
+                return (FolderBrowser.photoCount(in: u), folders > 0 ? FolderBrowser.deepPhotoCount(in: u, cap: Self.deepCap) : 0, folders)
+            }.value
         }
+    }
+}
+
+private extension View {
+    /// The recommended of two buttons is the prominent one.
+    @ViewBuilder func prominent(_ yes: Bool) -> some View {
+        if yes { buttonStyle(.borderedProminent) } else { buttonStyle(.bordered) }
     }
 }

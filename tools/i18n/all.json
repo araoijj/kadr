@@ -4978,5 +4978,65 @@
   "The folder goes to Shoots and opens",
   "La carpeta irá a Sesiones y se abrirá",
   "La cartella va nei Servizi e si apre"
+ ],
+ "Закладки: места, где вы ищете съёмки. Клик открывает это место в «Проводнике».": [
+  "Bookmarks: the places you look for shoots. A click opens the place in the Explorer.",
+  "Marcadores: los lugares donde busca sesiones. Un clic abre el lugar en el Explorador.",
+  "Segnalibri: i posti dove cerchi i servizi. Un clic apre il posto in Esplora."
+ ],
+ "Собрана вместе с подпапками": [
+  "Gathered together with its subfolders",
+  "Reunida junto con sus subcarpetas",
+  "Raccolta insieme alle sottocartelle"
+ ],
+ "Пересканировать только эту папку": [
+  "Rescan this folder only",
+  "Volver a escanear solo esta carpeta",
+  "Riscansiona solo questa cartella"
+ ],
+ "Пересканировать с подпапками": [
+  "Rescan with subfolders",
+  "Volver a escanear con subcarpetas",
+  "Riscansiona con le sottocartelle"
+ ],
+ "Открыть это место в «Проводнике»": [
+  "Open this place in the Explorer",
+  "Abrir este lugar en el Explorador",
+  "Apri questo posto in Esplora"
+ ],
+ "Здесь: {}": [
+  "Here: {}",
+  "Aquí: {}",
+  "Qui: {}"
+ ],
+ " · в подпапках: {} · подпапок: {}": [
+  " · in subfolders: {} · subfolders: {}",
+  " · en subcarpetas: {} · subcarpetas: {}",
+  " · nelle sottocartelle: {} · sottocartelle: {}"
+ ],
+ "Открыта сейчас": [
+  "Open now",
+  "Abierta ahora",
+  "Aperta ora"
+ ],
+ " · с подпапками": [
+  " · with subfolders",
+  " · con subcarpetas",
+  " · con le sottocartelle"
+ ],
+ "Только снимки из этой папки → в «Съёмки»": [
+  "Only the photos in this folder → Shoots",
+  "Solo las fotos de esta carpeta → Sesiones",
+  "Solo le foto in questa cartella → Servizi"
+ ],
+ "С подпапками": [
+  "With Subfolders",
+  "Con subcarpetas",
+  "Con le sottocartelle"
+ ],
+ "Снимки из этой папки и всех вложенных одним списком → в «Съёмки»": [
+  "Photos from this folder and all nested ones as one list → Shoots",
+  "Las fotos de esta carpeta y de todas las anidadas en una lista → Sesiones",
+  "Le foto di questa cartella e di tutte quelle annidate in un unico elenco → Servizi"
  ]
 }

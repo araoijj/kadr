@@ -647,9 +647,14 @@ final class Library {
     var groupKey: GroupKey = GroupKey(rawValue: UserDefaults.standard.string(forKey: "groupKey") ?? "") ?? .none {
         didSet { UserDefaults.standard.set(groupKey.rawValue, forKey: "groupKey") }
     }
-    var includeSubfolders = UserDefaults.standard.bool(forKey: "includeSubfolders") {
-        didSet {
-            UserDefaults.standard.set(includeSubfolders, forKey: "includeSubfolders")
+    /// Whether the open shoot was gathered with its subfolders. A property of the shoot, remembered
+    /// per folder (FolderState), chosen when scanning; flipping it here re-reads the open folder.
+    private var recursiveStorage = false
+    var includeSubfolders: Bool {
+        get { recursiveStorage }
+        set {
+            guard newValue != recursiveStorage else { return }
+            recursiveStorage = newValue
             reload()
         }
     }
@@ -791,18 +796,24 @@ final class Library {
     }
 
     /// "Scan": the folder becomes a shoot (top of the sidebar) and opens. The only way in.
-    func scan(_ url: URL) {
+    /// `recursive` nil = what the folder was scanned with before, else a guess: a folder with no photos
+    /// of its own but photos inside its subfolders is gathered whole.
+    func scan(_ url: URL, recursive: Bool? = nil) {
         browser.addShoot(url)
-        open(url)
+        open(url, recursive: recursive)
     }
 
     /// Reads the folder and shows it. Doesn't touch the shoots list: that's `scan`.
-    func open(_ url: URL) {
+    func open(_ url: URL, recursive: Bool? = nil) {
         flushEdits()
         analysisTask?.cancel()
         aiTask?.cancel(); aiRunning = false; aiCount = 0
         saveFolderState()
         folder = url
+        var state = FolderState.load(url) ?? FolderState()
+        let mode = recursive ?? state.recursive ?? FolderBrowser.suggestRecursive(url)
+        if state.recursive != mode { state.recursive = mode; FolderState.save(state, for: url) }
+        recursiveStorage = mode
         filter = .all
         lensFilter = nil
         tagFilter = nil
