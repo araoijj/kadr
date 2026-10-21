@@ -4313,5 +4313,80 @@
   "Exit Mode",
   "Salir del modo",
   "Esci dalla modalità"
+ ],
+ "AI не нашёл здесь отдельного объекта. Кликните ближе к его центру. Лучше всего выделяются люди, машины, мусор, знаки; фон, небо, трава, тени и отражения — плохо.": [
+  "AI found no separate object here. Click closer to its center. People, cars, litter and signs select best; background, sky, grass, shadows and reflections select poorly.",
+  "La IA no encontró aquí un objeto separado. Haga clic más cerca de su centro. Personas, coches, basura y señales se seleccionan mejor; fondo, cielo, hierba, sombras y reflejos, mal.",
+  "L'IA non ha trovato qui un oggetto distinto. Fai clic più vicino al suo centro. Persone, auto, rifiuti e cartelli si selezionano meglio; sfondo, cielo, erba, ombre e riflessi male."
+ ],
+ "Выделено {}% кадра — слишком много: такую область AI не дорисует правдоподобно. Сбросьте выделение (Esc) и кликните по самому объекту.": [
+  "{}% of the frame selected — too much: AI can't fill such an area believably. Clear the selection (Esc) and click on the object itself.",
+  "Seleccionado el {}% del encuadre: demasiado; la IA no rellenará esa zona de forma creíble. Borre la selección (Esc) y haga clic en el propio objeto.",
+  "Selezionato il {}% del fotogramma: troppo, l'IA non riempirà quest'area in modo credibile. Annulla la selezione (Esc) e fai clic sull'oggetto stesso."
+ ],
+ "Последний клик не нашёл объекта — выделение осталось прежним. Кликните по самой заметной части.": [
+  "The last click found no object — the selection is unchanged. Click on the most distinct part.",
+  "El último clic no encontró ningún objeto; la selección no cambia. Haga clic en la parte más visible.",
+  "L'ultimo clic non ha trovato oggetti: la selezione resta invariata. Fai clic sulla parte più evidente."
+ ],
+ "Большая область ({}% кадра): дорисованное будет мягче и может быть заметно. Лучше всего получаются небольшие объекты.": [
+  "Large area ({}% of the frame): the filled part will be softer and may show. Small objects work best.",
+  "Zona grande ({}% del encuadre): lo rellenado será más suave y puede notarse. Los objetos pequeños funcionan mejor.",
+  "Area grande ({}% del fotogramma): la parte ricostruita sarà più morbida e potrebbe notarsi. Gli oggetti piccoli riescono meglio."
+ ],
+ "AI не уверен в границах ({}%) — проверьте красную заливку. Пропущенную часть добавьте кликом.": [
+  "AI isn't sure about the edges ({}%) — check the red overlay. Add a missed part with a click.",
+  "La IA no está segura de los bordes ({}%): revise la zona roja. Añada la parte que falte con un clic.",
+  "L'IA non è sicura dei bordi ({}%): controlla la zona rossa. Aggiungi la parte mancante con un clic."
+ ],
+ "Выделено {}% кадра, уверенность {}%. Enter — убрать. Тень или отражение объекта кликните отдельно.": [
+  "{}% of the frame selected, confidence {}%. Enter removes it. Click the object's shadow or reflection separately.",
+  "Seleccionado el {}% del encuadre, confianza {}%. Intro lo quita. Haga clic aparte en la sombra o el reflejo del objeto.",
+  "Selezionato il {}% del fotogramma, affidabilità {}%. Invio lo rimuove. Fai clic a parte sull'ombra o sul riflesso dell'oggetto."
+ ],
+ "AI изучает кадр… (в первый раз — до 10 с)": [
+  "AI is studying the photo… (first time up to 10 s)",
+  "La IA analiza la foto… (la primera vez, hasta 10 s)",
+  "L'IA sta analizzando la foto… (la prima volta fino a 10 s)"
+ ],
+ "Подождите — AI ещё считает": [
+  "Wait — AI is still working",
+  "Espere: la IA aún está calculando",
+  "Attendi: l'IA sta ancora calcolando"
+ ],
+ "Выделяю…": [
+  "Selecting…",
+  "Seleccionando…",
+  "Selezione…"
+ ],
+ "Убираю объект…": [
+  "Removing the object…",
+  "Quitando el objeto…",
+  "Rimozione dell'oggetto…"
+ ],
+ "Не удалось убрать объект. Попробуйте выделить его заново.": [
+  "Couldn't remove the object. Try selecting it again.",
+  "No se pudo quitar el objeto. Intente seleccionarlo de nuevo.",
+  "Impossibile rimuovere l'oggetto. Prova a selezionarlo di nuovo."
+ ],
+ "Объект убран. Область большая — проверьте результат: \\ показывает исходник, ⌘Z возвращает.": [
+  "Object removed. The area is large — check the result: \\ shows the original, ⌘Z undoes.",
+  "Objeto quitado. La zona es grande: revise el resultado; \\ muestra el original, ⌘Z deshace.",
+  "Oggetto rimosso. L'area è grande: controlla il risultato; \\ mostra l'originale, ⌘Z annulla."
+ ],
+ "Объект убран — ⌘Z, чтобы вернуть. Можно выделять следующий.": [
+  "Object removed — ⌘Z to undo. You can select the next one.",
+  "Objeto quitado: ⌘Z para deshacer. Puede seleccionar el siguiente.",
+  "Oggetto rimosso: ⌘Z per annullare. Puoi selezionare il prossimo."
+ ],
+ "AI считает…": [
+  "AI is working…",
+  "La IA está calculando…",
+  "L'IA sta calcolando…"
+ ],
+ "Кликните по объекту — AI выделит его целиком, ещё клик добавит часть. Лучше всего получаются небольшие отдельные предметы на простом фоне: прохожий, мусор, провод, знак. Большие области, сложный фон и объекты, перекрывающие людей, дорисовываются хуже.": [
+  "Click an object — AI selects all of it; another click adds a part. Small separate things on a simple background work best: a passer-by, litter, a wire, a sign. Large areas, busy backgrounds and objects overlapping people come out worse.",
+  "Haga clic en un objeto: la IA lo selecciona entero; otro clic añade una parte. Funcionan mejor cosas pequeñas y separadas sobre fondo simple: un transeúnte, basura, un cable, una señal. Zonas grandes, fondos complejos y objetos que tapan a personas salen peor.",
+  "Fai clic su un oggetto: l'IA lo seleziona tutto; un altro clic aggiunge una parte. Riescono meglio cose piccole e separate su sfondo semplice: un passante, rifiuti, un filo, un cartello. Aree grandi, sfondi complessi e oggetti sovrapposti a persone vengono peggio."
  ]
 }

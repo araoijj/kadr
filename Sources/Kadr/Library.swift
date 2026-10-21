@@ -259,6 +259,9 @@ final class Library {
     var removePoints: [CGPoint] = []
     var removeMask: CGImage?
     var removeBusy = false
+    var removeBusyText: String?        // what AI is doing right now, shown under the spinner
+    var removeStatus: RemoveStatus?    // feedback on the current selection (Retouch.swift)
+    var removeArea = 0.0               // share of the frame selected
     var removeFor: URL?
     private var cropBackup: Adjustments?
 
