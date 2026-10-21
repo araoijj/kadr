@@ -696,8 +696,8 @@ final class Library {
     private func compareSort(_ a: Photo, _ b: Photo) -> ComparisonResult {
         switch sortKey {
         case .date:
-            if let da = a.exif.date, let db = b.exif.date, da != db { return cmp(da, db) }
-            return a.name.localizedStandardCompare(b.name)
+            let r = cmp(a.takenAt, b.takenAt)
+            return r == .orderedSame ? a.name.localizedStandardCompare(b.name) : r
         case .name: return a.name.localizedStandardCompare(b.name)
         case .rating: return cmp(b.rejected ? -1 : b.rating, a.rejected ? -1 : a.rating)
         case .lens: return a.lensName.localizedStandardCompare(b.lensName)

@@ -4563,5 +4563,50 @@
   "Camera — colors as in the camera JPEG; macOS — the RAW developed by the macOS engine as is",
   "Cámara: colores como en el JPEG de la cámara; macOS: el RAW revelado por el motor de macOS tal cual",
   "Fotocamera: colori come nel JPEG della fotocamera; macOS: il RAW sviluppato dal motore di macOS così com’è"
+ ],
+ "Порядок кадров: {}, {}": [
+  "Order: {}, {}",
+  "Orden: {}, {}",
+  "Ordine: {}, {}"
+ ],
+ "по времени": [
+  "by time",
+  "por hora",
+  "per ora"
+ ],
+ "по имени": [
+  "by name",
+  "por nombre",
+  "per nome"
+ ],
+ "по оценке": [
+  "by rating",
+  "por valoración",
+  "per voto"
+ ],
+ "по объективу": [
+  "by lens",
+  "por objetivo",
+  "per obiettivo"
+ ],
+ "по папке": [
+  "by folder",
+  "por carpeta",
+  "per cartella"
+ ],
+ "по размеру": [
+  "by size",
+  "por tamaño",
+  "per dimensione"
+ ],
+ "по убыванию": [
+  "descending",
+  "descendente",
+  "decrescente"
+ ],
+ "по возрастанию": [
+  "ascending",
+  "ascendente",
+  "crescente"
  ]
 }

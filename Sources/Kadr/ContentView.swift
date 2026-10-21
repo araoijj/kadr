@@ -133,23 +133,6 @@ struct ContentView: View {
                             .buttonStyle(.borderless).help(tr("Остановить AI-анализ"))
                     }
                 }
-                Menu {
-                    Picker(tr("Сортировать"), selection: $lib.sortKey) {
-                        ForEach(SortKey.allCases, id: \.self) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.inline)
-                    Toggle(tr("По убыванию"), isOn: $lib.sortDescending)
-                    Divider()
-                    Picker(tr("Группировать"), selection: $lib.groupKey) {
-                        ForEach(GroupKey.allCases, id: \.self) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.inline)
-                    Divider()
-                    Toggle(tr("С вложенными папками"), isOn: $lib.includeSubfolders)
-                } label: {
-                    Label(tr("Сортировка"), systemImage: "arrow.up.arrow.down")
-                }
-                .help(tr("Сортировка и группировка: \(lib.sortKey.title.lowercased())\(lib.groupKey == .none ? "" : ", " + lib.groupKey.title.lowercased())"))
                 Button { lib.showExport = true } label: {
                     Label(tr("Сохранить в папку"), systemImage: "square.and.arrow.down.on.square")
                 }
