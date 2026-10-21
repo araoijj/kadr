@@ -4783,5 +4783,55 @@
   "Click — show the whole burst (Esc — back); the arrow — select, compare, tournament",
   "Clic: mostrar toda la ráfaga (Esc: volver); la flecha: seleccionar, comparar, torneo",
   "Clic: mostra tutta la raffica (Esc: indietro); la freccia: seleziona, confronta, torneo"
+ ],
+ "Оставлено ★": [
+  "Kept ★",
+  "Conservada ★",
+  "Tenuta ★"
+ ],
+ "U — снять": [
+  "U — undo",
+  "U — quitar",
+  "U — annulla"
+ ],
+ "⌘Z или U — вернуть": [
+  "⌘Z or U — bring back",
+  "⌘Z o U — recuperar",
+  "⌘Z o U — ripristina"
+ ],
+ "P — оставить (★), X — брак, U — снять решение. ← → — просто дальше, кадр остаётся «без решения».": [
+  "P — keep (★), X — reject, U — clear. ← → — just move on, the photo stays “undecided”.",
+  "P — conservar (★), X — descartar, U — quitar la decisión. ← → — seguir sin más, la foto queda «sin decidir».",
+  "P — tieni (★), X — scarta, U — annulla. ← → — vai avanti, la foto resta «senza decisione»."
+ ],
+ "1–5 — звёзды, пробел — открыть крупно, Z — 100%, ⌘Z — отменить любое решение.": [
+  "1–5 — stars, Space — open large, Z — 100%, ⌘Z — undo any decision.",
+  "1–5 — estrellas, espacio — ver en grande, Z — 100%, ⌘Z — deshacer cualquier decisión.",
+  "1–5 — stelle, spazio — apri in grande, Z — 100%, ⌘Z — annulla qualsiasi decisione."
+ ],
+ "Отбор за минуту": [
+  "Culling in a minute",
+  "Selección en un minuto",
+  "Selezione in un minuto"
+ ],
+ "P — оставить (★), X — брак, U — снять решение. После решения открывается следующий кадр.": [
+  "P — keep (★), X — reject, U — clear. After a decision the next photo opens.",
+  "P — conservar (★), X — descartar, U — quitar la decisión. Tras decidir se abre la siguiente foto.",
+  "P — tieni (★), X — scarta, U — annulla. Dopo la decisione si apre la foto successiva."
+ ],
+ "← → — просто дальше: кадр остаётся «без решения», к нему можно вернуться через фильтр «Без решения».": [
+  "← → — just move on: the photo stays “undecided” and the “Undecided” filter brings you back to it.",
+  "← → — seguir sin más: la foto queda «sin decidir» y el filtro «Sin decidir» te devuelve a ella.",
+  "← → — vai avanti: la foto resta «senza decisione» e il filtro «Senza decisione» ti ci riporta."
+ ],
+ "1–5 — звёзды, пробел — крупно, Z — 100%, C — сравнить серию, H — скрыть брак, ⌘Z — отменить.": [
+  "1–5 — stars, Space — large, Z — 100%, C — compare the burst, H — hide rejects, ⌘Z — undo.",
+  "1–5 — estrellas, espacio — en grande, Z — 100%, C — comparar la ráfaga, H — ocultar descartes, ⌘Z — deshacer.",
+  "1–5 — stelle, spazio — in grande, Z — 100%, C — confronta la raffica, H — nascondi scarti, ⌘Z — annulla."
+ ],
+ "Очередь сверху: все кадры или только без решения; после AI-анализа — ещё лучшие и возможный брак.": [
+  "The queue at the top: all photos or undecided only; after AI analysis also the best and possible rejects.",
+  "La cola de arriba: todas las fotos o solo sin decidir; tras el análisis AI, también las mejores y los posibles descartes.",
+  "La coda in alto: tutte le foto o solo senza decisione; dopo l’analisi AI anche le migliori e i possibili scarti."
  ]
 }
