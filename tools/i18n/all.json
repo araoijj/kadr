@@ -5308,5 +5308,55 @@
   "Full Screen",
   "Pantalla completa",
   "Schermo intero"
+ ],
+ "Добавить": [
+  "Add",
+  "Añadir",
+  "Aggiungi"
+ ],
+ "Выберите папки для «Избранного»": [
+  "Choose folders for Favorites",
+  "Elija carpetas para Favoritos",
+  "Scegli le cartelle per i Preferiti"
+ ],
+ "Папки, которые вы открывали, новые сверху. Клик — продолжить с места, где остановились.": [
+  "Folders you have opened, newest first. Click to continue where you left off.",
+  "Carpetas que ha abierto, las más recientes arriba. Clic para continuar donde lo dejó.",
+  "Cartelle che hai aperto, le più recenti in alto. Clic per continuare da dove eri rimasto."
+ ],
+ "Показывать": [
+  "Show",
+  "Mostrar",
+  "Mostra"
+ ],
+ "Очистить список": [
+  "Clear list",
+  "Vaciar la lista",
+  "Svuota l’elenco"
+ ],
+ "Ваши папки: ★ у недавней папки, правая кнопка в дереве или перетащите папку из Finder сюда.": [
+  "Your folders: ★ on a recent folder, right-click in the tree, or drop a folder from Finder here.",
+  "Sus carpetas: ★ en una carpeta reciente, clic derecho en el árbol o arrastre una carpeta desde el Finder aquí.",
+  "Le tue cartelle: ★ su una cartella recente, clic destro nell’albero o trascina qui una cartella dal Finder."
+ ],
+ "Добавить папку…": [
+  "Add Folder…",
+  "Añadir carpeta…",
+  "Aggiungi cartella…"
+ ],
+ "В «Избранное»: {}": [
+  "Added to Favorites: {}",
+  "En Favoritos: {}",
+  "Nei Preferiti: {}"
+ ],
+ "Отпустите — папка попадёт в «Избранное»": [
+  "Drop to add the folder to Favorites",
+  "Suelte para añadir la carpeta a Favoritos",
+  "Rilascia per aggiungere la cartella ai Preferiti"
+ ],
+ "Что это и как настроить": [
+  "What this is and how to set it up",
+  "Qué es esto y cómo configurarlo",
+  "Che cos’è e come configurarlo"
  ]
 }
