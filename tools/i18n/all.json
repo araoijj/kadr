@@ -5213,5 +5213,15 @@
   "Back to all photos",
   "De vuelta a todas las fotos",
   "Di nuovo a tutte le foto"
+ ],
+ "Размер кадров: ползунок или клавиши + и −. «Авто» — заполнить окно; если кадров много, появится прокрутка": [
+  "Frame size: the slider or the + and − keys. “Auto” fills the window; with many photos the grid scrolls",
+  "Tamaño de los cuadros: el control o las teclas + y −. «Auto» llena la ventana; con muchas fotos aparece el desplazamiento",
+  "Dimensione dei riquadri: il cursore o i tasti + e −. «Auto» riempie la finestra; con molte foto compare lo scorrimento"
+ ],
+ "Кадров может быть сколько угодно: размер плиток — ползунок в панели или клавиши + и −, лишнее прокручивается.": [
+  "Any number of photos: tile size is the slider in the bar or the + and − keys; the rest scrolls.",
+  "Cualquier cantidad de fotos: el tamaño de las fichas se ajusta con el control de la barra o las teclas + y −; el resto se desplaza.",
+  "Qualsiasi numero di foto: la dimensione dei riquadri si regola con il cursore nella barra o con i tasti + e −; il resto scorre."
  ]
 }

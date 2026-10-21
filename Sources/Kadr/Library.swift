@@ -537,7 +537,18 @@ final class Library {
     var compareZoomBase: CGFloat = 1
     var compareZoom100: CGFloat = 4
     var compareCenter = CGPoint(x: 0.5, y: 0.5)
-    static let compareMax = 8
+    static let compareMax = 200
+    /// Width of a compared frame in points; 0 means automatic (fill the window, scroll when crowded).
+    var compareTile: CGFloat = CGFloat(UserDefaults.standard.double(forKey: "compareTile")) {
+        didSet { UserDefaults.standard.set(Double(compareTile), forKey: "compareTile") }
+    }
+    static let compareTileRange: ClosedRange<CGFloat> = 160...1200
+
+    /// + and − in Compare: bigger or smaller frames; from automatic, the first step starts at a medium size.
+    func compareTileStep(_ direction: Int) {
+        let base = compareTile > 0 ? compareTile : 400
+        compareTile = min(max(base * (direction > 0 ? 1.25 : 0.8), Self.compareTileRange.lowerBound), Self.compareTileRange.upperBound)
+    }
     var compareKeep: Set<URL> = []                 // frames marked to keep (checkmark, P, space)
     var compareReject: Set<URL> = []               // frames marked as rejects (cross, X)
 

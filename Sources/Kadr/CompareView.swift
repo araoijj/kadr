@@ -1,7 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// Side-by-side comparison of 2–8 frames. Zoom and pan are shared, so the same spot is visible in every frame.
+/// Side-by-side comparison of any number of frames: a grid that fills the window while everything fits,
+/// and scrolls with a chosen tile size when it doesn't. Zoom and pan are shared, so the same spot is
+/// visible in every frame.
 struct CompareView: View {
     @Environment(Library.self) private var lib
 
@@ -11,24 +13,25 @@ struct CompareView: View {
             toolbar(photos)
             ToolHint(id: lib.tournamentActive ? "tournament" : "compare")
             GeometryReader { geo in
-                // Up to 4 frames in one row on a wide window, otherwise two rows (3 or 4 per row for 5–8).
-                let n = photos.count
-                let rows = n <= 2 || (n <= 4 && geo.size.width > geo.size.height * 2.2) ? 1 : 2
-                let cols = Int(ceil(Double(n) / Double(rows)))
-                let w = (geo.size.width - CGFloat(cols - 1) * 6) / CGFloat(max(cols, 1))
-                let h = (geo.size.height - CGFloat(rows - 1) * 6) / CGFloat(max(rows, 1))
-                VStack(spacing: 6) {
-                    ForEach(0..<rows, id: \.self) { r in
-                        HStack(spacing: 6) {
-                            ForEach(photos.indices.filter { $0 / cols == r }, id: \.self) { i in
-                                ComparePane(photo: photos[i], focused: photos[i].id == lib.currentID)
-                                    .frame(width: w, height: h)
+                let lay = CompareLayout(count: photos.count, available: geo.size, wanted: lib.compareTile)
+                ScrollViewReader { proxy in
+                    ScrollView(lay.fits ? [] : .vertical) {
+                        LazyVGrid(columns: Array(repeating: GridItem(.fixed(lay.tile), spacing: 6), count: lay.cols), spacing: 6) {
+                            ForEach(photos) { p in
+                                ComparePane(photo: p, focused: p.id == lib.currentID, tile: lay.tile)
+                                    .frame(width: lay.tile, height: lay.height)
+                                    .id(p.id)
                             }
                         }
+                        .padding(8)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .onChange(of: lib.currentID) { _, id in
+                        guard let id, !lay.fits else { return }
+                        withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id) }
                     }
                 }
             }
-            .padding(8)
         }
     }
 
@@ -74,6 +77,21 @@ struct CompareView: View {
         }
     }
 
+    /// Size of the frames: a slider, and "Авто" to let the grid fill the window again.
+    private var tileSize: some View {
+        @Bindable var lib = lib
+        return HStack(spacing: 4) {
+            Image(systemName: "square.grid.2x2").font(.caption).foregroundStyle(.secondary)
+            Slider(value: Binding(get: { lib.compareTile > 0 ? lib.compareTile : 400 }, set: { lib.compareTile = $0 }),
+                   in: Library.compareTileRange)
+                .frame(width: 90).controlSize(.mini)
+            if lib.compareTile > 0 {
+                Button(tr("Авто")) { lib.compareTile = 0 }.controlSize(.mini).buttonStyle(.borderless)
+            }
+        }
+        .help(tr("Размер кадров: ползунок или клавиши + и −. «Авто» — заполнить окно; если кадров много, появится прокрутка"))
+    }
+
     private func compareRow(_ photos: [Photo], hint: Bool, long: Bool) -> some View {
         let marked = photos.filter { lib.compareKeep.contains($0.id) }.count
         let dropped = photos.filter { lib.compareReject.contains($0.id) }.count
@@ -114,6 +132,7 @@ struct CompareView: View {
             .tint(marked + dropped > 0 ? Theme.keep : .accentColor)
             .help(dropped > 0 ? tr("✓ получат ★ (если оценки не было), ✗ — в брак, остальные кадры не меняются. Отменить — ⌘Z")
                               : tr("Отмеченные кадры получат ★ (если оценки не было), остальные кадры сравнения — отклонены (X). Отменить — ⌘Z"))
+            if long { tileSize }
             HintButton(id: "compare")
             Button(tr("Готово")) { lib.stopCompare() }
                 .keyboardShortcut(.cancelAction)
@@ -121,9 +140,60 @@ struct CompareView: View {
     }
 }
 
+/// How the compared frames are laid out. Auto: the column count that gives the biggest frames while
+/// everything stays on screen; when that would make them smaller than ~220 pt, fixed tiles and scrolling.
+/// A chosen size (the slider, + and −) always means fixed tiles.
+struct CompareLayout {
+    let cols: Int
+    let tile: CGFloat      // width of a frame
+    let height: CGFloat
+    let fits: Bool         // everything is on screen, no scrolling
+
+    static let minAuto: CGFloat = 220
+    static let fixedTile: CGFloat = 300
+
+    init(count n: Int, available a: CGSize, wanted: CGFloat) {
+        let pad: CGFloat = 16, gap: CGFloat = 6
+        let w = max(120, a.width - pad), h = max(120, a.height - pad)
+        let n = max(1, n)
+        func tileFor(_ c: Int) -> CGFloat { (w - gap * CGFloat(c - 1)) / CGFloat(c) }
+        func rowsFor(_ c: Int) -> Int { Int(ceil(Double(n) / Double(c))) }
+        func rowHeight(_ c: Int) -> CGFloat { (h - gap * CGFloat(rowsFor(c) - 1)) / CGFloat(rowsFor(c)) }
+        if wanted > 0 {
+            let c = max(1, min(n, Int((w + gap) / (wanted + gap))))
+            cols = c
+            tile = tileFor(c)
+            let th = tile * 0.75
+            let all = CGFloat(rowsFor(c)) * (th + gap) - gap <= h
+            fits = all
+            height = all ? max(th, min(rowHeight(c), tile * 1.2)) : th
+            return
+        }
+        // Auto: the layout whose frames can show the biggest (roughly square) photo.
+        var best = 1, bestScore: CGFloat = 0
+        for c in 1...min(n, 8) {
+            let s = min(tileFor(c), rowHeight(c))
+            if s > bestScore { bestScore = s; best = c }
+        }
+        if bestScore >= Self.minAuto || n <= 2 {
+            cols = best
+            tile = tileFor(best)
+            height = rowHeight(best)
+            fits = true
+        } else {
+            let c = max(1, min(n, Int((w + gap) / (Self.fixedTile + gap))))
+            cols = c
+            tile = tileFor(c)
+            height = tile * 0.75
+            fits = false
+        }
+    }
+}
+
 struct ComparePane: View {
     let photo: Photo
     let focused: Bool
+    var tile: CGFloat = 600
     @Environment(Library.self) private var lib
     @State private var image: CGImage?
     @State private var full: CGImage?
@@ -132,6 +202,13 @@ struct ComparePane: View {
     private var marked: Bool { lib.compareKeep.contains(photo.id) }
     private var dropped: Bool { lib.compareReject.contains(photo.id) }
     private var markable: Bool { !lib.tournamentActive }
+    /// Narrow frame: icons instead of captions, less chrome.
+    private var compact: Bool { tile < 380 }
+    private var scale: CGFloat { NSScreen.main?.backingScaleFactor ?? 2 }
+    /// Pixels the frame needs; small frames come from the camera preview (fast, hundreds of them are fine),
+    /// big ones are developed at screen size.
+    private var wantPixels: CGFloat { tile * scale * 1.3 }
+    private struct RenderKey: Hashable { let url: URL; let adj: Adjustments; let bucket: Int }
 
     var body: some View {
         GeometryReader { geo in
@@ -181,11 +258,19 @@ struct ComparePane: View {
             }.onEnded { _ in lib.compareZoomBase = lib.compareZoom })
             .photoContextMenu(photo)
         }
-        .task(id: ThumbKey(url: photo.url, adj: photo.adj)) {
+        .task(id: RenderKey(url: photo.url, adj: photo.adj, bucket: Int(wantPixels / 400))) {
+            let url = photo.url, adj = photo.adj, px = wantPixels
+            if px <= 1400 {
+                // Preview-based, cached: cheap enough for a burst of a hundred frames.
+                let size = max(480, (px / 200).rounded(.up) * 200)
+                if let c = Renderer.shared.cachedThumbnail(url, adj, size: size) { image = c; return }
+                if image == nil { image = await Task.detached(priority: .userInitiated) { ImageStore.shared.preview(url) }.value }
+                if let t = await Task.detached(priority: .userInitiated) { Renderer.shared.thumbnail(url, adj, size: size) }.value { image = t }
+                return
+            }
             let screen = NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560
-            let url = photo.url
             if image == nil { image = await Task.detached(priority: .userInitiated) { ImageStore.shared.preview(url) }.value }
-            if let img = await Renderer.shared.render(photo.url, photo.adj, maxSide: min(screen, 3200), channel: "cmp-\(photo.url.path)") {
+            if let img = await Renderer.shared.render(url, adj, maxSide: min(screen, 3200), channel: "cmp-\(url.path)") {
                 image = img
             }
         }
@@ -201,10 +286,11 @@ struct ComparePane: View {
         return focused ? Color.accentColor : .white.opacity(0.08)
     }
 
-    /// Two marks in the corner: ✓ keep this frame, ✗ reject it. The keys are on the buttons.
+    /// Two marks in the corner: ✓ keep this frame, ✗ reject it. The keys are on the buttons;
+    /// a narrow frame shows the icon and the key only.
     private var keepButton: some View {
         VStack {
-            HStack(spacing: 6) {
+            HStack(spacing: compact ? 4 : 6) {
                 Spacer()
                 markButton(on: marked, icon: "checkmark.circle.fill", off: "circle", text: tr("Оставить"), key: "P", tint: Theme.keep,
                            help: tr("Оставить этот кадр (P или пробел для активного)")) { lib.toggleCompareKeep(photo.id) }
@@ -213,21 +299,22 @@ struct ComparePane: View {
             }
             Spacer()
         }
-        .padding(8)
+        .padding(compact ? 5 : 8)
     }
 
     private func markButton(on: Bool, icon: String, off: String, text: String, key: String, tint: Color, help: String,
                             _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: on ? icon : off).font(.system(size: 18, weight: .semibold))
-                Text(text).font(.caption.weight(.semibold))
+            HStack(spacing: 4) {
+                Image(systemName: on ? icon : off).font(.system(size: compact ? 15 : 18, weight: .semibold))
+                if !compact { Text(text).font(.caption.weight(.semibold)) }
                 Text(key).font(.caption2.weight(.bold)).opacity(0.7)
                     .padding(.horizontal, 4).padding(.vertical, 1)
                     .background(.white.opacity(0.15), in: RoundedRectangle(cornerRadius: 3))
             }
+            .fixedSize()
             .foregroundStyle(on ? tint : .white)
-            .padding(.horizontal, 8).padding(.vertical, 5)
+            .padding(.horizontal, compact ? 6 : 8).padding(.vertical, compact ? 3 : 5)
             .background(.black.opacity(on ? 0.7 : 0.45), in: Capsule())
             .overlay(Capsule().strokeBorder(on ? tint : .white.opacity(0.35)))
             .contentShape(Capsule())
@@ -238,14 +325,17 @@ struct ComparePane: View {
 
     private var overlay: some View {
         VStack {
-            HStack {
-                Text(photo.name).font(.caption.weight(.medium))
+            // The name never wraps: in a narrow frame it truncates in the middle and gives way to the marks.
+            HStack(spacing: 4) {
+                Text(photo.name).font(.caption.weight(.medium)).lineLimit(1).truncationMode(.middle)
                     .padding(.horizontal, 6).padding(.vertical, 3)
                     .background(focused ? Color.accentColor.opacity(0.85) : .black.opacity(0.55), in: Capsule())
-                if photo.isBestInSeries { Badge(text: tr("Самый резкий"), icon: "sparkles", tint: Theme.star) }
-                Spacer()
+                    .layoutPriority(-1)
+                if photo.isBestInSeries && !compact { Badge(text: tr("Самый резкий"), icon: "sparkles", tint: Theme.star) }
+                else if photo.isBestInSeries { Image(systemName: "sparkles").foregroundStyle(Theme.star).font(.caption) }
+                Spacer(minLength: 0)
                 if lib.compareZoom > 1.5 && full == nil { ProgressView().controlSize(.small) }
-                if markable { Color.clear.frame(width: 230, height: 1) }   // room for the mark buttons
+                if markable { Color.clear.frame(width: compact ? 112 : 230, height: 1) }   // room for the mark buttons
             }
             Spacer()
             HStack(spacing: 8) {
@@ -264,8 +354,8 @@ struct ComparePane: View {
                 Stars(rating: photo.rating, size: 13)
                 if let l = photo.label { Circle().fill(l.color).frame(width: 10, height: 10) }
                 Spacer()
-                if let s = photo.sharpness, let m = lib.photos.compactMap(\.sharpness).max(), m > 0 {
-                    Text(tr("резкость \(Int(s / m * 100))%")).font(.caption.monospacedDigit())
+                if let s = photo.sharpness, let m = lib.photos.compactMap(\.sharpness).max(), m > 0, tile >= 240 {
+                    Text(compact ? "\(Int(s / m * 100))%" : tr("резкость \(Int(s / m * 100))%")).font(.caption.monospacedDigit())
                         .padding(.horizontal, 6).padding(.vertical, 3)
                         .background(.black.opacity(0.55), in: Capsule())
                 }
