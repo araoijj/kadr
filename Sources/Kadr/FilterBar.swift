@@ -16,6 +16,13 @@ struct FilterBar: View {
                 HStack(spacing: 8) { breadcrumb; Spacer(minLength: 6); decisionsMenu; more; Spacer(minLength: 6); count }
             }
         }
+        .alert(tr("Как зовут?"), isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
+            TextField(tr("Имя"), text: $nameText)
+            Button(tr("Сохранить")) { if let id = naming { lib.namePerson(id, nameText) }; naming = nil }
+            Button(tr("Отмена"), role: .cancel) { naming = nil }
+        } message: {
+            Text(tr("Имя запомнится: этот человек будет узнаваться и в других съёмках. Дайте то же имя второй группе (например, профилю) — они объединятся."))
+        }
     }
 
     private func row(full: Bool) -> some View {
@@ -201,6 +208,20 @@ struct FilterBar: View {
                     }
                 }
             }
+            if !lib.people.isEmpty {
+                Menu(tr("Люди")) {
+                    ForEach(lib.people.prefix(20)) { p in
+                        Toggle("\(p.title) · \(p.photos.count)", isOn: Binding(get: { lib.personFilter == p.id },
+                                                                        set: { lib.personFilter = $0 ? p.id : nil; lib.move(0) }))
+                    }
+                    Divider()
+                    Menu(tr("Назвать…")) {
+                        ForEach(lib.people.prefix(20)) { p in
+                            Button(p.title) { naming = p.id; nameText = p.name ?? "" }
+                        }
+                    }
+                }
+            }
             let tags = lib.aiReady && lib.aiEnabled.contains(.tags) ? Array(lib.tags.prefix(25)) : []
             if !tags.isEmpty {
                 Menu(tr("Что на снимках")) {
@@ -246,6 +267,9 @@ struct FilterBar: View {
                 chip(d.formatted(.dateTime.day().month(.abbreviated).locale(I18n.locale)), icon: "calendar") { lib.dayFilter = nil }
             }
             if let t = lib.tagFilter { chip(TagNames.title(t), icon: "tag") { lib.tagFilter = nil } }
+            if let id = lib.personFilter, let p = lib.people.first(where: { $0.id == id }) {
+                chip(p.title, icon: "person.crop.circle") { lib.personFilter = nil }
+            }
             if lib.hideRejected && lib.filter != .rejected {
                 chip(tr("брак скрыт"), icon: "eye.slash") { lib.hideRejected = false }
             }
@@ -254,7 +278,7 @@ struct FilterBar: View {
 
     /// How many photos are shown; turns into a hint when extra filters hide some.
     private var count: some View {
-        let extra = lib.lensFilter != nil || lib.dayFilter != nil || lib.tagFilter != nil || (lib.hideRejected && lib.filter != .rejected)
+        let extra = lib.lensFilter != nil || lib.dayFilter != nil || lib.tagFilter != nil || lib.personFilter != nil || (lib.hideRejected && lib.filter != .rejected)
         return Text(tr("\(lib.visible.count) из \(lib.photos.count)"))
             .font(.caption.monospacedDigit()).foregroundStyle(extra ? Color.accentColor : .secondary)
             .fixedSize()
