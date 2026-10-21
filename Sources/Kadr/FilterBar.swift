@@ -14,7 +14,7 @@ struct FilterBar: View {
                 row(full: true)
                 row(full: false)
                 HStack(spacing: 8) {
-                    breadcrumb; Spacer(minLength: 6); decisionsMenu; more
+                    breadcrumb; sortMenu(caption: false); Spacer(minLength: 6); decisionsMenu; more
                     if lib.filter == .rejected { rejectedAction(caption: false) }
                     Spacer(minLength: 6); count
                 }
@@ -32,6 +32,7 @@ struct FilterBar: View {
     private func row(full: Bool) -> some View {
         HStack(spacing: 10) {
             breadcrumb
+            sortMenu(caption: true)
             Spacer(minLength: 6)
             if full {
                 decisions(compact: false); stars; labels; more
@@ -100,6 +101,51 @@ struct FilterBar: View {
             p = p.deletingLastPathComponent()
         }
         return out
+    }
+
+    // MARK: - Order
+
+    /// What the photos are ordered by, always in sight: the order is the first thing you need to trust
+    /// when flipping through a shoot, and it used to hide in a toolbar menu.
+    private func sortMenu(caption: Bool) -> some View {
+        @Bindable var lib = lib
+        return Menu {
+            Picker(tr("Сортировать"), selection: $lib.sortKey) {
+                ForEach(SortKey.allCases, id: \.self) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.inline)
+            Toggle(tr("По убыванию"), isOn: $lib.sortDescending)
+            Divider()
+            Picker(tr("Группировать"), selection: $lib.groupKey) {
+                ForEach(GroupKey.allCases, id: \.self) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: lib.sortDescending ? "arrow.down" : "arrow.up").font(.caption2.weight(.bold))
+                if caption {
+                    Text(sortCaption).lineLimit(1).fixedSize()
+                } else {
+                    Image(systemName: "arrow.up.arrow.down")
+                }
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(tr("Порядок кадров: \(lib.sortKey.title.lowercased()), \(lib.sortDescending ? tr("по убыванию") : tr("по возрастанию"))")
+              + (lib.groupKey == .none ? "" : " · " + lib.groupKey.title.lowercased()))
+    }
+
+    private var sortCaption: String {
+        let key: String = switch lib.sortKey {
+        case .date: tr("по времени")
+        case .name: tr("по имени")
+        case .rating: tr("по оценке")
+        case .lens: tr("по объективу")
+        case .folder: tr("по папке")
+        case .size: tr("по размеру")
+        }
+        return lib.groupKey == .none ? key : key + " · " + lib.groupKey.title.lowercased()
     }
 
     // MARK: - Decisions

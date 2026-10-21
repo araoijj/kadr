@@ -83,6 +83,9 @@ struct Photo: Identifiable, Equatable {
     var sceneID: Int?            // scene: part of a shoot without long pauses (Scenes.swift)
 
     var lensName: String { exif.lens?.trimmingCharacters(in: .whitespaces).nilIfEmpty ?? tr("Объектив не указан") }
+    /// Capture time; until EXIF is read (first indexing of a folder) the file time stands in, so the order
+    /// by time is stable from the first second instead of reshuffling as the index fills in.
+    var takenAt: Date { exif.date ?? Date(timeIntervalSince1970: mtime) }
     var day: Date? { exif.date.map { Calendar.current.startOfDay(for: $0) } }
 }
 
