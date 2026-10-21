@@ -46,7 +46,7 @@ struct SelectionBar: View {
 
             divider
 
-            action(tr("Сравнить"), "rectangle.split.2x1", tint: .primary, captions: captions, help: tr("Сравнить 2–4 кадра рядом (C)")) { lib.startCompare() }
+            action(tr("Сравнить"), "rectangle.split.2x1", tint: .primary, captions: captions, help: tr("Сравнить 2–8 кадров рядом (C)")) { lib.startCompare() }
             action(tr("Сохранить в папку"), "square.and.arrow.down.on.square", tint: .primary, captions: captions, help: tr("Сохранить выделенные в папку (⌘S)")) {
                 lib.export.scope = .selected
                 lib.showExport = true

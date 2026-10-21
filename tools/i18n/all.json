@@ -5068,5 +5068,115 @@
   "ascending",
   "ascendente",
   "crescente"
+ ],
+ "✓ (P) — оставить, ✗ (X) — в брак; Enter — применить": [
+  "✓ (P) — keep, ✗ (X) — reject; Enter — apply",
+  "✓ (P) — conservar, ✗ (X) — descartar; Intro — aplicar",
+  "✓ (P) — tieni, ✗ (X) — scarta; Invio — applica"
+ ],
+ "Отмечено ✓ {} из {} · Enter — оставить их, остальные в брак": [
+  "Marked ✓ {} of {} · Enter — keep them, reject the rest",
+  "Marcadas ✓ {} de {} · Intro — conservarlas, descartar el resto",
+  "Segnate ✓ {} di {} · Invio — tienile, scarta le altre"
+ ],
+ "✓ {} · ✗ {} · Enter — применить, остальные не трогать": [
+  "✓ {} · ✗ {} · Enter — apply, leave the rest alone",
+  "✓ {} · ✗ {} · Intro — aplicar, sin tocar el resto",
+  "✓ {} · ✗ {} · Invio — applica, le altre restano"
+ ],
+ "Применить ✓ {} · ✗ {}": [
+  "Apply ✓ {} · ✗ {}",
+  "Aplicar ✓ {} · ✗ {}",
+  "Applica ✓ {} · ✗ {}"
+ ],
+ "✓ получат ★ (если оценки не было), ✗ — в брак, остальные кадры не меняются. Отменить — ⌘Z": [
+  "✓ get ★ (if unrated), ✗ are rejected, the other photos are left as they are. Undo — ⌘Z",
+  "✓ reciben ★ (si no tenían valoración), ✗ se rechazan, las demás no cambian. Deshacer — ⌘Z",
+  "✓ ricevono ★ (se senza voto), ✗ vengono scartate, le altre restano com’erano. Annulla — ⌘Z"
+ ],
+ "В брак этот кадр (X для активного)": [
+  "Reject this photo (X for the active one)",
+  "Descartar esta foto (X para la activa)",
+  "Scarta questa foto (X per quella attiva)"
+ ],
+ "В брак": [
+  "Reject",
+  "Descartar",
+  "Scarta"
+ ],
+ "✓ в углу кадра (или P, пробел) — оставить, ✗ (или X) — в брак. Можно отметить несколько.": [
+  "✓ in a photo’s corner (or P, Space) keeps it, ✗ (or X) rejects it. You can mark several.",
+  "✓ en la esquina de la foto (o P, espacio) la conserva, ✗ (o X) la descarta. Puedes marcar varias.",
+  "✓ nell’angolo della foto (o P, spazio) la tiene, ✗ (o X) la scarta. Puoi segnarne più di una."
+ ],
+ "Enter — применить. Если стоят только ✓, все остальные кадры сравнения уходят в брак; если есть ✗ — остальные не трогаются.": [
+  "Enter applies the marks. With ✓ only, every other compared photo is rejected; with any ✗, the rest are left alone.",
+  "Intro aplica las marcas. Solo con ✓, las demás fotos comparadas se descartan; con alguna ✗, el resto no se toca.",
+  "Invio applica i segni. Solo con ✓, tutte le altre foto confrontate vengono scartate; con qualche ✗, le altre restano."
+ ],
+ "Показать только серию этого кадра": [
+  "Show Only This Photo’s Burst",
+  "Mostrar solo la ráfaga de esta foto",
+  "Mostra solo la raffica di questa foto"
+ ],
+ "Одна серия": [
+  "One burst",
+  "Una ráfaga",
+  "Una raffica"
+ ],
+ "Сравниваю первые {} из {}": [
+  "Comparing the first {} of {}",
+  "Comparando las primeras {} de {}",
+  "Confronto le prime {} di {}"
+ ],
+ "В серии {} кадров — показаны {}, начиная с текущего": [
+  "The burst has {} photos — showing {}, starting from the current one",
+  "La ráfaga tiene {} fotos: se muestran {}, desde la actual",
+  "La raffica ha {} foto: ne mostro {}, a partire da quella attuale"
+ ],
+ "Выделите 2–8 кадров: ⌘-клик или рамкой": [
+  "Select 2–8 photos: ⌘-click or drag a box",
+  "Selecciona 2–8 fotos: ⌘-clic o un recuadro",
+  "Seleziona 2–8 foto: ⌘-clic o un riquadro"
+ ],
+ "Отклонено в сравнении: {}": [
+  "Rejected in Compare: {}",
+  "Descartadas en la comparación: {}",
+  "Scartate nel confronto: {}"
+ ],
+ "Показать только эту серию ({})": [
+  "Show Only This Burst ({})",
+  "Mostrar solo esta ráfaga ({})",
+  "Mostra solo questa raffica ({})"
+ ],
+ "Выделить всю серию (⌘⇧A)": [
+  "Select the Whole Burst (⌘⇧A)",
+  "Seleccionar toda la ráfaga (⌘⇧A)",
+  "Seleziona tutta la raffica (⌘⇧A)"
+ ],
+ "Сравнить кадры серии (C)": [
+  "Compare the Burst (C)",
+  "Comparar la ráfaga (C)",
+  "Confronta la raffica (C)"
+ ],
+ "Серия похожих кадров: показать только её, выделить, сравнить": [
+  "A burst of similar photos: show only it, select it, compare it",
+  "Ráfaga de fotos parecidas: mostrar solo esta, seleccionarla, compararla",
+  "Raffica di foto simili: mostra solo questa, selezionala, confrontala"
+ ],
+ "Показать только эту серию": [
+  "Show Only This Burst",
+  "Mostrar solo esta ráfaga",
+  "Mostra solo questa raffica"
+ ],
+ "Сравнить 2–8 кадров рядом (C)": [
+  "Compare 2–8 photos side by side (C)",
+  "Comparar 2–8 fotos lado a lado (C)",
+  "Confronta 2–8 foto affiancate (C)"
+ ],
+ "Выделите 2–8 кадров (⌘-клик или рамкой) или встаньте на кадр серии": [
+  "Select 2–8 photos (⌘-click or drag a box) or stand on a burst photo",
+  "Selecciona 2–8 fotos (⌘-clic o un recuadro) o sitúate en una foto de ráfaga",
+  "Seleziona 2–8 foto (⌘-clic o un riquadro) o posizionati su una foto di raffica"
  ]
 }

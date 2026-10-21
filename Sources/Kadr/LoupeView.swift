@@ -39,9 +39,21 @@ struct LoupeView: View {
                 if p.seriesID != nil {
                     let s = lib.series(of: p)
                     let pos = (s.firstIndex { $0.id == p.id } ?? 0) + 1
-                    Badge(text: tr("Серия: \(pos) из \(s.count)") + (p.isBestInSeries ? tr(" · самый резкий") : ""),
-                          icon: p.isBestInSeries ? "sparkles" : "square.stack.3d.up",
-                          tint: p.isBestInSeries ? Theme.star : .white.opacity(0.8))
+                    // The badge is a menu: everything you can do with the burst, right where you see it.
+                    Menu {
+                        Button(tr("Показать только эту серию (\(s.count))"), systemImage: "square.stack.3d.up") { lib.showSeries(of: p) }
+                        Button(tr("Выделить всю серию (⌘⇧A)"), systemImage: "checkmark.square.fill") { lib.select(p); lib.selectSeries() }
+                        Button(tr("Сравнить кадры серии (C)"), systemImage: "rectangle.split.2x1") { lib.select(p); lib.startCompare() }
+                        Button(tr("Турнир: выбрать лучший (T)"), systemImage: "trophy") { lib.select(p); lib.startTournament() }
+                    } label: {
+                        Badge(text: tr("Серия: \(pos) из \(s.count)") + (p.isBestInSeries ? tr(" · самый резкий") : "") + " ▾",
+                              icon: p.isBestInSeries ? "sparkles" : "square.stack.3d.up",
+                              tint: p.isBestInSeries ? Theme.star : .white.opacity(0.8))
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .help(tr("Серия похожих кадров: показать только её, выделить, сравнить"))
                 }
                 // AI edits in effect on this photo — always visible, so nothing works unnoticed.
                 if p.adj.aiDenoise > 0, Denoiser.shared.hasResult(p.url) {
