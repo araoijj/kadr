@@ -4,15 +4,20 @@ import SwiftUI
 struct ContentView: View {
     @Environment(Library.self) private var lib
     @State private var monitor: Any?
+    // The sidebar stays unless you hide it yourself: with automatic visibility, a mode switch in a
+    // narrow window could collapse it.
+    @State private var columns: NavigationSplitViewVisibility = .all
 
     var body: some View {
         @Bindable var lib = lib
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columns) {
             Sidebar()
-                .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 280)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 300)
         } detail: {
-            ZStack {
-                Theme.canvas.ignoresSafeArea()
+            // Every mode is a column: banners and bars above and below, the photos in between.
+            // Bars never dictate the width (see Chrome.swift), so the window never grows by itself.
+            VStack(spacing: 0) {
+                CardBanner()
                 if lib.folder == nil {
                     EmptyState()
                 } else if lib.comparing {
@@ -20,20 +25,22 @@ struct ContentView: View {
                 } else if lib.culling {
                     CullView()
                 } else {
-                    VStack(spacing: 0) {
-                        FilterBar()
-                        if lib.loupe { LoupeView() } else { GridView() }
-                    }
+                    FilterBar()
+                    if lib.loupe { LoupeView() } else { GridView() }
                 }
                 if lib.multiSelected && lib.folder != nil && !lib.comparing { SelectionBar() }
-                CardBanner()
-                if let t = lib.toast { Toast(text: t) }
+            }
+            .background(Theme.canvas.ignoresSafeArea())
+            .overlay(alignment: .bottom) {
+                if let t = lib.toast { Toast(text: t).padding(.bottom, toastInset) }
             }
             .inspector(isPresented: $lib.showInfo) {
                 Inspector()
-                    .inspectorColumnWidth(min: 260, ideal: 290, max: 360)
+                    .inspectorColumnWidth(min: 300, ideal: 320, max: 420)
             }
         }
+        .navigationSplitViewStyle(.balanced)
+        .frame(minWidth: 980, minHeight: 600)
         .toolbar { toolbar }
         .sheet(isPresented: $lib.showExport) { ExportSheet().environment(lib) }
         .sheet(isPresented: $lib.showImport) { ImportSheet().environment(lib) }
@@ -72,6 +79,13 @@ struct ContentView: View {
         .onDisappear { if let monitor { NSEvent.removeMonitor(monitor) } }
     }
 
+    /// Keeps the toast above whatever sits at the bottom: filmstrip and zoom bar, the selection bar.
+    private var toastInset: CGFloat {
+        var y: CGFloat = lib.comparing ? 60 : lib.loupe || lib.culling ? 150 : 28
+        if lib.multiSelected && lib.folder != nil && !lib.comparing { y += Theme.barHeight + 4 }
+        return y
+    }
+
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         @Bindable var lib = lib
@@ -86,10 +100,6 @@ struct ContentView: View {
             Button { lib.redo() } label: { Label(tr("Вернуть"), systemImage: "arrow.uturn.forward") }
                 .disabled(!lib.canRedo)
                 .help(lib.redoTitle.map { tr("Вернуть: \($0) (⇧⌘Z)") } ?? tr("Нечего возвращать"))
-        }
-        ToolbarItem(placement: .navigation) {
-            Button { lib.showImport = true } label: { Label(tr("Импорт"), systemImage: "sdcard") }
-                .help(tr("Импорт с карты памяти (⌘I)"))
         }
         ToolbarItem(placement: .principal) {
             ToolsBar()
@@ -140,11 +150,6 @@ struct ContentView: View {
                     Label(tr("Сортировка"), systemImage: "arrow.up.arrow.down")
                 }
                 .help(tr("Сортировка и группировка: \(lib.sortKey.title.lowercased())\(lib.groupKey == .none ? "" : ", " + lib.groupKey.title.lowercased())"))
-                if !lib.loupe {
-                    Slider(value: $lib.thumbSize, in: 120...420)
-                        .frame(width: 110)
-                        .help(tr("Размер превью"))
-                }
                 Button { lib.showExport = true } label: {
                     Label(tr("Сохранить в папку"), systemImage: "square.and.arrow.down.on.square")
                 }
@@ -166,6 +171,9 @@ struct ContentView: View {
 enum Theme {
     static let canvas = Color(red: 0.085, green: 0.088, blue: 0.095)
     static let cell = Color.white.opacity(0.04)
+    static let bar = Color.black.opacity(0.2)        // top and bottom strips
+    static let barHeight: CGFloat = 38
+    static let barPadding: CGFloat = 14
     static let star = Color(red: 0.98, green: 0.80, blue: 0.30)
     static let reject = Color(red: 0.93, green: 0.33, blue: 0.31)
     static let keep = Color(red: 0.36, green: 0.80, blue: 0.47)
@@ -234,22 +242,6 @@ struct KeyHints: View {
                 .background(RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.08)))
             Text(h.1).font(.caption).foregroundStyle(.secondary)
         }
-    }
-}
-
-struct Toast: View {
-    let text: String
-    var body: some View {
-        VStack {
-            Text(text)
-                .font(.title3.weight(.semibold))
-                .padding(.horizontal, 20).padding(.vertical, 10)
-                .background(.ultraThinMaterial, in: Capsule())
-                .padding(.top, 24)
-            Spacer()
-        }
-        .transition(.opacity)
-        .allowsHitTesting(false)
     }
 }
 

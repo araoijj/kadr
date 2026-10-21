@@ -239,9 +239,7 @@ struct ZoomBar: View {
                 .frame(width: 44)
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, 12).padding(.vertical, 6)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().strokeBorder(.white.opacity(0.1)))
+        .floatingBar()
     }
 
     private func level(_ title: String, _ value: CGFloat?, active: Bool, help: String = "") -> some View {

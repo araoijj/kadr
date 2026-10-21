@@ -4488,5 +4488,40 @@
   "Show photos from all subfolders",
   "Mostrar fotos de todas las subcarpetas",
   "Mostra le foto di tutte le sottocartelle"
+ ],
+ "Оставить ({})": [
+  "Keep ({})",
+  "Conservar ({})",
+  "Tieni ({})"
+ ],
+ "Оставить активный": [
+  "Keep Active",
+  "Conservar la activa",
+  "Tieni l’attiva"
+ ],
+ "Часть кадров скрыта фильтрами объектива, даты, тегов или «Скрыть брак» — см. «Ещё»": [
+  "Some photos are hidden by the lens, date, tag or “Hide Rejects” filters — see “More”",
+  "Algunas fotos están ocultas por los filtros de objetivo, fecha, etiquetas u «Ocultar descartes»: ver «Más»",
+  "Alcune foto sono nascoste dai filtri obiettivo, data, tag o «Nascondi scarti»: vedi «Altro»"
+ ],
+ "Оставить все выделенные (P)": [
+  "Keep all selected (P)",
+  "Conservar todas las seleccionadas (P)",
+  "Tieni tutte le selezionate (P)"
+ ],
+ "В брак все выделенные (X)": [
+  "Reject all selected (X)",
+  "Descartar todas las seleccionadas (X)",
+  "Scarta tutte le selezionate (X)"
+ ],
+ "Сравнить 2–4 кадра рядом (C)": [
+  "Compare 2–4 photos side by side (C)",
+  "Comparar 2–4 fotos lado a lado (C)",
+  "Confronta 2–4 foto affiancate (C)"
+ ],
+ "Сохранить выделенные в папку (⌘S)": [
+  "Save the selected to a folder (⌘S)",
+  "Guardar las seleccionadas en una carpeta (⌘S)",
+  "Salva le selezionate in una cartella (⌘S)"
  ]
 }
