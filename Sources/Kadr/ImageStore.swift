@@ -98,6 +98,7 @@ final class ImageStore: @unchecked Sendable {
 
     private let wbLock = NSLock()
     private var wbCache: [String: Double] = [:]
+    private var rawDefaultsCache: [String: RawDevelop.Defaults] = [:]
 
     /// As-shot white balance in Kelvin (5500 K daylight for non-RAW).
     func asShotK(_ url: URL) -> Double {
@@ -108,6 +109,18 @@ final class ImageStore: @unchecked Sendable {
         let k = CIRAWFilter(imageURL: url).map { Double($0.neutralTemperature) }.flatMap { $0 > 1000 ? $0 : nil } ?? 5500
         wbLock.lock(); wbCache[url.path] = k; wbLock.unlock()
         return k
+    }
+
+    /// What the RAW engine uses for this file by default (for the "RAW development" sliders); nil for non-RAW.
+    func rawDefaults(_ url: URL) -> RawDevelop.Defaults? {
+        guard ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) else { return nil }
+        wbLock.lock()
+        if let d = rawDefaultsCache[url.path] { wbLock.unlock(); return d }
+        wbLock.unlock()
+        guard let f = CIRAWFilter(imageURL: url) else { return nil }
+        let d = RawDevelop.defaults(f)
+        wbLock.lock(); rawDefaultsCache[url.path] = d; wbLock.unlock()
+        return d
     }
 
     func exif(_ url: URL) -> ExifInfo {
