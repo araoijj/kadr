@@ -1240,7 +1240,7 @@ final class Library {
         let order = shownOrder
         update(r == 0 ? tr("Оценка снята") : String(repeating: "★", count: r)) { $0.rating = r; $0.rejected = false }
         flash((r == 0 ? tr("Оценка снята") : String(repeating: "★", count: r)) + countSuffix)
-        if !many { advanceIfNeeded(after: order) }
+        if many { settleSelection(after: order) } else { advanceIfNeeded(after: order) }
     }
 
     func toggleReject() {
@@ -1249,13 +1249,28 @@ final class Library {
         let order = shownOrder
         update(reject ? tr("Отклонено") : tr("Возвращено")) { $0.rejected = reject }
         flash((reject ? tr("Отклонено") : tr("Возвращено")) + countSuffix)
-        if reject && !many { advanceIfNeeded(after: order) }
+        if many { settleSelection(after: order) } else if reject { advanceIfNeeded(after: order) }
     }
 
     func toggleLabel(_ l: ColorLabel) {
         let clear = targets.allSatisfy { $0.label == l }
+        let order = shownOrder
         update(clear ? tr("Метка снята") : tr("Метка: \(l.title)")) { $0.label = clear ? nil : l }
         flash((clear ? tr("Метка снята") : l.title) + countSuffix)
+        if multiSelected { settleSelection(after: order) }
+    }
+
+    /// After a decision on several photos: if some of them left the current view (rejected in "Undecided",
+    /// hidden by "Hide rejects"), the selection would point at photos no longer on screen and the grid
+    /// would jump. Continue from the photo after the last selected one, as the list was shown; at the end
+    /// of the list, the one before the first. Photos that stay visible keep their selection.
+    private func settleSelection(after order: [URL]) {
+        let shown = Set(visible.map(\.id))
+        guard selection.contains(where: { !shown.contains($0) }) else { return }
+        let positions = selection.compactMap { order.firstIndex(of: $0) }
+        if let last = positions.max(), let next = order[(last + 1)...].first(where: { shown.contains($0) }) { focus(next); return }
+        if let first = positions.min(), let prev = order[..<first].last(where: { shown.contains($0) }) { focus(prev); return }
+        focus(visible.first?.id)
     }
 
     var countSuffix: String { multiSelected ? tr(" · \(targets.count) шт.") : "" }
