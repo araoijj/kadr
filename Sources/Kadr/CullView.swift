@@ -5,20 +5,9 @@ import SwiftUI
 /// AI culling (reject reasons, AI queues, faces at 100%) appears after "Run AI Analysis" and with "Hints" enabled.
 struct CullView: View {
     @Environment(Library.self) private var lib
-    @State private var barHeight: CGFloat = 84
-
     var body: some View {
         VStack(spacing: 0) {
-            // The bar adapts to the center width instead of dictating it: otherwise, together with "Info",
-            // it stretches the window and pushes the side panels off the edge.
-            Color.clear.frame(maxWidth: .infinity).frame(height: barHeight)
-                .overlay(alignment: .topLeading) {
-                    CullTopBar()
-                        .fixedSize(horizontal: false, vertical: true)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { barHeight = $0 }
-                }
-                .clipped()
-            Divider()
+            CullTopBar()
             GeometryReader { g in
             HStack(spacing: 0) {
                 ZStack {
@@ -52,7 +41,8 @@ struct CullTopBar: View {
 
     var body: some View {
         // Manual culling on top (progress, decisions, queue, tournament), with a separate AI culling strip below.
-        // Wide window: two rows, narrow: three; otherwise the bar stretches the window.
+        // Wide window: two rows, narrow: three. The bar takes the width it is given (see Chrome.swift).
+        Bar {
         ViewThatFits(in: .horizontal) {
             VStack(spacing: 8) {
                 HStack(spacing: 14) {
@@ -93,8 +83,7 @@ struct CullTopBar: View {
                 aiStrip(compact: true).controlSize(.small)
             }
         }
-        .padding(.horizontal, 14).padding(.vertical, 8)
-        .background(.black.opacity(0.2))
+        }
     }
 
     private func progress(width: CGFloat) -> some View {

@@ -36,46 +36,71 @@ struct CompareView: View {
     }
 
     private var tournamentBar: some View {
+        Bar {
+            ViewThatFits(in: .horizontal) {
+                tournamentRow(hint: true)
+                tournamentRow(hint: false)
+            }
+            .controlSize(.small)
+        }
+    }
+
+    private func tournamentRow(hint: Bool) -> some View {
         HStack(spacing: 14) {
             Label(tr("Турнир · раунд \(lib.tournamentRound) из \(lib.tournamentAll.count - 1)"), systemImage: "trophy")
-                .font(.callout.weight(.semibold))
-            Text(tr("← лучше левый · → лучше правый · победитель остаётся слева · Esc — выйти"))
-                .font(.caption).foregroundStyle(.secondary)
-            Spacer()
+                .font(.callout.weight(.semibold)).fixedSize()
+            if hint {
+                Text(tr("← лучше левый · → лучше правый · победитель остаётся слева · Esc — выйти"))
+                    .font(.caption).foregroundStyle(.secondary).fixedSize()
+            }
+            Spacer(minLength: 0)
             Button(tr("← Левый")) { lib.pickTournament(left: true) }
             Button(tr("Правый →")) { lib.pickTournament(left: false) }.buttonStyle(.borderedProminent)
             Button(tr("Выйти")) { lib.cancelTournament() }
             HintButton(id: "tournament")
         }
-        .controlSize(.small)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(.black.opacity(0.25))
     }
 
     private func compareBar(_ photos: [Photo]) -> some View {
+        Bar {
+            ViewThatFits(in: .horizontal) {
+                compareRow(photos, hint: true, long: true)
+                compareRow(photos, hint: false, long: true)
+                compareRow(photos, hint: false, long: false)
+            }
+            .controlSize(.small)
+        }
+    }
+
+    private func compareRow(_ photos: [Photo], hint: Bool, long: Bool) -> some View {
         let marked = photos.filter { lib.compareKeep.contains($0.id) }.count
         return HStack(spacing: 14) {
             Label(tr("Сравнение · \(photos.count)"), systemImage: "rectangle.split.2x1")
-                .font(.callout.weight(.semibold))
-            Group {
-                if marked == 0 {
-                    Text(tr("Отметьте галочкой кадры, которые оставить (P или пробел)"))
-                } else {
-                    Text(tr("Отмечено: \(marked) из \(photos.count) · Enter — оставить их, остальные отклонить"))
-                        .foregroundStyle(Theme.keep)
+                .font(.callout.weight(.semibold)).fixedSize()
+            if hint {
+                Group {
+                    if marked == 0 {
+                        Text(tr("Отметьте галочкой кадры, которые оставить (P или пробел)"))
+                    } else {
+                        Text(tr("Отмечено: \(marked) из \(photos.count) · Enter — оставить их, остальные отклонить"))
+                            .foregroundStyle(Theme.keep)
+                    }
                 }
+                .font(.caption).foregroundStyle(.secondary).fixedSize()
             }
-            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-            Spacer()
+            Spacer(minLength: 0)
             if marked > 0 {
                 Button(tr("Снять отметки")) { lib.compareKeep = [] }
             }
             Button {
                 lib.rejectOthersInCompare()
             } label: {
-                Label(marked > 0 ? tr("Оставить отмеченные (\(marked)), остальные отклонить") : tr("Оставить активный, остальные отклонить"),
-                      systemImage: "checkmark.seal")
+                if long {
+                    Label(marked > 0 ? tr("Оставить отмеченные (\(marked)), остальные отклонить") : tr("Оставить активный, остальные отклонить"),
+                          systemImage: "checkmark.seal")
+                } else {
+                    Label(marked > 0 ? tr("Оставить (\(marked))") : tr("Оставить активный"), systemImage: "checkmark.seal")
+                }
             }
             .buttonStyle(.borderedProminent)
             .tint(marked > 0 ? Theme.keep : .accentColor)
@@ -84,10 +109,6 @@ struct CompareView: View {
             Button(tr("Готово")) { lib.stopCompare() }
                 .keyboardShortcut(.cancelAction)
         }
-        .controlSize(.small)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(.black.opacity(0.25))
     }
 }
 

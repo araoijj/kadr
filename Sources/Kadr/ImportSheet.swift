@@ -168,10 +168,11 @@ struct CardBanner: View {
 
     var body: some View {
         if let card = lib.cardBanner {
-            VStack {
+            Bar(tint: Color.accentColor.opacity(0.14)) {
                 HStack(spacing: 12) {
                     Image(systemName: "sdcard.fill").foregroundStyle(Color.accentColor)
-                    Text(tr("Подключена карта «\(FolderBrowser.displayName(card))»")).font(.callout.weight(.medium))
+                    Text(tr("Подключена карта «\(FolderBrowser.displayName(card))»")).font(.callout.weight(.medium)).lineLimit(1)
+                    Spacer(minLength: 8)
                     Button(tr("Импортировать…")) {
                         lib.importer.scan(card)
                         lib.showImport = true
@@ -180,13 +181,8 @@ struct CardBanner: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                     Button { lib.cardBanner = nil } label: { Image(systemName: "xmark") }
-                        .buttonStyle(.plain).foregroundStyle(.secondary)
+                        .buttonStyle(.plain).foregroundStyle(.secondary).help(tr("Закрыть"))
                 }
-                .padding(.horizontal, 16).padding(.vertical, 8)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(.white.opacity(0.1)))
-                .padding(.top, 14)
-                Spacer()
             }
         }
     }

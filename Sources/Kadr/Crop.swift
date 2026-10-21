@@ -302,8 +302,6 @@ struct CropBar: View {
             }
             .controlSize(.small)
         }
-        .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.white.opacity(0.1)))
+        .floatingBar(RoundedRectangle(cornerRadius: 14))
     }
 }

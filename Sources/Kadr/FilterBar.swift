@@ -9,21 +9,39 @@ struct FilterBar: View {
     @State private var nameText = ""
 
     var body: some View {
+        Bar {
+            ViewThatFits(in: .horizontal) {
+                row(full: true)
+                row(full: false)
+                HStack(spacing: 8) { breadcrumb; Spacer(minLength: 6); decisionsMenu; more; Spacer(minLength: 6); count }
+            }
+        }
+    }
+
+    private func row(full: Bool) -> some View {
         HStack(spacing: 10) {
             breadcrumb
             Spacer(minLength: 6)
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) { decisions(compact: false); stars; labels; more }
-                HStack(spacing: 8) { decisions(compact: true); stars; more }
-                HStack(spacing: 8) { decisionsMenu; more }
+            if full {
+                decisions(compact: false); stars; labels; more
+            } else {
+                decisions(compact: true); stars; more
             }
             Spacer(minLength: 6)
-            shown
+            if full { chips }
+            if full, !lib.loupe { thumbSize }
+            count
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 7)
-        .background(.black.opacity(0.18))
-        .overlay(alignment: .bottom) { Divider() }
+    }
+
+    /// Size of the previews in the grid; it lived in the toolbar, where it ate 110 px of every mode.
+    private var thumbSize: some View {
+        @Bindable var lib = lib
+        return HStack(spacing: 4) {
+            Image(systemName: "square.grid.3x3").font(.caption).foregroundStyle(.secondary)
+            Slider(value: $lib.thumbSize, in: 120...420).frame(width: 80).controlSize(.mini)
+        }
+        .help(tr("Размер превью"))
     }
 
     // MARK: - Where
@@ -84,6 +102,7 @@ struct FilterBar: View {
                         Text("\(lib.count(f))").monospacedDigit().foregroundStyle(on ? .primary : .secondary)
                     }
                     .font(.callout.weight(on ? .semibold : .regular))
+                    .lineLimit(1).fixedSize()   // never wrap: ViewThatFits must see the row's real width
                     .padding(.horizontal, 9).padding(.vertical, 4)
                     .background(on ? Color.accentColor.opacity(0.35) : .clear, in: Capsule())
                     .contentShape(Capsule())
@@ -100,7 +119,7 @@ struct FilterBar: View {
         Menu {
             ForEach(Self.main, id: \.self) { f in Button("\(name(f)) · \(lib.count(f))") { set(f) } }
         } label: {
-            Text(Self.main.contains(lib.filter) ? name(lib.filter) : lib.filter.title)
+            Text(Self.main.contains(lib.filter) ? name(lib.filter) : lib.filter.title).lineLimit(1)
         }
         .fixedSize()
     }
@@ -219,8 +238,8 @@ struct FilterBar: View {
 
     // MARK: - Shown
 
-    /// Extra filters as chips, and how many photos are shown.
-    private var shown: some View {
+    /// Extra filters as chips with a cross to clear each.
+    private var chips: some View {
         HStack(spacing: 6) {
             if let l = lib.lensFilter { chip(l, icon: "camera.aperture") { lib.lensFilter = nil } }
             if let d = lib.dayFilter {
@@ -230,10 +249,16 @@ struct FilterBar: View {
             if lib.hideRejected && lib.filter != .rejected {
                 chip(tr("брак скрыт"), icon: "eye.slash") { lib.hideRejected = false }
             }
-            Text(tr("\(lib.visible.count) из \(lib.photos.count)"))
-                .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                .fixedSize()
         }
+    }
+
+    /// How many photos are shown; turns into a hint when extra filters hide some.
+    private var count: some View {
+        let extra = lib.lensFilter != nil || lib.dayFilter != nil || lib.tagFilter != nil || (lib.hideRejected && lib.filter != .rejected)
+        return Text(tr("\(lib.visible.count) из \(lib.photos.count)"))
+            .font(.caption.monospacedDigit()).foregroundStyle(extra ? Color.accentColor : .secondary)
+            .fixedSize()
+            .help(extra ? tr("Часть кадров скрыта фильтрами объектива, даты, тегов или «Скрыть брак» — см. «Ещё»") : "")
     }
 
     private func chip(_ text: String, icon: String, clear: @escaping () -> Void) -> some View {

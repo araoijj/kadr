@@ -20,10 +20,10 @@ struct ToolsBar: View {
                 Image(systemName: "checkmark.rectangle.stack").help(tr("Отбор")).tag(2)
             }
             .pickerStyle(.segmented)
-            .frame(width: 114)
+            .frame(width: 102)
             .help(tr("Сетка / Кадр (пробел) / Отбор (O)"))
 
-            Divider().frame(height: 18).padding(.horizontal, 6)
+            Divider().frame(height: 18).padding(.horizontal, 4)
 
             tool(tr("Кадрирование"), "crop", on: lib.cropMode, key: "R", enabled: hasPhoto) {
                 lib.cropMode ? lib.finishCrop() : lib.startCrop()
@@ -44,7 +44,7 @@ struct ToolsBar: View {
                 lib.zoom100.toggle()
             }
 
-            Divider().frame(height: 18).padding(.horizontal, 6)
+            Divider().frame(height: 18).padding(.horizontal, 4)
 
             tool(tr("Обработка"), "slider.horizontal.3", on: lib.showInfo && lib.inspectorTab == .edit, key: "E", enabled: hasPhoto) {
                 if lib.showInfo && lib.inspectorTab == .edit { lib.showInfo = false } else {
@@ -64,13 +64,12 @@ struct ToolsBar: View {
 
     private func tool(_ title: String, _ icon: String, on: Bool, key: String, enabled: Bool,
                       disabledHelp: String? = nil, action: @escaping () -> Void) -> some View {
+        // Icon only, as in the Finder toolbar: the name and the key are in the tooltip. Six tools with
+        // captions were 560 px, which forced the window wider than a laptop screen with both panels open.
         Button(action: action) {
-            VStack(spacing: 1) {
-                Image(systemName: icon).font(.system(size: 14, weight: .medium)).frame(height: 16)
-                Text(title).font(.system(size: 10, weight: on ? .semibold : .regular))
-            }
-            .frame(minWidth: 56)
-            .padding(.horizontal, 6).padding(.vertical, 3)
+            Image(systemName: icon).font(.system(size: 14, weight: .medium))
+                .frame(width: 30, height: 24)
+            .padding(.horizontal, 1).padding(.vertical, 1)
             .background(RoundedRectangle(cornerRadius: 6).fill(on ? Color.accentColor.opacity(0.3) : .clear))
             .foregroundStyle(on ? Color.primary : enabled ? Color.primary.opacity(0.85) : Color.secondary.opacity(0.5))
             .contentShape(Rectangle())
