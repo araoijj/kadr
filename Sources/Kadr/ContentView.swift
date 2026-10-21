@@ -166,6 +166,7 @@ enum Theme {
     static let cell = Color.white.opacity(0.04)
     static let star = Color(red: 0.98, green: 0.80, blue: 0.30)
     static let reject = Color(red: 0.93, green: 0.33, blue: 0.31)
+    static let keep = Color(red: 0.36, green: 0.80, blue: 0.47)
 }
 
 // MARK: - Empty state

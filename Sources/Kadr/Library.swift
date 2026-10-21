@@ -505,6 +505,7 @@ final class Library {
     var compareZoomBase: CGFloat = 1
     var compareZoom100: CGFloat = 4
     var compareCenter = CGPoint(x: 0.5, y: 0.5)
+    var compareKeep: Set<URL> = []                 // frames marked to keep (checkmark, P, space)
 
     var comparePhotos: [Photo] { compareIDs.compactMap { index[$0].map { photos[$0] } } }
 
@@ -528,6 +529,7 @@ final class Library {
         ids = Array(ids.prefix(4))
         guard ids.count >= 2 else { flash(tr("Выделите 2–4 кадра: ⌘-клик или рамкой")); return }
         compareIDs = ids
+        compareKeep = []
         let focusID = ids.contains(currentID ?? ids[0]) ? (currentID ?? ids[0]) : ids[0]
         focus(focusID)
         compareZoom = 1
@@ -558,21 +560,41 @@ final class Library {
         compareZoomBase = compareZoom
     }
 
-    /// Keep the focused photo and reject the other compared ones.
+    /// Mark or unmark a compared frame to keep; nil means the focused one.
+    func toggleCompareKeep(_ id: URL? = nil) {
+        guard let id = id ?? currentID, compareIDs.contains(id) else { return }
+        if compareKeep.contains(id) { compareKeep.remove(id) } else { compareKeep.insert(id) }
+    }
+
+    /// The frames that "Keep" applies to: the marked ones, or the focused one when nothing is marked.
+    var compareKeeping: [URL] {
+        let marked = compareIDs.filter { compareKeep.contains($0) }
+        if !marked.isEmpty { return marked }
+        return currentID.map { [$0] } ?? []
+    }
+
+    /// Keep the marked frames (★ if unrated) and reject the other compared ones. One undo step.
     func rejectOthersInCompare() {
-        guard let keep = currentID else { return }
+        let keep = Set(compareKeeping)
+        guard !keep.isEmpty else { return }
         let before = snapshot(compareIDs)
-        defer { record(tr("Оставлен \(keep.lastPathComponent)"), before: before) }
         var n = 0
         for id in compareIDs {
             guard let i = index[id] else { continue }
-            photos[i].rejected = id != keep
-            if id != keep { n += 1 }
-            let p = photos[i]
-            try? Sidecar.write(.init(rating: p.rating, rejected: p.rejected, label: p.label), for: p.url)
+            if keep.contains(id) {
+                photos[i].rejected = false
+                if photos[i].rating == 0 { photos[i].rating = 1 }
+            } else {
+                photos[i].rejected = true
+                n += 1
+            }
+            writeSidecar(i)
         }
+        let what = keep.count == 1 ? keep.first!.lastPathComponent : tr("\(keep.count) кадра")
+        record(tr("Оставлено: \(what)"), before: before)
+        compareKeep = []
         stopCompare()
-        flash(tr("Оставлен \(keep.lastPathComponent), отклонено: \(n)"))
+        flash(tr("Оставлено: \(what), отклонено: \(n)"))
     }
 
     var sortKey: SortKey = SortKey(rawValue: UserDefaults.standard.string(forKey: "sortKey") ?? "") ?? .date {

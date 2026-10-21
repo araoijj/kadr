@@ -151,9 +151,12 @@ struct KeyHandler {
             case 123, 126: lib.compareMove(-1); return true
             case 124, 125: lib.compareMove(1); return true
             case 53: lib.stopCompare(); return true
+            case 49 where !lib.tournamentActive: lib.toggleCompareKeep(); return true          // space: mark to keep
+            case 36 where !lib.tournamentActive, 76 where !lib.tournamentActive: lib.rejectOthersInCompare(); return true  // Enter: keep marked
             default: break
             }
             switch e.charactersIgnoringModifiers?.lowercased() {
+            case "p" where !lib.tournamentActive, "з" where !lib.tournamentActive: lib.toggleCompareKeep(); return true
             case "z", "я": lib.toggleCompareZoom(); return true
             case "c", "с": lib.stopCompare(); return true
             default: break

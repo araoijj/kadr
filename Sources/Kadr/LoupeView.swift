@@ -13,6 +13,10 @@ struct LoupeView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(alignment: .top) {
+                if lib.cropMode { ToolHint(id: "crop") }
+                else if lib.splitCompare, lib.current?.adj.isIdentity == false { ToolHint(id: "split") }
+            }
             .overlay(alignment: .bottom) {
                 if lib.cropMode { CropBar().padding(.bottom, 12) } else { ZoomBar().padding(.bottom, 12) }
             }
