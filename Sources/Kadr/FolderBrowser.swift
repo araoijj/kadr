@@ -108,10 +108,46 @@ final class FolderBrowser {
     /// Roots of the explorer: home first, then the drives (cards have their own section).
     var explorerRoots: [URL] { [Self.home] + drives }
 
-    /// Selects a folder in the sidebar (the card shows it) and makes sure the explorer is unfolded.
+    /// The folder the explorer should unfold down to and scroll to (set by `reveal`).
+    var revealTarget: URL?
+
+    /// Selects a folder (the card shows it), unfolds the explorer down to it and scrolls there.
     func reveal(_ u: URL) {
         UserDefaults.standard.set(true, forKey: "sb.explorer")
         selected = u
+        revealTarget = u
+    }
+
+    /// Is `child` inside `folder` (strictly)?
+    nonisolated static func isInside(_ child: URL, _ folder: URL) -> Bool {
+        let a = child.standardizedFileURL.path, b = folder.standardizedFileURL.path
+        return a != b && a.hasPrefix(b.hasSuffix("/") ? b : b + "/")
+    }
+
+    /// The default for a freshly scanned folder: whole when its photos live only in subfolders.
+    nonisolated static func suggestRecursive(_ u: URL) -> Bool {
+        photoCount(in: u) == 0 && deepPhotoCount(in: u, cap: 1) > 0
+    }
+
+    /// Photos in the folder's subfolders (not the folder itself), counting at most `cap`
+    /// so the card stays quick on a home folder or a whole drive.
+    nonisolated static func deepPhotoCount(in u: URL, cap: Int) -> Int {
+        let fm = FileManager.default
+        var n = 0
+        let en = fm.enumerator(at: u, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles, .skipsPackageDescendants])
+        while let c = en?.nextObject() as? URL {
+            if (try? c.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                if c.lastPathComponent == "_Отклонённые" { en?.skipDescendants() }
+                continue
+            }
+            guard c.deletingLastPathComponent().standardizedFileURL != u.standardizedFileURL else { continue }
+            let ext = c.pathExtension.lowercased()
+            if ImageStore.rawExtensions.contains(ext) || ImageStore.imageExtensions.contains(ext) {
+                n += 1
+                if n >= cap { return n }
+            }
+        }
+        return n
     }
 
     func isFavorite(_ u: URL) -> Bool { favorites.contains { $0.standardizedFileURL == u.standardizedFileURL } }
@@ -209,7 +245,14 @@ struct FolderRow: View {
             let (c, n) = await Task.detached(priority: .utility) { (FolderBrowser.subfolders(of: u), FolderBrowser.photoCount(in: u)) }.value
             children = c
             count = n
+            unfoldIfRevealed()
         }
+        .onChange(of: lib.browser.revealTarget) { _, _ in unfoldIfRevealed() }
+    }
+
+    /// A reveal (favorite click, breadcrumb) unfolds every folder on the way down to the target.
+    private func unfoldIfRevealed() {
+        if let t = lib.browser.revealTarget, FolderBrowser.isInside(t, url) { expanded = true }
     }
 
     private var isCurrent: Bool { lib.folder?.standardizedFileURL == url.standardizedFileURL }
