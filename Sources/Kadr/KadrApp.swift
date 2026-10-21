@@ -211,6 +211,9 @@ struct KeyHandler {
         case "o", "щ": lib.culling.toggle()
         case "t", "е": lib.startTournament()
         case "u", "г": lib.unflag()
+        case "h", "р":
+            lib.hideRejected.toggle()
+            lib.flash(lib.hideRejected ? tr("Брак скрыт (H — показать)") : tr("Брак снова виден"))
         case "y", "н": lib.splitCompare.toggle(); if lib.splitCompare { lib.loupe = true }
         case "r", "к": lib.startCrop()
         default: return false

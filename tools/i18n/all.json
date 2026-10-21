@@ -4788,5 +4788,165 @@
   "A 1:1 crop. Drag to look at another part of the photo.",
   "Un recorte a 1:1. Arrastra para ver otra parte de la foto.",
   "Un ritaglio a 1:1. Trascina per vedere un’altra parte della foto."
+ ],
+ "Открыта: {}": [
+  "Open: {}",
+  "Abierta: {}",
+  "Aperta: {}"
+ ],
+ "Меню — перейти в папку выше": [
+  "Menu — go to a parent folder",
+  "Menú: ir a una carpeta superior",
+  "Menu: vai a una cartella superiore"
+ ],
+ "Любая оценка": [
+  "Any rating",
+  "Cualquier valoración",
+  "Qualsiasi voto"
+ ],
+ "Фильтр по звёздам": [
+  "Filter by stars",
+  "Filtrar por estrellas",
+  "Filtra per stelle"
+ ],
+ "Серии": [
+  "Bursts",
+  "Ráfagas",
+  "Raffiche"
+ ],
+ "Скрыть брак (H)": [
+  "Hide Rejects (H)",
+  "Ocultar descartes (H)",
+  "Nascondi scarti (H)"
+ ],
+ "Ещё": [
+  "More",
+  "Más",
+  "Altro"
+ ],
+ "Серии, дубли, AI-отбор, сцены, объективы, даты": [
+  "Bursts, duplicates, AI culling, scenes, lenses, dates",
+  "Ráfagas, duplicados, selección AI, escenas, objetivos, fechas",
+  "Raffiche, duplicati, selezione AI, scene, obiettivi, date"
+ ],
+ "брак скрыт": [
+  "rejects hidden",
+  "descartes ocultos",
+  "scarti nascosti"
+ ],
+ "Двойной клик — открыть": [
+  "Double-click to open",
+  "Doble clic para abrir",
+  "Doppio clic per aprire"
+ ],
+ "Быстрый отбор": [
+  "Quick culling",
+  "Selección rápida",
+  "Selezione rapida"
+ ],
+ "← → — листать, пробел — открыть крупно, Z — 100%.": [
+  "← → — browse, Space — open large, Z — 100%.",
+  "← → — recorrer, espacio — ver en grande, Z — 100%.",
+  "← → — scorri, spazio — apri in grande, Z — 100%."
+ ],
+ "P — оставить, X — брак, U — снять решение. 1–5 — звёзды.": [
+  "P — keep, X — reject, U — clear. 1–5 — stars.",
+  "P — conservar, X — descartar, U — quitar decisión. 1–5 — estrellas.",
+  "P — tieni, X — scarta, U — annulla. 1–5 — stelle."
+ ],
+ "Сверху — фильтры: «Без решения» показывает то, что осталось разобрать. H — скрыть брак.": [
+  "Filters are at the top: “Undecided” shows what's left to cull. H hides rejects.",
+  "Los filtros están arriba: «Sin decidir» muestra lo que queda por revisar. H oculta los descartes.",
+  "I filtri sono in alto: «Senza decisione» mostra ciò che resta da selezionare. H nasconde gli scarti."
+ ],
+ "Слева — папки с прогрессом отбора: открыть — двойной клик или кнопка «Открыть».": [
+  "On the left, folders with culling progress: double-click or “Open” to open one.",
+  "A la izquierda, carpetas con el progreso de la selección: doble clic o «Abrir» para abrirlas.",
+  "A sinistra, cartelle con l’avanzamento della selezione: doppio clic o «Apri» per aprirle."
+ ],
+ "Брак скрыт (H — показать)": [
+  "Rejects hidden (H to show)",
+  "Descartes ocultos (H para mostrar)",
+  "Scarti nascosti (H per mostrarli)"
+ ],
+ "Брак снова виден": [
+  "Rejects are visible again",
+  "Los descartes vuelven a verse",
+  "Gli scarti sono di nuovo visibili"
+ ],
+ "Продолжить": [
+  "Continue",
+  "Continuar",
+  "Continua"
+ ],
+ "Здесь появятся папки, которые вы открывали, — с прогрессом отбора.": [
+  "Folders you open appear here, with their culling progress.",
+  "Aquí aparecerán las carpetas que abras, con el progreso de la selección.",
+  "Qui compariranno le cartelle aperte, con l’avanzamento della selezione."
+ ],
+ "Карты памяти": [
+  "Memory Cards",
+  "Tarjetas de memoria",
+  "Schede di memoria"
+ ],
+ "Избранное": [
+  "Favorites",
+  "Favoritos",
+  "Preferiti"
+ ],
+ "Диски": [
+  "Drives",
+  "Discos",
+  "Dischi"
+ ],
+ "Убрать из списка": [
+  "Remove from List",
+  "Quitar de la lista",
+  "Rimuovi dall’elenco"
+ ],
+ "Решено {} из {}": [
+  "{} of {} decided",
+  "{} de {} decididas",
+  "{} di {} decise"
+ ],
+ "Всё уже импортировано": [
+  "Everything is imported",
+  "Todo importado",
+  "Tutto importato"
+ ],
+ "Новых: {}": [
+  "New: {}",
+  "Nuevas: {}",
+  "Nuove: {}"
+ ],
+ "Считаю новые…": [
+  "Counting new…",
+  "Contando nuevas…",
+  "Conto le nuove…"
+ ],
+ "Открыть как папку": [
+  "Open as Folder",
+  "Abrir como carpeta",
+  "Apri come cartella"
+ ],
+ "Фото: {}": [
+  "Photos: {}",
+  "Fotos: {}",
+  "Foto: {}"
+ ],
+ " · подпапок: {}": [
+  " · subfolders: {}",
+  " · subcarpetas: {}",
+  " · sottocartelle: {}"
+ ],
+ "Считаю…": [
+  "Counting…",
+  "Contando…",
+  "Conteggio…"
+ ],
+ "Показывать снимки из всех подпапок": [
+  "Show photos from all subfolders",
+  "Mostrar fotos de todas las subcarpetas",
+  "Mostra le foto di tutte le sottocartelle"
  ]
 }

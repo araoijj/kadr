@@ -130,7 +130,8 @@ final class Renderer: @unchecked Sendable {
         }
         bases[key] = b
         baseOrder.append(key)
-        while baseOrder.count > max(2, Prefs.renderCache) { bases[baseOrder.removeFirst()] = nil }
+        // Room for the current frame plus the three prefetched neighbors.
+        while baseOrder.count > max(5, Prefs.renderCache) { bases[baseOrder.removeFirst()] = nil }
         return b
     }
 }

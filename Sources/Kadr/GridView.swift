@@ -15,7 +15,7 @@ struct GridView: View {
         let sections = lib.sections
         let list = sections.flatMap(\.photos)
         VStack(spacing: 0) {
-        FilterChips()
+        ToolHint(id: "browse")
         GeometryReader { geo in
             ScrollViewReader { proxy in
                 ScrollView {
@@ -238,39 +238,3 @@ struct SectionHeader: View {
 }
 
 /// Chips for active extra filters above the grid, showing why not all frames are visible.
-struct FilterChips: View {
-    @Environment(Library.self) private var lib
-
-    var body: some View {
-        if lib.lensFilter != nil || lib.dayFilter != nil {
-            HStack(spacing: 8) {
-                if let l = lib.lensFilter {
-                    chip(l, icon: "camera.aperture") { lib.lensFilter = nil }
-                }
-                if let d = lib.dayFilter {
-                    chip(d.formatted(.dateTime.day().month(.wide).year().locale(I18n.locale)), icon: "calendar") { lib.dayFilter = nil }
-                }
-                Spacer()
-                Text(tr("Показано \(lib.visible.count) из \(lib.photos.count)"))
-                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-        }
-    }
-
-    private func chip(_ text: String, icon: String, clear: @escaping () -> Void) -> some View {
-        Button(action: clear) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                Text(text).lineLimit(1)
-                Image(systemName: "xmark").font(.caption2.weight(.bold))
-            }
-            .font(.callout)
-            .padding(.horizontal, 10).padding(.vertical, 4)
-            .background(Color.accentColor.opacity(0.18), in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .help(tr("Снять фильтр"))
-    }
-}

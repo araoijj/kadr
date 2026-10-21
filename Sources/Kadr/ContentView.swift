@@ -19,10 +19,11 @@ struct ContentView: View {
                     CompareView()
                 } else if lib.culling {
                     CullView()
-                } else if lib.loupe {
-                    LoupeView()
                 } else {
-                    GridView()
+                    VStack(spacing: 0) {
+                        FilterBar()
+                        if lib.loupe { LoupeView() } else { GridView() }
+                    }
                 }
                 if lib.multiSelected && lib.folder != nil && !lib.comparing { SelectionBar() }
                 CardBanner()
