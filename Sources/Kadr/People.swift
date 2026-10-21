@@ -81,7 +81,7 @@ extension Library {
             } else { merged.append(p) }
         }
         people = merged.enumerated().map { i, p in var q = p; q = Person(id: i + 1, name: p.name, centroid: p.centroid, faces: p.faces, photos: p.photos); return q }
-        if let f = personFilter, !people.contains(where: { $0.id == f }) { personFilter = nil }
+        personFilters = personFilters.filter { f in people.contains { $0.id == f } }
     }
 
     func person(_ id: Int) -> Person? { people.first { $0.id == id } }

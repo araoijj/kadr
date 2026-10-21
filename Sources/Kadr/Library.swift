@@ -510,8 +510,8 @@ final class Library {
                 && (!hideRejected || !p.rejected || filter == .rejected)
                 && (lensFilter == nil || p.lensName == lensFilter)
                 && (dayFilter == nil || p.day == dayFilter)
-                && (tagFilter == nil || !aiEnabled.contains(.tags) || (p.cull?.tags?.contains(tagFilter!) ?? false))
-                && (personFilter == nil || (person(personFilter!)?.photos.contains(p.id) ?? true))
+                && (tagFilters.isEmpty || !aiEnabled.contains(.tags) || (p.cull?.tags?.contains(where: tagFilters.contains) ?? false))
+                && (personFilters.isEmpty || personFilters.contains { person($0)?.photos.contains(p.id) ?? false })
         }
         .sorted(by: inOrder)
     }
@@ -683,8 +683,37 @@ final class Library {
     }
     var lensFilter: String?
     var dayFilter: Date?
-    var tagFilter: String?          // Vision tag after AI analysis
-    var personFilter: Int?          // person after AI analysis (People.swift)
+    /// Vision tags after AI analysis; several tags = any of them ("or").
+    var tagFilters: Set<String> = []
+    /// People after AI analysis (People.swift); several people = any of them ("or").
+    var personFilters: Set<Int> = []
+
+    /// Anything narrowing the folder besides the main filter: lens, day, tags, people, hidden rejects.
+    var extraFiltersActive: Bool {
+        lensFilter != nil || dayFilter != nil || !tagFilters.isEmpty || !personFilters.isEmpty || (hideRejected && filter != .rejected)
+    }
+
+    /// "Reset all": back to every photo of the folder.
+    func resetFilters() {
+        filter = .all
+        lensFilter = nil; dayFilter = nil; tagFilters = []; personFilters = []
+        hideRejected = false
+        move(0)
+    }
+
+    /// One click on a person: the only one selected, or none if it was the only one already;
+    /// ⌘-click (`add`) toggles it in the set, so several people are "any of them".
+    func togglePerson(_ id: Int, add: Bool) {
+        if add { if personFilters.remove(id) == nil { personFilters.insert(id) } }
+        else { personFilters = personFilters == [id] ? [] : [id] }
+        move(0)
+    }
+
+    func toggleTag(_ id: String, add: Bool) {
+        if add { if tagFilters.remove(id) == nil { tagFilters.insert(id) } }
+        else { tagFilters = tagFilters == [id] ? [] : [id] }
+        move(0)
+    }
     var people: [Person] = []
 
     /// Lenses and shooting days with photo counts, for the sidebar.
@@ -841,8 +870,8 @@ final class Library {
         recursiveStorage = mode
         filter = .all
         lensFilter = nil
-        tagFilter = nil
-        personFilter = nil
+        tagFilters = []
+        personFilters = []
         people = []
         dayFilter = nil
         loupe = false
@@ -1255,7 +1284,7 @@ final class Library {
         guard let id = p.seriesID else { return }
         if case .series = filter {} else { filterBeforeSeries = filter }
         filter = .series(id)
-        lensFilter = nil; dayFilter = nil; tagFilter = nil
+        lensFilter = nil; dayFilter = nil; tagFilters = []
         select(p)
     }
 
@@ -1275,7 +1304,7 @@ final class Library {
         filter = .all
         filterBeforeSeries = nil
         hideRejected = false
-        lensFilter = nil; dayFilter = nil; tagFilter = nil
+        lensFilter = nil; dayFilter = nil; tagFilters = []
         if current == nil || !visible.contains(where: { $0.id == currentID }) { focus(visible.first?.id) }
     }
 

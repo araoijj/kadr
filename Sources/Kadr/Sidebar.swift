@@ -8,7 +8,13 @@ import UniformTypeIdentifiers
 /// - «Проводник» — home and drives. A click shows the folder card below with "Scan"; nothing scans by itself.
 /// Filters are in the bar above the photos (FilterBar).
 struct Sidebar: View {
+    enum Tab: String { case sources, filters }
+    static let tabKey = "sb.tab"
+    /// Switches the sidebar tab from anywhere (menu, filter bar); AppStorage picks the change up.
+    static func show(_ t: Tab) { UserDefaults.standard.set(t.rawValue, forKey: tabKey) }
+
     @Environment(Library.self) private var lib
+    @AppStorage(tabKey) private var tab = Tab.sources.rawValue
     @AppStorage("sb.shoots") private var showShoots = true
     @AppStorage("sb.cards") private var showCards = true
     @AppStorage("sb.favorites") private var showFavorites = true
@@ -16,6 +22,23 @@ struct Sidebar: View {
     @State private var dropTarget = false
 
     var body: some View {
+        VStack(spacing: 0) {
+            Picker("", selection: $tab) {
+                Text(tr("Источники")).tag(Tab.sources.rawValue)
+                Text(tr("Фильтры")).tag(Tab.filters.rawValue)
+            }
+            .pickerStyle(.segmented).labelsHidden().controlSize(.small)
+            .padding(.horizontal, 12).padding(.top, 6).padding(.bottom, 4)
+            .help(tr("⌥⌘1 — источники, ⌥⌘2 — фильтры"))
+            if tab == Tab.filters.rawValue {
+                FiltersPanel()
+            } else {
+                sources
+            }
+        }
+    }
+
+    private var sources: some View {
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
                 List {

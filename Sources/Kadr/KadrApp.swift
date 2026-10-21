@@ -68,6 +68,15 @@ struct KadrApp: App {
                     .keyboardShortcut("f", modifiers: [])
                     .disabled(library.current == nil)
                 Divider()
+                // The sidebar's two tabs; ⌘1 itself is zoom 100%, as in other photo apps.
+                Button(tr("Панель: Источники")) { UserDefaults.standard.set(Sidebar.Tab.sources.rawValue, forKey: Sidebar.tabKey) }
+                    .keyboardShortcut("1", modifiers: [.command, .option])
+                Button(tr("Панель: Фильтры")) { UserDefaults.standard.set(Sidebar.Tab.filters.rawValue, forKey: Sidebar.tabKey) }
+                    .keyboardShortcut("2", modifiers: [.command, .option])
+                Button(tr("Сбросить все фильтры")) { library.resetFilters() }
+                    .keyboardShortcut("f", modifiers: [.command, .option])
+                    .disabled(library.filter == .all && !library.extraFiltersActive)
+                Divider()
             }
             CommandGroup(replacing: .help) {
                 Button(tr("Горячие клавиши")) { library.showShortcuts = true }.keyboardShortcut("/", modifiers: .command)

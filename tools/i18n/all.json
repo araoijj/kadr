@@ -5498,5 +5498,170 @@
   "Photos from this folder and all nested ones as one list → Shoots",
   "Las fotos de esta carpeta y de todas las anidadas en una lista → Sesiones",
   "Le foto di questa cartella e di tutte quelle annidate in un unico elenco → Servizi"
+ ],
+ "Все фильтры в панели… (⌥⌘2)": [
+  "All filters in the panel… (⌥⌘2)",
+  "Todos los filtros en el panel… (⌥⌘2)",
+  "Tutti i filtri nel pannello… (⌥⌘2)"
+ ],
+ "Снять фильтр «{}»": [
+  "Clear filter “{}”",
+  "Quitar el filtro «{}»",
+  "Togli il filtro «{}»"
+ ],
+ "Панель фильтров (⌥⌘2), скрыть брак, подпапки": [
+  "Filters panel (⌥⌘2), hide rejects, subfolders",
+  "Panel de filtros (⌥⌘2), ocultar descartes, subcarpetas",
+  "Pannello filtri (⌥⌘2), nascondi scarti, sottocartelle"
+ ],
+ "Часть кадров скрыта фильтрами объектива, даты, тегов, людей или «Скрыть брак» — см. панель «Фильтры» (⌥⌘2)": [
+  "Some photos are hidden by lens, date, tag, people or “Hide rejects” filters — see the Filters panel (⌥⌘2)",
+  "Algunas fotos están ocultas por filtros de objetivo, fecha, etiquetas, personas u «Ocultar descartes»: vea el panel Filtros (⌥⌘2)",
+  "Alcune foto sono nascoste dai filtri obiettivo, data, tag, persone o «Nascondi scarti»: vedi il pannello Filtri (⌥⌘2)"
+ ],
+ "Скрыть брак": [
+  "Hide rejects",
+  "Ocultar descartes",
+  "Nascondi scarti"
+ ],
+ "Все кадры: {}": [
+  "All photos: {}",
+  "Todas las fotos: {}",
+  "Tutte le foto: {}"
+ ],
+ "Сбросить всё": [
+  "Reset all",
+  "Restablecer todo",
+  "Azzera tutto"
+ ],
+ "Снять все фильтры (⌥⌘F)": [
+  "Clear all filters (⌥⌘F)",
+  "Quitar todos los filtros (⌥⌘F)",
+  "Togli tutti i filtri (⌥⌘F)"
+ ],
+ "Решение": [
+  "Decision",
+  "Decisión",
+  "Decisione"
+ ],
+ "Оценка и цвет": [
+  "Rating and color",
+  "Valoración y color",
+  "Valutazione e colore"
+ ],
+ "и выше": [
+  "and up",
+  "o más",
+  "e oltre"
+ ],
+ "цветные метки": [
+  "color labels",
+  "etiquetas de color",
+  "etichette colore"
+ ],
+ "анализ готов": [
+  "analysis done",
+  "análisis listo",
+  "analisi pronta"
+ ],
+ "Проблемы": [
+  "Problems",
+  "Problemas",
+  "Problemi"
+ ],
+ "почему в сомнительных": [
+  "why doubtful",
+  "por qué dudosas",
+  "perché dubbie"
+ ],
+ "Анализ идёт: {} из {}": [
+  "Analyzing: {} of {}",
+  "Analizando: {} de {}",
+  "Analisi in corso: {} di {}"
+ ],
+ "Рекомендуемые, проблемы, люди и теги появятся после анализа.": [
+  "Recommended, problems, people and tags appear after the analysis.",
+  "Recomendadas, problemas, personas y etiquetas aparecerán tras el análisis.",
+  "Consigliate, problemi, persone e tag compaiono dopo l’analisi."
+ ],
+ "Дождитесь, пока папка проиндексируется": [
+  "Wait until the folder is indexed",
+  "Espere a que la carpeta se indexe",
+  "Attendi che la cartella sia indicizzata"
+ ],
+ "человек: {}": [
+  "people: {}",
+  "personas: {}",
+  "persone: {}"
+ ],
+ "Убрать из фильтра": [
+  "Remove from filter",
+  "Quitar del filtro",
+  "Rimuovi dal filtro"
+ ],
+ "Добавить к фильтру (⌘-клик)": [
+  "Add to filter (⌘-click)",
+  "Añadir al filtro (⌘-clic)",
+  "Aggiungi al filtro (⌘-clic)"
+ ],
+ "Клик — только этот человек, ⌘-клик — добавить ещё, правая кнопка — назвать.": [
+  "Click — only this person, ⌘-click — add another, right-click — name.",
+  "Clic: solo esta persona; ⌘-clic: añadir otra; clic derecho: nombrar.",
+  "Clic: solo questa persona; ⌘-clic: aggiungi un’altra; clic destro: dai un nome."
+ ],
+ "теги": [
+  "tags",
+  "etiquetas",
+  "tag"
+ ],
+ "Свернуть": [
+  "Collapse",
+  "Contraer",
+  "Comprimi"
+ ],
+ "Ещё {}…": [
+  "{} more…",
+  "{} más…",
+  "Altri {}…"
+ ],
+ "решено / всего": [
+  "decided / total",
+  "decididas / total",
+  "decise / totale"
+ ],
+ "объективы · даты": [
+  "lenses · dates",
+  "objetivos · fechas",
+  "obiettivi · date"
+ ],
+ "Снять этот фильтр": [
+  "Clear this filter",
+  "Quitar este filtro",
+  "Togli questo filtro"
+ ],
+ "Панель: Источники": [
+  "Sidebar: Sources",
+  "Panel: Fuentes",
+  "Pannello: Sorgenti"
+ ],
+ "Панель: Фильтры": [
+  "Sidebar: Filters",
+  "Panel: Filtros",
+  "Pannello: Filtri"
+ ],
+ "Сбросить все фильтры": [
+  "Clear All Filters",
+  "Quitar todos los filtros",
+  "Togli tutti i filtri"
+ ],
+ "Источники": [
+  "Sources",
+  "Fuentes",
+  "Sorgenti"
+ ],
+ "⌥⌘1 — источники, ⌥⌘2 — фильтры": [
+  "⌥⌘1 — sources, ⌥⌘2 — filters",
+  "⌥⌘1: fuentes, ⌥⌘2: filtros",
+  "⌥⌘1: sorgenti, ⌥⌘2: filtri"
  ]
 }
