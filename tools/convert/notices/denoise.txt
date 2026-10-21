@@ -1,0 +1,4 @@
+SCUNet denoising model ("scunet_color_real_psnr"), Kai Zhang et al., https://github.com/cszn/SCUNet — Apache License 2.0.
+Weights from https://github.com/cszn/KAIR/releases/download/v1.0/scunet_color_real_psnr.pth.
+Converted PyTorch -> Core ML (coremltools, float16, fixed 512x512 tile); the shifted-window attention mask is
+precomputed as a constant additive mask (same result as -inf masking). Max difference to PyTorch: 0.0005.

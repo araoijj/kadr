@@ -1,0 +1,9 @@
+Kadr face mesh models
+
+These Core ML models are converted from Google MediaPipe Face Landmarker
+(face_landmarker.task: face_landmarks_detector.tflite, face_blendshapes.tflite),
+Copyright Google LLC, licensed under the Apache License, Version 2.0
+(see LICENSE-Apache-2.0.txt). Source: https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker
+
+Modifications: converted TFLite -> ONNX (tf2onnx) -> PyTorch (onnx2torch) -> Core ML (coremltools);
+PReLU rewritten as relu(x) - a*relu(-x); landmarks model stored in float16. Weights are otherwise unchanged.

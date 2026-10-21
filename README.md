@@ -117,7 +117,10 @@ Thanks to everyone whose work Kadr builds on:
 
 - Film emulation LUTs — [t3mujinpack](https://github.com/t3mujin/t3mujinpack) © João Almeida, MIT license. Not bundled: Kadr downloads them from GitHub on request and keeps the author’s license next to them.
 - Face mesh for blink detection — [MediaPipe Face Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker) © Google, Apache 2.0 license. Converted to Core ML and bundled with the app (`Contents/Resources/FaceMesh`, with the license and a NOTICE); the models are not in the repository — `build.sh` fetches them from the [`models-1` release](https://github.com/araoijj/kadr/releases/tag/models-1).
+- Optional model packages ([`models-2`](https://github.com/araoijj/kadr/releases/tag/models-2), installed in Settings → AI): [SFace](https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface) (OpenCV Zoo), [SCUNet](https://github.com/cszn/SCUNet) (Kai Zhang et al.), [SAM 2.1 Small](https://huggingface.co/apple/coreml-sam2.1-small) (Meta, Core ML by Apple) and [LaMa](https://huggingface.co/mlboydaisuke/LaMa-CoreML) — all Apache 2.0.
 - Apple Vision, Core Image and ImageIO, which do the heavy lifting on device.
+
+Every model archive is checked by SHA-256 before it is installed, and [`tools/convert`](tools/convert) rebuilds each package from the authors' original weights so anyone can confirm the published copies are exactly those models.
 
 ## License
 

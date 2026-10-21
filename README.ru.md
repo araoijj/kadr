@@ -118,6 +118,10 @@ xcode-select --install   # если ещё не установлены
 
 Сетка лица для поиска моргания — [MediaPipe Face Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker) © Google, лицензия Apache 2.0. Модели перегнаны в Core ML (~7 МБ, ~12 мс на лицо на нейроядре) и встроены в приложение вместе с лицензией и NOTICE; в репозитории их нет — `build.sh` берёт архив из выпуска [models-1](https://github.com/araoijj/kadr/releases/tag/models-1).
 
+Дополнительные пакеты моделей (выпуск [models-2](https://github.com/araoijj/kadr/releases/tag/models-2), ставятся в «Настройки → AI»): [SFace](https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface) (OpenCV Zoo), [SCUNet](https://github.com/cszn/SCUNet) (Kai Zhang и соавторы), [SAM 2.1 Small](https://huggingface.co/apple/coreml-sam2.1-small) (Meta, Core ML от Apple) и [LaMa](https://huggingface.co/mlboydaisuke/LaMa-CoreML) — все под Apache 2.0.
+
+Каждый архив моделей перед установкой сверяется по SHA-256, а [`tools/convert`](tools/convert) пересобирает каждый пакет из оригинальных весов авторов — любой может убедиться, что опубликованные копии — это ровно те модели.
+
 ## Лицензия
 
 [PolyForm Noncommercial 1.0.0](LICENSE) © 2026 Aleksandr Kozlov

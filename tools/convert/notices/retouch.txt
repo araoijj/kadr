@@ -1,0 +1,4 @@
+SAM 2.1 Small (Segment Anything 2.1, Meta) — Apache License 2.0. Core ML packages as published by Apple:
+https://huggingface.co/apple/coreml-sam2.1-small (unchanged).
+LaMa inpainting (advimman/lama, big-lama) — Apache License 2.0. Core ML conversion from
+https://huggingface.co/mlboydaisuke/LaMa-CoreML (unchanged). Note: LaMa was trained on the Places dataset.

@@ -486,6 +486,7 @@ struct FaceMeshSection: View {
                 }
             }
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
+            ModelSourcesView(sources: FaceMesh.sources, sha256: ModelChecksum.facemesh)
             Text(tr("В «Отборе» отличает моргание от прищура и взгляда вниз (~12 мс на лицо, на нейроядре). Без моделей глаза меряются по контуру от macOS — грубее. После установки кадры с лицами в открытых папках пересчитаются. Модели — Google MediaPipe Face Landmarker, лицензия Apache 2.0."))
                 .font(.caption).foregroundStyle(.secondary)
         }
@@ -507,6 +508,11 @@ struct FaceMeshSection: View {
             do {
                 let (tmp, resp) = try await URLSession.shared.download(from: FaceMesh.downloadURL)
                 guard (resp as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+                guard await ModelChecksum.matches(tmp, ModelChecksum.facemesh) else {
+                    try? FileManager.default.removeItem(at: tmp)
+                    error = tr("Скачанный архив не совпал по контрольной сумме — не установлен. Попробуйте ещё раз позже.")
+                    busy = false; return
+                }
                 let zip = tmp.deletingLastPathComponent().appendingPathComponent("kadr-facemesh.zip")
                 try? FileManager.default.removeItem(at: zip)
                 try FileManager.default.moveItem(at: tmp, to: zip)
@@ -521,7 +527,13 @@ struct FaceMeshSection: View {
         p.canChooseDirectories = true
         p.allowedContentTypes = [.zip, .package, .folder]
         p.message = tr("Архив .zip или папка с face_landmarks_detector и face_blendshapes (.mlpackage)")
-        if p.runModal() == .OK, let u = p.url { busy = true; finish(u, nil) }
+        guard p.runModal() == .OK, let u = p.url else { return }
+        busy = true; error = nil
+        Task {
+            let ok = u.pathExtension.lowercased() == "zip" ? await ModelChecksum.matches(u, ModelChecksum.facemesh) : false
+            guard ok || ModelChecksum.confirmUnverified(tr("Сетка лица MediaPipe")) else { busy = false; return }
+            finish(u, nil)
+        }
     }
 }
 

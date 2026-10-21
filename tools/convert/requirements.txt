@@ -1,0 +1,13 @@
+# Exact versions the published models were converted with; other versions may give different bytes.
+# Python 3.12, macOS (Apple Silicon).
+coremltools==8.3.0
+torch==2.14.1
+numpy==1.26.4
+onnx==1.22.0
+onnx2torch==1.5.15
+onnxruntime==1.31.0
+tensorflow==2.18.1
+tf2onnx==1.17.0
+protobuf==5.29.6
+einops==0.8.2
+timm==1.0.30

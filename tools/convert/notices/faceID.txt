@@ -1,0 +1,4 @@
+SFace face recognition model (face_recognition_sface_2021dec), from OpenCV Zoo
+https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface — Apache License 2.0.
+Converted ONNX -> PyTorch (onnx2torch) -> Core ML (coremltools, float16); PReLU rewritten as relu(x) - a*relu(-x).
+Weights otherwise unchanged; outputs match the ONNX model (cosine similarity 1.0).

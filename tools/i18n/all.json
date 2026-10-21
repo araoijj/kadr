@@ -4163,5 +4163,90 @@
   "Click — show photos with this person; right-click — name them (the same name merges groups)",
   "Clic: mostrar fotos con esta persona; clic derecho: ponerle nombre (el mismo nombre une grupos)",
   "Clic: mostra le foto con questa persona; clic destro: assegna un nome (lo stesso nome unisce i gruppi)"
+ ],
+ "Файл не совпадает с опубликованным архивом": [
+  "The file doesn't match the published archive",
+  "El archivo no coincide con el archivo publicado",
+  "Il file non corrisponde all'archivio pubblicato"
+ ],
+ "Контрольная сумма не совпала с архивом «{}» из выпуска «Кадра». Устанавливайте, только если собрали модели сами (tools/convert) или знаете, откуда этот файл.": [
+  "The checksum doesn't match the “{}” archive from the Kadr release. Install it only if you built the models yourself (tools/convert) or know where this file comes from.",
+  "La suma de comprobación no coincide con el archivo «{}» de la versión de Kadr. Instálelo solo si compiló los modelos usted mismo (tools/convert) o sabe de dónde viene este archivo.",
+  "Il checksum non corrisponde all'archivio «{}» della release di Kadr. Installalo solo se hai creato i modelli da solo (tools/convert) o sai da dove viene questo file."
+ ],
+ "Установить всё равно": [
+  "Install Anyway",
+  "Instalar de todos modos",
+  "Installa comunque"
+ ],
+ "переведена из TFLite в Core ML, веса не менялись": [
+  "converted from TFLite to Core ML, weights unchanged",
+  "convertido de TFLite a Core ML, pesos sin cambios",
+  "convertito da TFLite a Core ML, pesi invariati"
+ ],
+ "33 МБ": [
+  "33 MB",
+  "33 MB",
+  "33 MB"
+ ],
+ "269 МБ": [
+  "269 MB",
+  "269 MB",
+  "269 MB"
+ ],
+ "переведена из ONNX в Core ML, веса не менялись; ответы совпадают с оригиналом": [
+  "converted from ONNX to Core ML, weights unchanged; outputs match the original",
+  "convertido de ONNX a Core ML, pesos sin cambios; los resultados coinciden con el original",
+  "convertito da ONNX a Core ML, pesi invariati; i risultati coincidono con l'originale"
+ ],
+ "переведена из PyTorch в Core ML (плитка 512×512), веса не менялись; расхождение с оригиналом не больше 0,05%": [
+  "converted from PyTorch to Core ML (512×512 tile), weights unchanged; differs from the original by at most 0.05%",
+  "convertido de PyTorch a Core ML (tesela de 512×512), pesos sin cambios; diferencia con el original de 0,05 % como máximo",
+  "convertito da PyTorch a Core ML (tile 512×512), pesi invariati; differenza dall'originale al massimo 0,05%"
+ ],
+ "без изменений — файлы Apple как есть": [
+  "unchanged — Apple's files as published",
+  "sin cambios: los archivos de Apple tal cual",
+  "invariato: i file di Apple così come sono"
+ ],
+ "без изменений; обучена на датасете Places": [
+  "unchanged; trained on the Places dataset",
+  "sin cambios; entrenado con el conjunto de datos Places",
+  "invariato; addestrato sul dataset Places"
+ ],
+ "Скачанный архив не совпал по контрольной сумме — не установлен. Попробуйте ещё раз позже.": [
+  "The downloaded archive failed the checksum check and was not installed. Try again later.",
+  "El archivo descargado no superó la comprobación de suma y no se instaló. Inténtelo más tarde.",
+  "L'archivio scaricato non ha superato il controllo del checksum e non è stato installato. Riprova più tardi."
+ ],
+ "Источник и лицензия": [
+  "Source and license",
+  "Origen y licencia",
+  "Origine e licenza"
+ ],
+ "SHA-256 архива: {}": [
+  "Archive SHA-256: {}",
+  "SHA-256 del archivo: {}",
+  "SHA-256 dell'archivio: {}"
+ ],
+ "Как пересобрать модели из оригиналов": [
+  "How to rebuild the models from the originals",
+  "Cómo recompilar los modelos desde los originales",
+  "Come ricreare i modelli dagli originali"
+ ],
+ "Тяжёлые модели ставятся по желанию и хранятся в папке данных «Кадра». Работают офлайн, на этом Mac. Скачанный архив сверяется по контрольной сумме: подменённый или битый файл не установится.": [
+  "Heavy models are optional and kept in Kadr's data folder. They run offline, on this Mac. A downloaded archive is checked against its checksum: a swapped or broken file won't be installed.",
+  "Los modelos pesados son opcionales y se guardan en la carpeta de datos de Kadr. Funcionan sin conexión, en este Mac. El archivo descargado se verifica con su suma de comprobación: un archivo sustituido o dañado no se instalará.",
+  "I modelli pesanti sono facoltativi e si trovano nella cartella dati di Kadr. Funzionano offline, su questo Mac. L'archivio scaricato viene verificato con il checksum: un file sostituito o danneggiato non verrà installato."
+ ],
+ "Meta; Core ML — Apple": [
+  "Meta; Core ML by Apple",
+  "Meta; Core ML de Apple",
+  "Meta; Core ML di Apple"
+ ],
+ "Samsung AI (advimman/lama); Core ML — mlboydaisuke": [
+  "Samsung AI (advimman/lama); Core ML by mlboydaisuke",
+  "Samsung AI (advimman/lama); Core ML de mlboydaisuke",
+  "Samsung AI (advimman/lama); Core ML di mlboydaisuke"
  ]
 }

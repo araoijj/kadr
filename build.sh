@@ -10,10 +10,17 @@ cp .build/release/Kadr "$APP/Contents/MacOS/Kadr"
 # MediaPipe face mesh (Apache 2.0) goes inside the app so AI culling works without a separate install.
 # The models are not in the repo: the archive is fetched from the models-1 release and cached in .build.
 MODELS_ZIP=.build/models/kadr-facemesh-1.zip
+MODELS_SHA=3712b88b9634b2db4e28a99991024253e7abb9ca71059b3405ef8c93fb52a425   # same as ModelChecksum.facemesh
+if [ -s "$MODELS_ZIP" ] && [ "$(shasum -a 256 "$MODELS_ZIP" | cut -d' ' -f1)" != "$MODELS_SHA" ]; then
+  echo "Архив моделей сетки лица не совпал по SHA-256 — удалён, скачиваю заново"; rm -f "$MODELS_ZIP"
+fi
 if [ ! -s "$MODELS_ZIP" ]; then
   mkdir -p .build/models
   curl -fsSL --max-time 120 -o "$MODELS_ZIP.part" https://github.com/araoijj/kadr/releases/download/models-1/kadr-facemesh-1.zip \
     && mv "$MODELS_ZIP.part" "$MODELS_ZIP" || { rm -f "$MODELS_ZIP.part"; echo "Модели сетки лица не скачались — сборка без них"; }
+fi
+if [ -s "$MODELS_ZIP" ] && [ "$(shasum -a 256 "$MODELS_ZIP" | cut -d' ' -f1)" != "$MODELS_SHA" ]; then
+  rm -f "$MODELS_ZIP"; echo "Архив моделей сетки лица не совпал по SHA-256 — сборка без них"
 fi
 if [ -s "$MODELS_ZIP" ]; then
   ditto -x -k "$MODELS_ZIP" .build/models/x && rm -rf "$APP/Contents/Resources/FaceMesh" \
