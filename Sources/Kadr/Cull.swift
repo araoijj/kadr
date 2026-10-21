@@ -228,9 +228,10 @@ extension Library {
     /// P: keep. With no rating, sets ★ so the pick is visible in Capture One too.
     func keep() {
         let many = multiSelected
+        let order = shownOrder
         update(tr("Оставлено")) { if $0.rating == 0 { $0.rating = 1 }; $0.rejected = false }
         flash(tr("Оставлено") + countSuffix)
-        if !many { advanceAfterDecision() }
+        if !many { advanceAfterDecision(after: order) }
     }
 
     /// U: clear the decision: no rating, no reject.
