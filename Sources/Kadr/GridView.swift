@@ -159,10 +159,9 @@ struct Thumbnail: View {
     private var badges: some View {
         VStack {
             HStack(spacing: 4) {
-                if photo.isBestInSeries {
-                    Badge(text: tr("Лучший"), icon: "sparkles", tint: Theme.star)
-                } else if photo.seriesID != nil {
-                    Badge(text: tr("Серия"), icon: "square.stack.3d.up", tint: .white.opacity(0.7))
+                if photo.seriesID != nil {
+                    // Click: the whole burst on screen (or back out of it); hover shows it's a button.
+                    SeriesBadge(photo: photo)
                 }
                 if photo.duplicateOf != nil {
                     Badge(text: tr("Дубль"), icon: "doc.on.doc", tint: .orange)
@@ -248,3 +247,33 @@ struct SectionHeader: View {
 }
 
 /// Chips for active extra filters above the grid, showing why not all frames are visible.
+
+/// The "Серия" / "Лучший" badge on a preview: a button that shows the whole burst, or leaves it.
+struct SeriesBadge: View {
+    let photo: Photo
+    @Environment(Library.self) private var lib
+    @State private var hover = false
+
+    var body: some View {
+        let inside = lib.inSeries && lib.filter == .series(photo.seriesID ?? -1)
+        let n = lib.series(of: photo).count
+        Button {
+            if inside { lib.leaveSeries() } else { lib.showSeries(of: photo) }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: inside ? "arrow.uturn.backward" : photo.isBestInSeries ? "sparkles" : "square.stack.3d.up")
+                Text(inside ? tr("Все кадры") : photo.isBestInSeries ? tr("Лучший") : tr("Серия"))
+                if hover && !inside { Text("\(n)").opacity(0.8) }
+            }
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(photo.isBestInSeries && !inside ? Theme.star : .white.opacity(hover ? 1 : 0.75))
+            .padding(.horizontal, 6).padding(.vertical, 3)
+            .background(.black.opacity(hover ? 0.8 : 0.55), in: Capsule())
+            .overlay(Capsule().strokeBorder(.white.opacity(hover ? 0.5 : 0)))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .help(inside ? tr("Назад ко всем кадрам (Esc)") : tr("Показать все \(n) кадров серии; правый клик по кадру — выделить или сравнить серию"))
+    }
+}
