@@ -488,7 +488,7 @@ final class Library {
                 && (!hideRejected || !p.rejected || filter == .rejected)
                 && (lensFilter == nil || p.lensName == lensFilter)
                 && (dayFilter == nil || p.day == dayFilter)
-                && (tagFilter == nil || !aiEnabled.contains(.tags) || (p.cull?.tags?.contains(tagFilter!) ?? false))
+                && (tagFilters.isEmpty || !aiEnabled.contains(.tags) || (p.cull?.tags?.contains(where: tagFilters.contains) ?? false))
         }
         .sorted(by: inOrder)
     }
@@ -660,7 +660,29 @@ final class Library {
     }
     var lensFilter: String?
     var dayFilter: Date?
-    var tagFilter: String?          // Vision tag after AI analysis
+    /// Vision tags after AI analysis; several tags = any of them ("or").
+    var tagFilters: Set<String> = []
+
+    /// Anything narrowing the folder besides the main filter: lens, day, tags, hidden rejects.
+    var extraFiltersActive: Bool {
+        lensFilter != nil || dayFilter != nil || !tagFilters.isEmpty || (hideRejected && filter != .rejected)
+    }
+
+    /// "Reset all": back to every photo of the folder.
+    func resetFilters() {
+        filter = .all
+        lensFilter = nil; dayFilter = nil; tagFilters = []
+        hideRejected = false
+        move(0)
+    }
+
+    /// One click on a tag: the only one selected, or none if it was the only one already;
+    /// ⌘-click (`add`) toggles it in the set, so several tags are "any of them".
+    func toggleTag(_ id: String, add: Bool) {
+        if add { if tagFilters.remove(id) == nil { tagFilters.insert(id) } }
+        else { tagFilters = tagFilters == [id] ? [] : [id] }
+        move(0)
+    }
 
     /// Lenses and shooting days with photo counts, for the sidebar.
     var lenses: [(name: String, count: Int)] {
@@ -816,7 +838,7 @@ final class Library {
         recursiveStorage = mode
         filter = .all
         lensFilter = nil
-        tagFilter = nil
+        tagFilters = []
         dayFilter = nil
         loupe = false
         loupeZoom = nil
@@ -1227,7 +1249,7 @@ final class Library {
         guard let id = p.seriesID else { return }
         if case .series = filter {} else { filterBeforeSeries = filter }
         filter = .series(id)
-        lensFilter = nil; dayFilter = nil; tagFilter = nil
+        lensFilter = nil; dayFilter = nil; tagFilters = []
         select(p)
     }
 
@@ -1247,7 +1269,7 @@ final class Library {
         filter = .all
         filterBeforeSeries = nil
         hideRejected = false
-        lensFilter = nil; dayFilter = nil; tagFilter = nil
+        lensFilter = nil; dayFilter = nil; tagFilters = []
         if current == nil || !visible.contains(where: { $0.id == currentID }) { focus(visible.first?.id) }
     }
 

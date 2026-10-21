@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Bar above the photos: where you are, the main culling filters one click away, and the rest under "More".
-/// Replaces the "Filters" tab of the sidebar, so narrowing a folder down never needs a tab switch.
+/// Bar above the photos: where you are, the main culling filters one click away, and chips for whatever
+/// else narrows the view. The full set of filters lives in the sidebar's «Фильтры» tab (FiltersPanel).
 struct FilterBar: View {
     @Environment(Library.self) private var lib
 
@@ -252,54 +252,11 @@ struct FilterBar: View {
     private var more: some View {
         @Bindable var lib = lib
         let extra = !Self.main.contains(lib.filter) && !isStars && !isLabel
+        // Series, AI picks, scenes, lenses, days and tags moved to the sidebar's «Фильтры» tab:
+        // one click each, with counts, instead of two levels of menus.
         return Menu {
-            Section(tr("Серии")) {
-                pick(.best)
-                pick(.duplicates)
-            }
-            if lib.aiOn {
-                Section(tr("AI-отбор")) {
-                    pick(.recommended)
-                    pick(.suspects)
-                    pick(.leaders)
-                    if lib.count(.smiling) > 0 { pick(.smiling) }
-                    ForEach(CullReason.allCases.filter { lib.count(.reason($0)) > 0 }) { r in pick(.reason(r)) }
-                }
-            } else if !lib.aiReady && !lib.aiRunning {
-                Button(tr("Запустить AI-анализ")) { lib.startAI() }.disabled(lib.analyzed < lib.photos.count)
-            }
-            if lib.scenes.count > 1 {
-                Menu(tr("Сцены")) {
-                    ForEach(lib.scenes) { sc in
-                        Button("\(sc.title) · \(lib.sceneProgress(sc))/\(sc.count)") { set(.scene(sc.id)) }
-                    }
-                }
-            }
-            if lib.lenses.count > 1 {
-                Menu(tr("Объективы")) {
-                    ForEach(lib.lenses, id: \.name) { l in
-                        Toggle("\(l.name) · \(l.count)", isOn: Binding(get: { lib.lensFilter == l.name },
-                                                                    set: { lib.lensFilter = $0 ? l.name : nil; lib.move(0) }))
-                    }
-                }
-            }
-            if lib.days.count > 1 {
-                Menu(tr("Даты")) {
-                    ForEach(lib.days, id: \.day) { d in
-                        Toggle("\(d.day.formatted(.dateTime.day().month(.abbreviated).year().locale(I18n.locale))) · \(d.count)",
-                               isOn: Binding(get: { lib.dayFilter == d.day }, set: { lib.dayFilter = $0 ? d.day : nil; lib.move(0) }))
-                    }
-                }
-            }
-            let tags = lib.aiReady && lib.aiEnabled.contains(.tags) ? Array(lib.tags.prefix(25)) : []
-            if !tags.isEmpty {
-                Menu(tr("Что на снимках")) {
-                    ForEach(tags, id: \.id) { t in
-                        Toggle("\(TagNames.title(t.id)) · \(t.count)", isOn: Binding(get: { lib.tagFilter == t.id },
-                                                                                     set: { lib.tagFilter = $0 ? t.id : nil; lib.move(0) }))
-                    }
-                }
-            }
+            Button(tr("Все фильтры в панели… (⌥⌘2)")) { Sidebar.show(.filters) }
+            if extra { Button(tr("Снять фильтр «\(lib.filter.title)»")) { set(.all) } }
             Divider()
             Toggle(tr("Скрыть брак (H)"), isOn: $lib.hideRejected)
             Toggle(tr("С вложенными папками"), isOn: $lib.includeSubfolders)
@@ -311,7 +268,7 @@ struct FilterBar: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .help(tr("Серии, дубли, AI-отбор, сцены, объективы, даты"))
+        .help(tr("Панель фильтров (⌥⌘2), скрыть брак, подпапки"))
     }
 
     private var isStars: Bool { if case .stars = lib.filter { true } else { false } }
@@ -335,7 +292,7 @@ struct FilterBar: View {
             if let d = lib.dayFilter {
                 chip(d.formatted(.dateTime.day().month(.abbreviated).locale(I18n.locale)), icon: "calendar") { lib.dayFilter = nil }
             }
-            if let t = lib.tagFilter { chip(TagNames.title(t), icon: "tag") { lib.tagFilter = nil } }
+            ForEach(lib.tagFilters.sorted(), id: \.self) { t in chip(TagNames.title(t), icon: "tag") { lib.toggleTag(t, add: true) } }
             if lib.hideRejected && lib.filter != .rejected {
                 chip(tr("брак скрыт"), icon: "eye.slash") { lib.hideRejected = false }
             }
@@ -344,11 +301,11 @@ struct FilterBar: View {
 
     /// How many photos are shown; turns into a hint when extra filters hide some.
     private var count: some View {
-        let extra = lib.lensFilter != nil || lib.dayFilter != nil || lib.tagFilter != nil || (lib.hideRejected && lib.filter != .rejected)
+        let extra = lib.extraFiltersActive
         return Text(tr("\(lib.visible.count) из \(lib.photos.count)"))
             .font(.caption.monospacedDigit()).foregroundStyle(extra ? Color.accentColor : .secondary)
             .fixedSize()
-            .help(extra ? tr("Часть кадров скрыта фильтрами объектива, даты, тегов или «Скрыть брак» — см. «Ещё»") : "")
+            .help(extra ? tr("Часть кадров скрыта фильтрами объектива, даты, тегов, людей или «Скрыть брак» — см. панель «Фильтры» (⌥⌘2)") : "")
     }
 
     private func chip(_ text: String, icon: String, clear: @escaping () -> Void) -> some View {
