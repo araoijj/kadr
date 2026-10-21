@@ -25,8 +25,9 @@ extension Library {
         Task.detached(priority: .utility) {
             var files = 0
             for (url, words) in jobs where ((try? Sidecar.addKeywords(words, for: url)) ?? 0) > 0 { files += 1 }
+            let done = files
             await MainActor.run { [weak self] in
-                self?.flash(files == 0 ? tr("Ключевые слова уже записаны") : tr("Ключевые слова добавлены, кадров: \(files)"))
+                self?.flash(done == 0 ? tr("Ключевые слова уже записаны") : tr("Ключевые слова добавлены, кадров: \(done)"))
             }
         }
     }
