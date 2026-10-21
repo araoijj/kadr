@@ -1170,17 +1170,19 @@ final class Library {
 
     func setRating(_ r: Int) {
         let many = multiSelected
+        let order = shownOrder
         update(r == 0 ? tr("Оценка снята") : String(repeating: "★", count: r)) { $0.rating = r; $0.rejected = false }
         flash((r == 0 ? tr("Оценка снята") : String(repeating: "★", count: r)) + countSuffix)
-        if !many { advanceIfNeeded() }
+        if !many { advanceIfNeeded(after: order) }
     }
 
     func toggleReject() {
         let many = multiSelected
         let reject = !targets.allSatisfy(\.rejected)
+        let order = shownOrder
         update(reject ? tr("Отклонено") : tr("Возвращено")) { $0.rejected = reject }
         flash((reject ? tr("Отклонено") : tr("Возвращено")) + countSuffix)
-        if reject && !many { advanceIfNeeded() }
+        if reject && !many { advanceIfNeeded(after: order) }
     }
 
     func toggleLabel(_ l: ColorLabel) {
@@ -1204,20 +1206,26 @@ final class Library {
         if failed > 0 { flash(tr("Не удалось записать XMP: \(failed) шт.")) }
     }
 
-    func advanceAfterDecision() { advanceIfNeeded() }
+    /// The order the photos are shown in right now (filter, sort, grouping): captured before a decision,
+    /// because the decision itself may remove the photo from the view or change its place in it.
+    var shownOrder: [URL] { visible.map(\.id) }
 
-    private func advanceIfNeeded() {
+    func advanceAfterDecision(after order: [URL]) { advanceIfNeeded(after: order) }
+
+    /// After a decision on one photo: the next one as the list was shown. If the photo just left the
+    /// current view (rejected in "Undecided", hidden by "Hide rejects"), continue from the same place:
+    /// the next still-shown photo after it, or the previous one at the end of the list.
+    private func advanceIfNeeded(after order: [URL]) {
         guard autoAdvance, !comparing, let cur = currentID else { return }
         let list = visible
-        // If the photo dropped out of the current filter, move to the next one after it.
-        if !list.contains(where: { $0.id == cur }) {
-            let all = photos.map(\.id)
-            if let i = all.firstIndex(of: cur) {
-                focus(all[(i + 1)...].first { id in list.contains { $0.id == id } } ?? list.last?.id)
-            }
-        } else {
-            move(1)
+        guard !list.isEmpty else { return }
+        if list.contains(where: { $0.id == cur }) { move(1); return }
+        let shown = Set(list.map(\.id))
+        if let i = order.firstIndex(of: cur) {
+            if let next = order[(i + 1)...].first(where: { shown.contains($0) }) { focus(next); return }
+            if let prev = order[..<i].last(where: { shown.contains($0) }) { focus(prev); return }
         }
+        focus(list.first?.id)
     }
 
     func flash(_ text: String) {
