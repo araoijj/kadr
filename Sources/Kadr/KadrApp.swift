@@ -7,6 +7,9 @@ struct KadrApp: App {
 
     init() {
         NSApplication.shared.setActivationPolicy(.regular)
+        // One window per library: no macOS window tabs (a tab bar turned on once by View → Show Tab Bar
+        // stays on and looks like an empty search field under the toolbar).
+        NSWindow.allowsAutomaticWindowTabbing = false
         NSApplication.shared.activate(ignoringOtherApps: true)
         // On quit: unsaved (debounced) edits and where you stopped in the folder.
         let lib = library
