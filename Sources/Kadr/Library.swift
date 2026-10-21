@@ -1190,12 +1190,36 @@ final class Library {
         selection = Set(series(of: p).map(\.id))
     }
 
+    /// The filter that was on before a burst was opened: Esc goes back to it.
+    var filterBeforeSeries: PhotoFilter?
+
     /// Only this burst in the grid and the filmstrip; the filter bar shows "Одна серия" with a way back.
     func showSeries(of p: Photo) {
         guard let id = p.seriesID else { return }
+        if case .series = filter {} else { filterBeforeSeries = filter }
         filter = .series(id)
         lensFilter = nil; dayFilter = nil; tagFilter = nil
         select(p)
+    }
+
+    var inSeries: Bool { if case .series = filter { true } else { false } }
+
+    /// Back from a burst to the photos you came from (Esc, the button in the filter bar). The photo you are
+    /// on stays current if that view still has it, otherwise the nearest one is taken.
+    func leaveSeries() {
+        guard inSeries else { return }
+        filter = filterBeforeSeries ?? .all
+        filterBeforeSeries = nil
+        if let c = currentID, !visible.contains(where: { $0.id == c }) { focus(visible.first?.id) }
+    }
+
+    /// The current view has no photos left (everything rejected and hidden, moved away…): show everything.
+    func showAllPhotos() {
+        filter = .all
+        filterBeforeSeries = nil
+        hideRejected = false
+        lensFilter = nil; dayFilter = nil; tagFilter = nil
+        if current == nil || !visible.contains(where: { $0.id == currentID }) { focus(visible.first?.id) }
     }
 
     // MARK: - Ratings (applied to all selected)

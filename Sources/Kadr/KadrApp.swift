@@ -180,7 +180,9 @@ struct KeyHandler {
             return true
         case 36: lib.loupe = true; return true                    // Enter
         case 53:                                                   // Esc
-            if lib.zoom100 { lib.zoom100 = false } else if lib.culling { lib.culling = false } else if lib.loupe { lib.loupe = false } else { lib.clearSelection() }
+            if lib.zoom100 { lib.zoom100 = false }
+            else if lib.inSeries { lib.leaveSeries(); lib.flash(tr("Назад ко всем кадрам")) }   // out of a burst first, the view stays
+            else if lib.culling { lib.culling = false } else if lib.loupe { lib.loupe = false } else { lib.clearSelection() }
             return true
         case 51, 117: lib.toggleReject(); return true              // Backspace / Delete
         default: break
