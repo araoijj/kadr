@@ -1267,7 +1267,7 @@ final class Library {
         let many = multiSelected
         let order = shownOrder
         update(r == 0 ? tr("Оценка снята") : String(repeating: "★", count: r)) { $0.rating = r; $0.rejected = false }
-        flash((r == 0 ? tr("Оценка снята") : String(repeating: "★", count: r)) + countSuffix)
+        if r == 0 { flash(tr("Оценка снята") + countSuffix) } else { flashDecision(String(repeating: "★", count: r), undo: tr("U — снять")) }
         if many { settleSelection(after: order) } else { advanceIfNeeded(after: order) }
     }
 
@@ -1276,7 +1276,7 @@ final class Library {
         let reject = !targets.allSatisfy(\.rejected)
         let order = shownOrder
         update(reject ? tr("Отклонено") : tr("Возвращено")) { $0.rejected = reject }
-        flash((reject ? tr("Отклонено") : tr("Возвращено")) + countSuffix)
+        if reject { flashDecision(tr("Брак"), undo: tr("⌘Z или U — вернуть")) } else { flash(tr("Возвращено") + countSuffix) }
         if many { settleSelection(after: order) } else if reject { advanceIfNeeded(after: order) }
     }
 
@@ -1338,13 +1338,19 @@ final class Library {
         focus(list.first?.id)
     }
 
-    func flash(_ text: String) {
+    func flash(_ text: String, seconds: Double = 1.2) {
         toast = text
         let shown = text
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(1.2))
+            try? await Task.sleep(for: .seconds(seconds))
             if self.toast == shown { self.toast = nil }
         }
+    }
+
+    /// A decision just happened: say what, and how to take it back. Stays a little longer than a plain
+    /// toast, because in "Undecided" the photo leaves the screen and this is the only trace of what happened.
+    private func flashDecision(_ what: String, undo: String) {
+        flash(what + countSuffix + " · " + undo, seconds: 2.2)
     }
 
     // MARK: - File operations

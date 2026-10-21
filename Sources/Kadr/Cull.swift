@@ -230,7 +230,7 @@ extension Library {
         let many = multiSelected
         let order = shownOrder
         update(tr("Оставлено")) { if $0.rating == 0 { $0.rating = 1 }; $0.rejected = false }
-        flash(tr("Оставлено") + countSuffix)
+        flash(tr("Оставлено ★") + countSuffix + " · " + tr("U — снять"), seconds: 2.2)
         if !many { advanceAfterDecision(after: order) }
     }
 
