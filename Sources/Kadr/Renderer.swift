@@ -26,7 +26,7 @@ final class Renderer: @unchecked Sendable {
         return await withCheckedContinuation { cont in
             queue.async {
                 guard self.current(channel) == gen else { cont.resume(returning: nil); return }
-                guard let base = self.base(url, maxSide: maxSide) else { cont.resume(returning: nil); return }
+                guard let base = self.base(url, maxSide: maxSide, raw: adj.raw) else { cont.resume(returning: nil); return }
                 let cube = adj.profile == .camera ? CameraMatch.shared.cube(for: url) : nil
                 let out = EditPipeline.apply(adj, to: base, cameraCube: cube, asShotK: ImageStore.shared.asShotK(url))
                 let cg = self.context.createCGImage(out, from: out.extent.integral, format: .RGBA8,
@@ -43,8 +43,8 @@ final class Renderer: @unchecked Sendable {
         return await withCheckedContinuation { cont in
             queue.async {
                 guard self.current(channel) == gen, pixels.width >= 1, pixels.height >= 1, region.width > 0 else { cont.resume(returning: nil); return }
-                guard var base = self.base(url, maxSide: 3200) else { cont.resume(returning: nil); return }
-                if pixels.width / region.width > base.extent.width * adj.cropW * 1.05, let full = self.base(url, maxSide: nil) { base = full }
+                guard var base = self.base(url, maxSide: 3200, raw: adj.raw) else { cont.resume(returning: nil); return }
+                if pixels.width / region.width > base.extent.width * adj.cropW * 1.05, let full = self.base(url, maxSide: nil, raw: adj.raw) { base = full }
                 guard self.current(channel) == gen else { cont.resume(returning: nil); return }
                 let cube = adj.profile == .camera ? CameraMatch.shared.cube(for: url) : nil
                 let out = EditPipeline.apply(adj, to: base, cameraCube: cube, asShotK: ImageStore.shared.asShotK(url))
@@ -115,10 +115,11 @@ final class Renderer: @unchecked Sendable {
         return generation[channel] ?? 0
     }
 
-    private func base(_ url: URL, maxSide: CGFloat?) -> CIImage? {
-        let key = "\(url.path)|\(maxSide.map { Int($0) } ?? 0)"
+    private func base(_ url: URL, maxSide: CGFloat?, raw: RawDevelop = RawDevelop()) -> CIImage? {
+        // The size goes last: full-size bases are found by the "|0" suffix.
+        let key = "\(url.path)|\(raw.isDefault ? "" : String(describing: raw))|\(maxSide.map { Int($0) } ?? 0)"
         if let b = bases[key] { return b }
-        guard let src = EditPipeline.source(url, maxSide: maxSide) else { return nil }
+        guard let src = EditPipeline.source(url, maxSide: maxSide, raw: raw) else { return nil }
         let b = src.insertingIntermediate(cache: true)
         // Only one full-size base (50 MP ≈ 400 MB); the rest are up to 4 downscaled ones.
         if maxSide == nil {

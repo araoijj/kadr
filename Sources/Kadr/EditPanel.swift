@@ -142,6 +142,12 @@ struct EditPanel: View {
                 slider(tr("Виньетка"), "circle.dashed", \.vignette, p, gradient: [.black, .gray, .white])
                 slider(tr("Зерно"), "circle.grid.3x3", \.grain, p, range: 0...100)
             }
+            section(tr("Проявка и детали"), .detail, p) {
+                if let d = ImageStore.shared.rawDefaults(p.url) {
+                    rawControls(p, d)
+                }
+                slider(tr("Резкость"), "righttriangle", \.sharpen, p, range: 0...100)
+            }
         }
     }
 
@@ -413,6 +419,45 @@ struct EditPanel: View {
         }
     }
 
+    /// Settings of the macOS RAW engine. They need the RAW to be developed again (~0.2–0.5 s),
+    /// so the sliders apply on release instead of on every move.
+    @ViewBuilder
+    private func rawControls(_ p: Photo, _ d: RawDevelop.Defaults) -> some View {
+        let set: (WritableKeyPath<RawDevelop, Double?>, Double?) -> Void = { key, v in
+            var a = p.adj
+            a.raw[keyPath: key] = v
+            lib.setAdjustments(a)
+        }
+        if d.nrSupported {
+            EngineSlider(title: tr("Шум: яркость"), icon: "aqi.low", value: p.adj.raw.lumaNR, defaultValue: d.lumaNR) { set(\.lumaNR, $0) }
+            EngineSlider(title: tr("Шум: цвет"), icon: "aqi.medium", value: p.adj.raw.colorNR, defaultValue: d.colorNR) { set(\.colorNR, $0) }
+        }
+        if d.detailSupported {
+            EngineSlider(title: tr("Детализация"), icon: "circle.grid.cross", value: p.adj.raw.detail, defaultValue: d.detail) { set(\.detail, $0) }
+        }
+        if d.moireSupported {
+            EngineSlider(title: tr("Муар"), icon: "water.waves", value: p.adj.raw.moire, defaultValue: d.moire) { set(\.moire, $0) }
+        }
+        EngineSlider(title: tr("Кривая движка"), icon: "point.topleft.down.to.point.bottomright.curvepath", value: p.adj.raw.curve, defaultValue: d.curve) { set(\.curve, $0) }
+            .help(tr("Сила стандартной тональной кривой macOS. Меньше — мягче контраст и больше запаса в светах и тенях, удобно тянуть дальше «Светом»."))
+        EngineSlider(title: tr("Подъём теней"), icon: "moon.haze", value: p.adj.raw.shadowLift, defaultValue: d.shadowLift, range: 0...200) { set(\.shadowLift, $0) }
+            .disabled((p.adj.raw.curve ?? d.curve) == 0)
+        if d.lensSupported {
+            Toggle(tr("Коррекция объектива"), isOn: Binding(get: { p.adj.raw.lens ?? d.lens }, set: { v in
+                var a = p.adj; a.raw.lens = v == d.lens ? nil : v; lib.setAdjustments(a)
+            }))
+            .help(tr("Дисторсия и виньетирование по данным объектива из файла"))
+        }
+        if d.highlightRecoverySupported {
+            Toggle(tr("Восстановление светов"), isOn: Binding(get: { p.adj.raw.highlightRecovery ?? d.highlightRecovery }, set: { v in
+                var a = p.adj; a.raw.highlightRecovery = v == d.highlightRecovery ? nil : v; lib.setAdjustments(a)
+            }))
+            .help(tr("Достраивает пересвеченные участки по уцелевшим каналам"))
+        }
+        Text(tr("Настройки проявки RAW применяются, когда отпускаете ползунок."))
+            .font(.caption).foregroundStyle(.secondary)
+    }
+
     /// White balance in kelvins, as in Lightroom and Capture One. The starting point is "as shot" from the RAW.
     private func kelvinSlider(_ p: Photo) -> some View {
         let asShot = ImageStore.shared.asShotK(p.url)
@@ -589,5 +634,40 @@ struct LUTPeek: View {
                     saved = nil
                 })
             .help(tr("Зажмите — без LUT"))
+    }
+}
+
+/// Slider for a RAW engine setting: shows the value live while dragging and applies it on release
+/// (each change develops the RAW again). nil is the engine's default for this file.
+struct EngineSlider: View {
+    let title: String
+    let icon: String
+    let value: Double?
+    let defaultValue: Double
+    var range: ClosedRange<Double> = 0...100
+    let commit: (Double?) -> Void
+    @State private var live: Double?
+
+    var body: some View {
+        let v = live ?? value ?? defaultValue
+        let changed = value != nil
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: icon).frame(width: 18).foregroundStyle(changed ? Color.accentColor : .secondary)
+                Text(title).foregroundStyle(changed ? .primary : .secondary)
+                    .onTapGesture(count: 2) { commit(nil) }
+                Spacer()
+                Text("\(Int(v.rounded()))").font(.callout.monospacedDigit().weight(changed ? .semibold : .regular))
+                    .foregroundStyle(changed ? .primary : .secondary)
+                Button { commit(nil) } label: { Image(systemName: "arrow.uturn.backward.circle.fill") }
+                    .buttonStyle(.plain).foregroundStyle(.secondary).opacity(changed ? 1 : 0).disabled(!changed)
+                    .help(tr("Как у движка по умолчанию: \(Int(defaultValue.rounded()))"))
+            }
+            Slider(value: Binding(get: { v }, set: { live = $0.rounded() }), in: range) { editing in
+                guard !editing, let l = live else { return }
+                live = nil
+                commit(l == defaultValue.rounded() ? nil : l)
+            }
+        }
     }
 }

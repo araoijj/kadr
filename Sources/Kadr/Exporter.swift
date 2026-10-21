@@ -215,9 +215,9 @@ enum Exporter {
             let need: CGFloat = s.preset == .web ? 2560 : 1920
             maxSide = need / CGFloat(max(min(item.adj.cropW, item.adj.cropH), 0.2)) * 1.2
         }
-        guard var img = EditPipeline.source(item.url, maxSide: maxSide) else { return false }
         // Even without edits, use the in-camera profile so colors match the preview.
         let adj = s.applyEdits ? item.adj : Adjustments()
+        guard var img = EditPipeline.source(item.url, maxSide: maxSide, raw: adj.raw) else { return false }
         img = EditPipeline.apply(adj, to: img, cameraCube: adj.profile == .camera ? CameraMatch.shared.cube(for: item.url) : nil,
                                  asShotK: ImageStore.shared.asShotK(item.url))
         img = fitToPreset(img, s, userCropped: adj.hasCrop)

@@ -29,6 +29,8 @@ struct Adjustments: Codable, Equatable, Hashable {
     var grain: Double = 0         // 0…100
     var lut: String?              // path inside the LUT folder (.cube or HaldCLUT .png)
     var lutAmount: Double = 100   // 0…200: above 100 amplifies the LUT effect
+    var sharpen: Double = 0       // 0…100: output sharpening (ours: the engine's own works only at full size)
+    var raw = RawDevelop()        // settings of the macOS RAW engine itself
 
     // Crop: a rectangle in frame fractions (y from top to bottom) plus horizon straightening, in degrees.
     var cropX: Double = 0
@@ -89,12 +91,82 @@ extension Adjustments {
         cropX = v(.cropX) ?? 0; cropY = v(.cropY) ?? 0; cropW = v(.cropW) ?? 1; cropH = v(.cropH) ?? 1
         angle = v(.angle) ?? 0
         cropAspect = try? c.decodeIfPresent(String.self, forKey: .cropAspect)
+        sharpen = v(.sharpen) ?? 0
+        raw = (try? c.decodeIfPresent(RawDevelop.self, forKey: .raw)) ?? RawDevelop()
+    }
+}
+
+/// Settings of the macOS RAW engine (CIRAWFilter), applied while the RAW is developed. nil means the engine's
+/// own default for that file, so frames edited before these settings existed develop exactly as before.
+/// Values are in slider units; `apply` converts them to the engine's.
+struct RawDevelop: Codable, Hashable {
+    var lumaNR: Double?            // 0…100 → luminanceNoiseReductionAmount 0…1
+    var colorNR: Double?           // 0…100 → colorNoiseReductionAmount 0…1
+    var detail: Double?            // 0…100 → detailAmount 0…3
+    var moire: Double?             // 0…100 → moireReductionAmount 0…1
+    var curve: Double?             // 0…100 → boostAmount 0…1: strength of the engine's global tone curve
+    var shadowLift: Double?        // 0…200 → boostShadowAmount 0…2
+    var lens: Bool?                // lens correction from the file's metadata
+    var highlightRecovery: Bool?   // macOS 26+
+
+    var isDefault: Bool { self == RawDevelop() }
+
+    /// What the engine uses for this file when nothing is set, in slider units.
+    struct Defaults: Equatable {
+        var lumaNR = 0.0, colorNR = 50.0, detail = 0.0, moire = 0.0, curve = 100.0, shadowLift = 100.0
+        var lens = false, highlightRecovery = false
+        var lensSupported = false, highlightRecoverySupported = false, nrSupported = false, detailSupported = false, moireSupported = false
+    }
+
+    static func defaults(_ f: CIRAWFilter) -> Defaults {
+        var d = Defaults()
+        d.lumaNR = Double(f.luminanceNoiseReductionAmount) * 100
+        d.colorNR = Double(f.colorNoiseReductionAmount) * 100
+        d.detail = Double(f.detailAmount) / 3 * 100
+        d.moire = Double(f.moireReductionAmount) * 100
+        d.curve = Double(f.boostAmount) * 100
+        d.shadowLift = Double(f.boostShadowAmount) * 100
+        d.lensSupported = f.isLensCorrectionSupported
+        d.lens = f.isLensCorrectionEnabled
+        d.nrSupported = f.isLuminanceNoiseReductionSupported
+        d.detailSupported = f.isDetailSupported
+        d.moireSupported = f.isMoireReductionSupported
+        if #available(macOS 26.0, *) {
+            d.highlightRecoverySupported = f.isHighlightRecoverySupported
+            d.highlightRecovery = f.isHighlightRecoveryEnabled
+        }
+        return d
+    }
+
+    func apply(to f: CIRAWFilter) {
+        if let v = lumaNR, f.isLuminanceNoiseReductionSupported { f.luminanceNoiseReductionAmount = Float(v / 100) }
+        if let v = colorNR, f.isColorNoiseReductionSupported { f.colorNoiseReductionAmount = Float(v / 100) }
+        if let v = detail, f.isDetailSupported { f.detailAmount = Float(v / 100 * 3) }
+        if let v = moire, f.isMoireReductionSupported { f.moireReductionAmount = Float(v / 100) }
+        if let v = curve { f.boostAmount = Float(v / 100) }
+        if let v = shadowLift { f.boostShadowAmount = Float(v / 100) }
+        if let v = lens, f.isLensCorrectionSupported { f.isLensCorrectionEnabled = v }
+        if #available(macOS 26.0, *), let v = highlightRecovery, f.isHighlightRecoverySupported { f.isHighlightRecoveryEnabled = v }
+    }
+
+    /// Carries only what changed between `old` and `new` (multi-photo editing, paste of changes).
+    func syncing(from old: RawDevelop, to new: RawDevelop) -> RawDevelop {
+        var r = self
+        if old.lumaNR != new.lumaNR { r.lumaNR = new.lumaNR }
+        if old.colorNR != new.colorNR { r.colorNR = new.colorNR }
+        if old.detail != new.detail { r.detail = new.detail }
+        if old.moire != new.moire { r.moire = new.moire }
+        if old.curve != new.curve { r.curve = new.curve }
+        if old.shadowLift != new.shadowLift { r.shadowLift = new.shadowLift }
+        if old.lens != new.lens { r.lens = new.lens }
+        if old.highlightRecovery != new.highlightRecovery { r.highlightRecovery = new.highlightRecovery }
+        return r
     }
 }
 
 /// Settings groups, as in Lightroom's "New Preset" window: a style can store only some of them.
 enum StyleGroup: String, Codable, CaseIterable, Identifiable {
-    case profile, light, color, toning, effects, lut
+    case profile, light, color, toning, effects, lut, detail
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -104,6 +176,7 @@ enum StyleGroup: String, Codable, CaseIterable, Identifiable {
         case .toning: tr("Тонирование")
         case .effects: tr("Эффекты")
         case .lut: "LUT"
+        case .detail: tr("Проявка и детали")
         }
     }
 }
@@ -111,7 +184,7 @@ enum StyleGroup: String, Codable, CaseIterable, Identifiable {
 extension Adjustments {
     private static let syncedNumbers: [WritableKeyPath<Adjustments, Double>] = [
         \.exposure, \.tint, \.contrast, \.highlights, \.shadows, \.fade, \.clarity, \.vibrance, \.saturation,
-        \.shadowHue, \.shadowSat, \.highlightHue, \.highlightSat, \.vignette, \.grain, \.lutAmount,
+        \.shadowHue, \.shadowSat, \.highlightHue, \.highlightSat, \.vignette, \.grain, \.lutAmount, \.sharpen,
     ]
 
     /// Applies what changed between `old` and `new` (on another photo) to this photo: changed settings take
@@ -121,6 +194,7 @@ extension Adjustments {
         for kp in Self.syncedNumbers where old[keyPath: kp] != new[keyPath: kp] { r[keyPath: kp] = new[keyPath: kp] }
         if old.profile != new.profile { r.profile = new.profile }
         if old.lut != new.lut { r.lut = new.lut }
+        if old.raw != new.raw { r.raw = r.raw.syncing(from: old.raw, to: new.raw) }
         if old.wbShift != new.wbShift, let srcK {
             r.wbShift = ((srcK + new.wbShift - ImageStore.shared.asShotK(target)) / 10).rounded() * 10
         }
@@ -137,6 +211,7 @@ extension Adjustments {
             case .toning: shadowHue = s.shadowHue; shadowSat = s.shadowSat; highlightHue = s.highlightHue; highlightSat = s.highlightSat
             case .effects: vignette = s.vignette; grain = s.grain
             case .lut: lut = s.lut; lutAmount = s.lutAmount
+            case .detail: raw = s.raw; sharpen = s.sharpen
             }
         }
     }
@@ -536,6 +611,14 @@ enum EditPipeline {
         if a.shadowSat > 0 { img = tone(img, hue: a.shadowHue, sat: a.shadowSat, shadows: true) }
         if a.highlightSat > 0 { img = tone(img, hue: a.highlightHue, sat: a.highlightSat, shadows: false) }
 
+        // 6½. Sharpening of luminance only (no color fringes). The radius grows with the frame size,
+        // so the preview and a full-size export look alike.
+        if a.sharpen > 0 {
+            img = img.applyingFilter("CISharpenLuminance", parameters: [
+                "inputSharpness": a.sharpen / 100 * 2, kCIInputRadiusKey: max(1, longSide / 4000),
+            ]).cropped(to: e)
+        }
+
         // 7. Vignette: smooth falloff from 30% to the edges; at −100 the corners are nearly black, at +100 nearly white.
         if a.vignette != 0 {
             img = vignetteKernel.apply(extent: e, roiCallback: { _, r in r }, arguments: [
@@ -571,8 +654,9 @@ enum EditPipeline {
     /// The source as a linear CIImage. maxSide downscales during development (faster); nil means full size.
     /// For RAW we replicate the camera crop: if the camera JPEG has a different aspect ratio (e.g. shot in 4:3),
     /// we center-crop the same way; otherwise extra edges would appear in the frame after the first edit.
-    static func source(_ url: URL, maxSide: CGFloat?) -> CIImage? {
+    static func source(_ url: URL, maxSide: CGFloat?, raw develop: RawDevelop = RawDevelop()) -> CIImage? {
         if ImageStore.rawExtensions.contains(url.pathExtension.lowercased()), let raw = CIRAWFilter(imageURL: url) {
+            develop.apply(to: raw)
             if let maxSide {
                 let n = raw.nativeSize
                 let k = maxSide / max(n.width, n.height)

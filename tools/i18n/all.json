@@ -4253,5 +4253,75 @@
   "Skip This Version",
   "Omitir esta versión",
   "Salta questa versione"
+ ],
+ "Проявка и детали": [
+  "Development & Detail",
+  "Revelado y detalle",
+  "Sviluppo e dettaglio"
+ ],
+ "Шум: яркость": [
+  "Noise: Luminance",
+  "Ruido: luminancia",
+  "Rumore: luminanza"
+ ],
+ "Шум: цвет": [
+  "Noise: Color",
+  "Ruido: color",
+  "Rumore: colore"
+ ],
+ "Детализация": [
+  "Detail",
+  "Detalle",
+  "Dettaglio"
+ ],
+ "Муар": [
+  "Moiré",
+  "Muaré",
+  "Moiré"
+ ],
+ "Кривая движка": [
+  "Engine Curve",
+  "Curva del motor",
+  "Curva del motore"
+ ],
+ "Сила стандартной тональной кривой macOS. Меньше — мягче контраст и больше запаса в светах и тенях, удобно тянуть дальше «Светом».": [
+  "Strength of the standard macOS tone curve. Lower gives softer contrast and more room in highlights and shadows to work with in Light.",
+  "Intensidad de la curva tonal estándar de macOS. Menos da un contraste más suave y más margen en luces y sombras para ajustar en «Luz».",
+  "Intensità della curva tonale standard di macOS. Meno dà un contrasto più morbido e più margine in luci e ombre da regolare in «Luce»."
+ ],
+ "Подъём теней": [
+  "Shadow Lift",
+  "Elevar sombras",
+  "Solleva ombre"
+ ],
+ "Коррекция объектива": [
+  "Lens Correction",
+  "Corrección de objetivo",
+  "Correzione obiettivo"
+ ],
+ "Дисторсия и виньетирование по данным объектива из файла": [
+  "Distortion and vignetting from the lens data in the file",
+  "Distorsión y viñeteo según los datos del objetivo en el archivo",
+  "Distorsione e vignettatura dai dati dell’obiettivo nel file"
+ ],
+ "Восстановление светов": [
+  "Highlight Recovery",
+  "Recuperación de luces",
+  "Recupero luci"
+ ],
+ "Достраивает пересвеченные участки по уцелевшим каналам": [
+  "Rebuilds clipped areas from the channels that survived",
+  "Reconstruye las zonas quemadas a partir de los canales intactos",
+  "Ricostruisce le zone bruciate dai canali rimasti intatti"
+ ],
+ "Настройки проявки RAW применяются, когда отпускаете ползунок.": [
+  "RAW development settings apply when you release the slider.",
+  "Los ajustes de revelado RAW se aplican al soltar el control.",
+  "Le impostazioni di sviluppo RAW si applicano quando rilasci il cursore."
+ ],
+ "Как у движка по умолчанию: {}": [
+  "Engine default: {}",
+  "Valor por defecto del motor: {}",
+  "Predefinito del motore: {}"
  ]
 }
