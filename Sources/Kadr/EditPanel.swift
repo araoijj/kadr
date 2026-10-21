@@ -205,6 +205,7 @@ struct EditPanel: View {
                 slider(tr("Зерно"), "circle.grid.3x3", \.grain, p, range: 0...100)
             }
             section(tr("Проявка и детали"), .detail, p) {
+                DetailPreview(photo: p)
                 if let d = ImageStore.shared.rawDefaults(p.url) {
                     rawControls(p, d)
                 }
@@ -523,7 +524,7 @@ struct EditPanel: View {
             }))
             .help(tr("Достраивает пересвеченные участки по уцелевшим каналам"))
         }
-        Text(tr("Настройки проявки RAW применяются, когда отпускаете ползунок."))
+        Text(tr("Шум, детализация, муар и резкость видны только в масштабе 1:1 — в окошке выше (его можно двигать) или с зумом 100% (Z). Ползунки проявки применяются, когда отпускаете их."))
             .font(.caption).foregroundStyle(.secondary)
     }
 
@@ -738,5 +739,65 @@ struct EngineSlider: View {
                 commit(l == defaultValue.rounded() ? nil : l)
             }
         }
+    }
+}
+
+/// A 1:1 window for noise, detail and sharpening, as in Lightroom's Detail panel: in a frame that fits
+/// the screen they are scaled away. Drag to look at another part of the frame.
+struct DetailPreview: View {
+    let photo: Photo
+    @Environment(Library.self) private var lib
+    @State private var center = CGPoint(x: 0.5, y: 0.5)   // frame fractions, y top-down
+    @State private var dragStart: CGPoint?
+    @State private var image: CGImage?
+    @State private var busy = false
+    private let height: CGFloat = 170
+
+    private struct Key: Hashable {
+        let url: URL, adj: Adjustments, x: Double, y: Double, w: Double, h: Double, pw: Double, ph: Double
+    }
+
+    var body: some View {
+        GeometryReader { g in
+            let scale = NSScreen.main?.backingScaleFactor ?? 2
+            let px = CGSize(width: (g.size.width * scale).rounded(), height: (height * scale).rounded())
+            let full = lib.pixelSize(photo)
+            let iw = max(1, full.width * photo.adj.cropW), ih = max(1, full.height * photo.adj.cropH)
+            let rw = min(1, px.width / iw), rh = min(1, px.height / ih)
+            let rx = min(max(center.x - rw / 2, 0), 1 - rw), ry = min(max(center.y - rh / 2, 0), 1 - rh)
+            ZStack(alignment: .topLeading) {
+                Color.black.opacity(0.35)
+                if let image {
+                    Image(decorative: image, scale: scale).interpolation(.none)
+                }
+                Text("1:1").font(.caption2.weight(.bold)).padding(.horizontal, 5).padding(.vertical, 2)
+                    .background(.black.opacity(0.6), in: Capsule()).padding(6)
+                if busy { ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity) }
+            }
+            .frame(width: g.size.width, height: height)
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 1)
+                .onChanged { v in
+                    let s = dragStart ?? CGPoint(x: rx + rw / 2, y: ry + rh / 2)
+                    if dragStart == nil { dragStart = s }
+                    center = CGPoint(x: s.x - v.translation.width * scale / iw, y: s.y - v.translation.height * scale / ih)
+                }
+                .onEnded { _ in
+                    dragStart = nil
+                    center = CGPoint(x: rx + rw / 2, y: ry + rh / 2)
+                })
+            .help(tr("Фрагмент в масштабе 1:1. Тяните, чтобы посмотреть другую часть кадра."))
+            .task(id: Key(url: photo.url, adj: photo.adj, x: rx, y: ry, w: rw, h: rh, pw: px.width, ph: px.height)) {
+                busy = true
+                if let r = await Renderer.shared.renderRegion(photo.url, photo.adj, region: CGRect(x: rx, y: ry, width: rw, height: rh),
+                                                              pixels: px, channel: "detail") {
+                    image = r
+                }
+                busy = false
+            }
+        }
+        .frame(height: height)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .onChange(of: photo.url) { center = CGPoint(x: 0.5, y: 0.5); image = nil }
     }
 }

@@ -4774,14 +4774,19 @@
   "Reconstruye las zonas quemadas a partir de los canales intactos",
   "Ricostruisce le zone bruciate dai canali rimasti intatti"
  ],
- "Настройки проявки RAW применяются, когда отпускаете ползунок.": [
-  "RAW development settings apply when you release the slider.",
-  "Los ajustes de revelado RAW se aplican al soltar el control.",
-  "Le impostazioni di sviluppo RAW si applicano quando rilasci il cursore."
- ],
  "Как у движка по умолчанию: {}": [
   "Engine default: {}",
   "Valor por defecto del motor: {}",
   "Predefinito del motore: {}"
+ ],
+ "Шум, детализация, муар и резкость видны только в масштабе 1:1 — в окошке выше (его можно двигать) или с зумом 100% (Z). Ползунки проявки применяются, когда отпускаете их.": [
+  "Noise, detail, moiré and sharpening show only at 1:1 — in the window above (drag it) or at 100% zoom (Z). Development sliders apply when you release them.",
+  "El ruido, el detalle, el muaré y la nitidez solo se ven a 1:1: en la ventana de arriba (se puede arrastrar) o con zoom al 100% (Z). Los controles de revelado se aplican al soltarlos.",
+  "Rumore, dettaglio, moiré e nitidezza si vedono solo a 1:1: nella finestra qui sopra (si può trascinare) o con zoom al 100% (Z). I cursori di sviluppo si applicano al rilascio."
+ ],
+ "Фрагмент в масштабе 1:1. Тяните, чтобы посмотреть другую часть кадра.": [
+  "A 1:1 crop. Drag to look at another part of the photo.",
+  "Un recorte a 1:1. Arrastra para ver otra parte de la foto.",
+  "Un ritaglio a 1:1. Trascina per vedere un’altra parte della foto."
  ]
 }
