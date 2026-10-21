@@ -11,6 +11,7 @@ enum PhotoFilter: Hashable {
     case suspects, undecided, leaders, smiling, recommended
     case reason(CullReason)
     case scene(Int)
+    case series(Int)      // one burst, from the badge on a photo
 
     var title: String {
         switch self {
@@ -29,6 +30,7 @@ enum PhotoFilter: Hashable {
         case .scene(let id): tr("Сцена \(id)")
         case .smiling: tr("Улыбаются")
         case .recommended: tr("Лучшие кадры")
+        case .series: tr("Одна серия")
         }
     }
 
@@ -49,6 +51,7 @@ enum PhotoFilter: Hashable {
         case .scene: "film.stack"
         case .smiling: "face.smiling"
         case .recommended: "star.circle"
+        case .series: "square.stack.3d.up"
         }
     }
 }
@@ -511,7 +514,9 @@ final class Library {
     var compareZoomBase: CGFloat = 1
     var compareZoom100: CGFloat = 4
     var compareCenter = CGPoint(x: 0.5, y: 0.5)
+    static let compareMax = 8
     var compareKeep: Set<URL> = []                 // frames marked to keep (checkmark, P, space)
+    var compareReject: Set<URL> = []               // frames marked as rejects (cross, X)
 
     var comparePhotos: [Photo] { compareIDs.compactMap { index[$0].map { photos[$0] } } }
 
@@ -523,19 +528,21 @@ final class Library {
         var ids: [URL]
         if multiSelected {
             ids = targets.map(\.id)
-            if ids.count > 4 { flash(tr("Сравниваю первые 4 из \(ids.count)")) }
+            if ids.count > Self.compareMax { flash(tr("Сравниваю первые \(Self.compareMax) из \(ids.count)")) }
         } else if let p = current, p.seriesID != nil {
             let s = series(of: p).map(\.id)
             let i = s.firstIndex(of: p.id) ?? 0
-            ids = Array(s[max(0, min(i, s.count - 4))...])
+            ids = Array(s[max(0, min(i, s.count - Self.compareMax))...])
+            if s.count > Self.compareMax { flash(tr("В серии \(s.count) кадров — показаны \(Self.compareMax), начиная с текущего")) }
         } else {
-            flash(tr("Выделите 2–4 кадра: ⌘-клик или рамкой"))
+            flash(tr("Выделите 2–8 кадров: ⌘-клик или рамкой"))
             return
         }
-        ids = Array(ids.prefix(4))
-        guard ids.count >= 2 else { flash(tr("Выделите 2–4 кадра: ⌘-клик или рамкой")); return }
+        ids = Array(ids.prefix(Self.compareMax))
+        guard ids.count >= 2 else { flash(tr("Выделите 2–8 кадров: ⌘-клик или рамкой")); return }
         compareIDs = ids
         compareKeep = []
+        compareReject = []
         let focusID = ids.contains(currentID ?? ids[0]) ? (currentID ?? ids[0]) : ids[0]
         focus(focusID)
         compareZoom = 1
@@ -547,6 +554,8 @@ final class Library {
 
     func stopCompare() {
         comparing = false
+        compareKeep = []
+        compareReject = []
         compareZoom = 1
         compareZoomBase = 1
     }
@@ -566,10 +575,16 @@ final class Library {
         compareZoomBase = compareZoom
     }
 
-    /// Mark or unmark a compared frame to keep; nil means the focused one.
+    /// Mark or unmark a compared frame to keep; nil means the focused one. A keep mark clears a reject mark.
     func toggleCompareKeep(_ id: URL? = nil) {
         guard let id = id ?? currentID, compareIDs.contains(id) else { return }
-        if compareKeep.contains(id) { compareKeep.remove(id) } else { compareKeep.insert(id) }
+        if compareKeep.contains(id) { compareKeep.remove(id) } else { compareKeep.insert(id); compareReject.remove(id) }
+    }
+
+    /// Mark or unmark a compared frame as a reject (the explicit "no"); clears a keep mark.
+    func toggleCompareReject(_ id: URL? = nil) {
+        guard let id = id ?? currentID, compareIDs.contains(id) else { return }
+        if compareReject.contains(id) { compareReject.remove(id) } else { compareReject.insert(id); compareKeep.remove(id) }
     }
 
     /// The frames that "Keep" applies to: the marked ones, or the focused one when nothing is marked.
@@ -579,28 +594,36 @@ final class Library {
         return currentID.map { [$0] } ?? []
     }
 
-    /// Keep the marked frames (★ if unrated) and reject the other compared ones. One undo step.
+    /// With ✗ marks the unmarked frames are left alone; with ✓ marks only, everything unmarked is a reject.
+    var compareHasExplicitRejects: Bool { compareIDs.contains { compareReject.contains($0) } }
+
+    /// Apply the marks. ✓ → ★ (if unrated) and not rejected. ✗ → rejected. Unmarked: rejected when the
+    /// marks are ✓ only (the quick "keep these, drop the rest"), untouched when there are ✗ marks.
+    /// Nothing marked: the focused frame is kept, the rest rejected. One undo step.
     func rejectOthersInCompare() {
-        let keep = Set(compareKeeping)
-        guard !keep.isEmpty else { return }
+        let explicit = compareHasExplicitRejects
+        let keep = Set(explicit ? compareIDs.filter { compareKeep.contains($0) } : compareKeeping)
+        let drop = Set(explicit ? compareIDs.filter { compareReject.contains($0) } : compareIDs.filter { !keep.contains($0) })
+        guard !keep.isEmpty || !drop.isEmpty else { return }
         let before = snapshot(compareIDs)
-        var n = 0
         for id in compareIDs {
             guard let i = index[id] else { continue }
             if keep.contains(id) {
                 photos[i].rejected = false
                 if photos[i].rating == 0 { photos[i].rating = 1 }
-            } else {
+            } else if drop.contains(id) {
                 photos[i].rejected = true
-                n += 1
+            } else {
+                continue
             }
             writeSidecar(i)
         }
         let what = keep.count == 1 ? keep.first!.lastPathComponent : tr("\(keep.count) кадра")
-        record(tr("Оставлено: \(what)"), before: before)
+        record(keep.isEmpty ? tr("Отклонено в сравнении: \(drop.count)") : tr("Оставлено: \(what)"), before: before)
         compareKeep = []
+        compareReject = []
         stopCompare()
-        flash(tr("Оставлено: \(what), отклонено: \(n)"))
+        flash(keep.isEmpty ? tr("Отклонено: \(drop.count)") : tr("Оставлено: \(what), отклонено: \(drop.count)"))
     }
 
     var sortKey: SortKey = SortKey(rawValue: UserDefaults.standard.string(forKey: "sortKey") ?? "") ?? .date {
@@ -726,6 +749,7 @@ final class Library {
         case .leaders: !p.rejected && (p.seriesID == nil || p.isBestInSeries) && p.duplicateOf == nil
         case .reason(let r): verdict(p).reasons.contains(r)
         case .scene(let id): p.sceneID == id
+        case .series(let id): p.seriesID == id
         case .recommended: isRecommended(p)
         case .smiling: aiEnabled.contains(.faces) && !p.rejected && (p.cull?.faces.contains { $0.meshUsable && ($0.smile ?? 0) >= 0.6 } ?? false)
         }
@@ -1164,6 +1188,14 @@ final class Library {
     func selectSeries() {
         guard let p = current, p.seriesID != nil else { return }
         selection = Set(series(of: p).map(\.id))
+    }
+
+    /// Only this burst in the grid and the filmstrip; the filter bar shows "Одна серия" with a way back.
+    func showSeries(of p: Photo) {
+        guard let id = p.seriesID else { return }
+        filter = .series(id)
+        lensFilter = nil; dayFilter = nil; tagFilter = nil
+        select(p)
     }
 
     // MARK: - Ratings (applied to all selected)

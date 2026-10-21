@@ -99,6 +99,8 @@ struct KadrApp: App {
                 Button(tr("Выделить всё")) { library.selectAll() }
                 Button(tr("Выделить серию")) { library.selectSeries() }
                     .keyboardShortcut("a", modifiers: [.command, .shift])
+                Button(tr("Показать только серию этого кадра")) { if let p = library.current { library.showSeries(of: p) } }
+                    .disabled(library.current?.seriesID == nil)
                 Divider()
                 if library.aiRunning {
                     Button(tr("Остановить AI-анализ")) { library.stopAI() }
@@ -162,6 +164,7 @@ struct KeyHandler {
             }
             switch e.charactersIgnoringModifiers?.lowercased() {
             case "p" where !lib.tournamentActive, "з" where !lib.tournamentActive: lib.toggleCompareKeep(); return true
+            case "x" where !lib.tournamentActive, "ч" where !lib.tournamentActive: lib.toggleCompareReject(); return true
             case "z", "я": lib.toggleCompareZoom(); return true
             case "c", "с": lib.stopCompare(); return true
             default: break

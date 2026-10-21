@@ -72,7 +72,8 @@ struct PhotoContextMenu: ViewModifier {
             Button(n > 1 ? tr("Сравнить (\(min(n, 4)))") : tr("Сравнить кадры серии"), systemImage: "rectangle.split.2x1") { act { lib.startCompare() } }
         }
         if photo.seriesID != nil {
-            Button(tr("Выделить всю серию"), systemImage: "square.stack.3d.up") { act { lib.selectSeries() } }
+            Button(tr("Показать только эту серию"), systemImage: "square.stack.3d.up") { lib.showSeries(of: photo) }
+            Button(tr("Выделить всю серию"), systemImage: "checkmark.square.fill") { act { lib.selectSeries() } }
         }
         if n > 1 || photo.seriesID != nil {
             Button(tr("Турнир: выбрать лучший (T)"), systemImage: "trophy") { act { lib.startTournament() } }
