@@ -82,6 +82,10 @@ struct FilterBar: View {
     private var breadcrumb: some View {
         Menu {
             if let f = lib.folder {
+                // The full name and path, for when the label had to be shortened.
+                Text(FolderBrowser.displayName(f))
+                Text(FolderBrowser.shortPath(f))
+                Divider()
                 ForEach(parents(of: f), id: \.self) { p in
                     Button(FolderBrowser.displayName(p)) { lib.open(p) }
                 }
@@ -89,13 +93,21 @@ struct FilterBar: View {
                 Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([f]) }
             }
         } label: {
-            Label(lib.folder.map(FolderBrowser.displayName) ?? "", systemImage: "folder")
-                .lineLimit(1).truncationMode(.middle)
+            // Shortened in code, not by the layout: the label keeps `.fixedSize()` so ViewThatFits
+            // measures its true width; a layout-truncated label would overflow onto the sort menu.
+            Label(lib.folder.map { Self.shortName(FolderBrowser.displayName($0)) } ?? "", systemImage: "folder")
+                .lineLimit(1)
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .frame(maxWidth: 220, alignment: .leading)
         .help(lib.folder.map { tr("Открыта: \($0.path)") + "\n" + tr("Меню — перейти в папку выше") } ?? "")
+    }
+
+    /// "11160601_1.06.2026_Studio_Photo_kun" → "11160601_1.06…_Photo_kun": the start and the end survive.
+    static func shortName(_ s: String, max: Int = 26) -> String {
+        guard s.count > max else { return s }
+        let head = (max - 1) / 2, tail = max - 1 - head
+        return String(s.prefix(head)) + "…" + String(s.suffix(tail))
     }
 
     private func parents(of u: URL) -> [URL] {
