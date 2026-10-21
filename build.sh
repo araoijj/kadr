@@ -37,8 +37,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleExecutable</key><string>Kadr</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
-  <key>CFBundleShortVersionString</key><string>1.4.1</string>
-  <key>CFBundleVersion</key><string>141</string>
+  <key>CFBundleShortVersionString</key><string>1.4.2</string>
+  <key>CFBundleVersion</key><string>142</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>CFBundleDevelopmentRegion</key><string>ru</string>
