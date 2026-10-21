@@ -13,7 +13,11 @@ struct FilterBar: View {
             ViewThatFits(in: .horizontal) {
                 row(full: true)
                 row(full: false)
-                HStack(spacing: 8) { breadcrumb; Spacer(minLength: 6); decisionsMenu; more; Spacer(minLength: 6); count }
+                HStack(spacing: 8) {
+                    breadcrumb; Spacer(minLength: 6); decisionsMenu; more
+                    if lib.filter == .rejected { rejectedAction(caption: false) }
+                    Spacer(minLength: 6); count
+                }
             }
         }
         .alert(tr("Как зовут?"), isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
@@ -34,11 +38,26 @@ struct FilterBar: View {
             } else {
                 decisions(compact: true); stars; more
             }
+            if lib.filter == .rejected { rejectedAction(caption: full) }
             Spacer(minLength: 6)
             if full { chips }
             if full, !lib.loupe { thumbSize }
             count
         }
+    }
+
+    /// What to do with the rejects once they are reviewed: get them out of the shoot folder.
+    private func rejectedAction(caption: Bool) -> some View {
+        let n = lib.count(.rejected)
+        return Button { lib.moveRejected() } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "folder.badge.minus")
+                if caption { Text(tr("Перенести в «_Отклонённые» (\(n))")).lineLimit(1).fixedSize() }
+            }
+        }
+        .controlSize(.small)
+        .disabled(n == 0)
+        .help(tr("Все отклонённые кадры (\(n)) переедут в подпапку «_Отклонённые» рядом со съёмкой. Файлы не удаляются."))
     }
 
     /// Size of the previews in the grid; it lived in the toolbar, where it ate 110 px of every mode.

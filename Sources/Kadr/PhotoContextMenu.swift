@@ -30,6 +30,7 @@ struct PhotoContextMenu: ViewModifier {
         }
         Button(photo.rejected ? tr("Вернуть") + suffix : tr("Отклонить") + suffix,
                systemImage: photo.rejected ? "arrow.uturn.backward" : "xmark.circle") { act { lib.toggleReject() } }
+        Button(tr("Перенести в «_Отклонённые»") + suffix, systemImage: "folder.badge.minus") { act { lib.moveTargetsToRejectedFolder() } }
 
         Menu(tr("Применить стиль") + suffix) {
             ForEach(lib.styles) { st in
