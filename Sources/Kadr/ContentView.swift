@@ -53,12 +53,8 @@ struct ContentView: View {
             lib.open(isDir.boolValue ? u : u.deletingLastPathComponent())
             return true
         }
+        .background(WindowTweaks())
         .onAppear {
-            // A tab bar saved from an earlier launch is restored even with tabbing off: hide it once.
-            DispatchQueue.main.async {
-                for w in NSApp.windows where w.tabGroup?.isTabBarVisible == true { w.toggleTabBar(nil) }
-                for w in NSApp.windows { w.tabbingMode = .disallowed }
-            }
             Updater.checkAtLaunch()
             // kadr /path/to/folder — open it right away
             if lib.folder == nil, CommandLine.arguments.count > 1 {

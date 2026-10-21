@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Shared chrome, so every mode is built from the same parts:
@@ -61,5 +62,28 @@ struct Toast: View {
             .frame(maxWidth: 520)
             .transition(.opacity)
             .allowsHitTesting(false)
+    }
+}
+
+/// Settings that live on the NSWindow, applied the moment the view lands in one (NSApp.windows is still
+/// empty in onAppear). One window per library: no macOS window tabs — a tab bar restored from an earlier
+/// launch would sit under the toolbar as a wide pill with a useless "+" (new empty window).
+struct WindowTweaks: NSViewRepresentable {
+    func makeNSView(context: Context) -> TweakView { TweakView() }
+    func updateNSView(_ v: TweakView, context: Context) {}
+
+    final class TweakView: NSView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard let w = window else { return }
+            Self.apply(w)
+            // State restoration can bring the tab bar back a moment later.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak w] in w.map(Self.apply) }
+        }
+
+        static func apply(_ w: NSWindow) {
+            w.tabbingMode = .disallowed
+            if w.tabGroup?.isTabBarVisible == true { w.toggleTabBar(nil) }
+        }
     }
 }
