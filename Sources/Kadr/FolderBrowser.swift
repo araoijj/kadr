@@ -9,6 +9,13 @@ final class FolderBrowser {
     var favorites: [URL] = []
     var recent: [URL] = []
     var volumes: [URL] = []
+    /// Folder highlighted in the sidebar tree: one click selects, a double click or "Open" opens it.
+    var selected: URL?
+    /// Photos on each camera card that haven't been imported yet (nil while counting).
+    var newOnCard: [URL: Int] = [:]
+
+    var cards: [URL] { volumes.filter { CardImporter.isCameraCard($0) } }
+    var drives: [URL] { volumes.filter { !CardImporter.isCameraCard($0) } }
     /// Called when a new camera card is connected (has DCIM at the root).
     var onCardMounted: ((URL) -> Void)?
     private var scannedOnce = false
@@ -45,6 +52,13 @@ final class FolderBrowser {
                 let v = try? u.resourceValues(forKeys: Set(keys))
                 return v?.volumeIsRootFileSystem != true && v?.volumeIsBrowsable != false
             }
+        for c in cards where newOnCard[c] == nil {
+            Task {
+                let n = await Task.detached(priority: .utility) { CardImporter.newCount(on: c) }.value
+                newOnCard[c] = n
+            }
+        }
+        newOnCard = newOnCard.filter { volumes.contains($0.key) }
         // Cards already inserted at launch don't trigger the banner; only new connections do.
         if scannedOnce {
             for v in volumes where !before.contains(v) && CardImporter.isCameraCard(v) { onCardMounted?(v) }
@@ -56,6 +70,11 @@ final class FolderBrowser {
         recent.removeAll { $0.standardizedFileURL == u.standardizedFileURL }
         recent.insert(u, at: 0)
         recent = Array(recent.prefix(8))
+        UserDefaults.standard.set(recent.map(\.path), forKey: recentKey)
+    }
+
+    func removeRecent(_ u: URL) {
+        recent.removeAll { $0.standardizedFileURL == u.standardizedFileURL }
         UserDefaults.standard.set(recent.map(\.path), forKey: recentKey)
     }
 
@@ -120,25 +139,28 @@ struct FolderRow: View {
 
     private var isCurrent: Bool { lib.folder?.standardizedFileURL == url.standardizedFileURL }
 
+    private var isSelected: Bool { lib.browser.selected?.standardizedFileURL == url.standardizedFileURL }
+
     private var label: some View {
-        Button { lib.open(url) } label: {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .foregroundStyle(isCurrent ? Color.accentColor : .secondary)
-                    .frame(width: 16)
-                Text(title ?? FolderBrowser.displayName(url))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .fontWeight(isCurrent ? .semibold : .regular)
-                Spacer(minLength: 4)
-                if let count, count > 0 {
-                    Text("\(count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                }
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .foregroundStyle(isCurrent ? Color.accentColor : .secondary)
+                .frame(width: 16)
+            Text(title ?? FolderBrowser.displayName(url))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .fontWeight(isCurrent ? .semibold : .regular)
+            Spacer(minLength: 4)
+            if let count, count > 0 {
+                Text("\(count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .help(url.path)
+        .padding(.vertical, 1).padding(.horizontal, 4)
+        .background(isSelected ? Color.accentColor.opacity(0.22) : .clear, in: RoundedRectangle(cornerRadius: 5))
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) { lib.open(url) }
+        .onTapGesture { lib.browser.selected = url }
+        .help(tr("Двойной клик — открыть") + "\n" + url.path)
         .contextMenu {
             Button(tr("Открыть")) { lib.open(url) }
             Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([url]) }

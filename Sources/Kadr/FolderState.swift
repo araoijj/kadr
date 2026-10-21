@@ -7,24 +7,38 @@ struct FolderState: Codable {
     var filter: String?
     var mode: String?          // "grid", "loupe", "cull"
     var date = Date()
+    // Culling progress when the folder was last left, for the sidebar.
+    var total: Int?
+    var kept: Int?
+    var rejected: Int?
+
+    /// Share of photos with a decision (kept or rejected), 0…1.
+    var progress: Double? {
+        guard let total, total > 0 else { return nil }
+        return Double((kept ?? 0) + (rejected ?? 0)) / Double(total)
+    }
 
     private static let key = "folderStates"
+    @MainActor private static var cache: [String: FolderState]?
 
-    static func load(_ folder: URL) -> FolderState? {
+    @MainActor static func load(_ folder: URL) -> FolderState? {
         all()[folder.standardizedFileURL.path]
     }
 
-    static func save(_ s: FolderState, for folder: URL) {
+    @MainActor static func save(_ s: FolderState, for folder: URL) {
         var a = all()
         a[folder.standardizedFileURL.path] = s
         if a.count > 200 {
             for k in a.sorted(by: { $0.value.date < $1.value.date }).prefix(a.count - 200).map(\.key) { a[k] = nil }
         }
+        cache = a
         if let d = try? JSONEncoder().encode(a) { Prefs.d.set(d, forKey: key) }
     }
 
-    private static func all() -> [String: FolderState] {
+    @MainActor private static func all() -> [String: FolderState] {
+        if let cache { return cache }
         guard let d = Prefs.d.data(forKey: key), let a = try? JSONDecoder().decode([String: FolderState].self, from: d) else { return [:] }
+        cache = a
         return a
     }
 }
@@ -70,7 +84,17 @@ extension Library {
     func saveFolderState() {
         guard let folder else { return }
         let mode = culling ? "cull" : loupe ? "loupe" : "grid"
-        FolderState.save(FolderState(current: current?.url.lastPathComponent, filter: filter.code, mode: mode), for: folder)
+        guard !photos.isEmpty else { return }
+        var s = FolderState(current: current?.url.lastPathComponent, filter: filter.code, mode: mode)
+        if loading {
+            // Still reading the folder: keep the counts from last time instead of partial ones.
+            let old = FolderState.load(folder)
+            s.total = old?.total; s.kept = old?.kept; s.rejected = old?.rejected
+        } else {
+            let d = decided
+            s.total = photos.count; s.kept = d.kept; s.rejected = d.rejected
+        }
+        FolderState.save(s, for: folder)
     }
 
     /// Back to the photo, filter and mode you left the folder with.

@@ -473,9 +473,15 @@ final class Library {
 
     // MARK: - Filtering
 
+    /// Rejected photos are hidden in every view except the "Rejected" one (H).
+    var hideRejected = UserDefaults.standard.bool(forKey: "hideRejected") {
+        didSet { UserDefaults.standard.set(hideRejected, forKey: "hideRejected") }
+    }
+
     var visible: [Photo] {
         photos.filter { p in
             matches(p, filter)
+                && (!hideRejected || !p.rejected || filter == .rejected)
                 && (lensFilter == nil || p.lensName == lensFilter)
                 && (dayFilter == nil || p.day == dayFilter)
                 && (tagFilter == nil || !aiEnabled.contains(.tags) || (p.cull?.tags?.contains(tagFilter!) ?? false))

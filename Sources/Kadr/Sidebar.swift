@@ -1,175 +1,49 @@
 import SwiftUI
 
+/// Left panel: where the photos come from. Filters are in the bar above the photos (FilterBar),
+/// so opening a folder and narrowing it down never needs a tab switch.
 struct Sidebar: View {
     @Environment(Library.self) private var lib
-    @AppStorage("sb.folders") private var showFolders = true
-    @AppStorage("sb.shoot") private var showShoot = true
-    @AppStorage("sb.rating") private var showRating = true
-    @AppStorage("sb.color") private var showColor = false
-    @AppStorage("sb.lens") private var showLens = true
-    @AppStorage("sb.days") private var showDays = true
-    @AppStorage("sb.analysis") private var showAnalysis = true
-    @AppStorage("sb.cull") private var showCull = true
-    @AppStorage("sb.scenes") private var showScenes = true
-    @AppStorage("sb.tags") private var showTags = false
-    @AppStorage("sb.tab") private var tab = 0      // 0 = folders, 1 = filters
+    @AppStorage("sb.continue") private var showContinue = true
+    @AppStorage("sb.cards") private var showCards = true
+    @AppStorage("sb.favorites") private var showFavorites = true
+    @AppStorage("sb.drives") private var showDrives = true
 
     var body: some View {
-        // Two tabs so things aren't all piled together: "Folders" (as in Finder) and shooting "Filters".
         VStack(spacing: 0) {
-            Picker("", selection: $tab) {
-                Text(tr("Папки")).tag(0)
-                Text(tr("Фильтры")).tag(1)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            if tab == 0 { folders } else { filters }
-        }
-    }
-
-    private var folders: some View {
-        @Bindable var lib = lib
-        return List {
-            // The open folder at the top, with its subfolders: you can see right away where the photos are.
-            if let f = lib.folder {
-                Section(tr("Открыта")) {
-                    FolderRow(url: f, icon: "folder.fill")
-                    Text(f.deletingLastPathComponent().path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
-                        .font(.caption).foregroundStyle(.secondary).lineLimit(2).truncationMode(.head)
-                        .selectionDisabled()
+            List {
+                Section(tr("Продолжить"), isExpanded: $showContinue) {
+                    if lib.browser.recent.isEmpty {
+                        Text(tr("Здесь появятся папки, которые вы открывали, — с прогрессом отбора."))
+                            .font(.caption).foregroundStyle(.secondary).selectionDisabled()
+                    }
+                    ForEach(lib.browser.recent.prefix(6), id: \.self) { RecentRow(url: $0) }
                 }
-            }
-            Section(tr("Места")) {
-                if !lib.browser.recent.isEmpty {
-                    DisclosureGroup {
-                        ForEach(lib.browser.recent, id: \.self) { FolderRow(url: $0, icon: "clock") }
-                    } label: {
-                        Label(tr("Недавние"), systemImage: "clock.arrow.circlepath").foregroundStyle(.secondary)
+                if !lib.browser.cards.isEmpty {
+                    Section(tr("Карты памяти"), isExpanded: $showCards) {
+                        ForEach(lib.browser.cards, id: \.self) { CardRow(url: $0) }
                     }
                 }
-                ForEach(lib.browser.favorites, id: \.self) { u in
-                    FolderRow(url: u, icon: icon(for: u))
+                Section(tr("Избранное"), isExpanded: $showFavorites) {
+                    ForEach(lib.browser.favorites, id: \.self) { FolderRow(url: $0, icon: icon(for: $0)) }
+                    Button { lib.chooseFolder() } label: {
+                        Label(tr("Другая папка…"), systemImage: "folder.badge.plus").foregroundStyle(Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .selectionDisabled()
                 }
-                ForEach(lib.browser.volumes, id: \.self) { u in
-                    FolderRow(url: u, icon: "sdcard")
+                if !lib.browser.drives.isEmpty {
+                    Section(tr("Диски"), isExpanded: $showDrives) {
+                        ForEach(lib.browser.drives, id: \.self) { FolderRow(url: $0, icon: "externaldrive") }
+                    }
                 }
-                Button {
-                    lib.showImport = true
-                } label: {
-                    Label(tr("Импорт с карты…"), systemImage: "square.and.arrow.down")
-                        .foregroundStyle(Color.accentColor)
-                }
-                .buttonStyle(.plain)
-                .selectionDisabled()
-                Toggle(tr("С вложенными папками"), isOn: $lib.includeSubfolders)
-                    .toggleStyle(.checkbox)
-                    .font(.callout)
-                    .help(tr("Показывать снимки из всех подпапок открытой папки"))
+            }
+            .listStyle(.sidebar)
+            if let s = lib.browser.selected {
+                Divider()
+                SelectedFolderCard(url: s)
             }
         }
-        .listStyle(.sidebar)
-    }
-
-    private var filters: some View {
-        List(selection: Binding(get: { lib.filter }, set: { if let f = $0 { lib.filter = f; lib.move(0) } })) {
-            if lib.folder == nil {
-                Text(tr("Откройте папку на вкладке «Папки»")).font(.callout).foregroundStyle(.secondary).selectionDisabled()
-            } else {
-                Section(tr("Съёмка"), isExpanded: $showShoot) {
-                    row(.all)
-                    row(.undecided)
-                    row(.unrated)
-                    row(.picked)
-                    row(.rejected, tint: Theme.reject)
-                }
-                Section(tr("Оценка"), isExpanded: $showRating) {
-                    ForEach((1...5).reversed(), id: \.self) { n in starRow(n) }
-                }
-                Section(tr("Цвет"), isExpanded: $showColor) {
-                    ForEach(ColorLabel.allCases) { l in row(.label(l), tint: l.color) }
-                }
-                if lib.lenses.count > 1 {
-                    Section(tr("Объективы"), isExpanded: $showLens) {
-                        ForEach(lib.lenses, id: \.name) { l in
-                            toggleRow(l.name, icon: "camera.aperture", count: l.count, on: lib.lensFilter == l.name) {
-                                lib.lensFilter = lib.lensFilter == l.name ? nil : l.name
-                                lib.move(0)
-                            }
-                        }
-                    }
-                }
-                if lib.days.count > 1 {
-                    Section(tr("Даты"), isExpanded: $showDays) {
-                        ForEach(lib.days, id: \.day) { d in
-                            toggleRow(d.day.formatted(.dateTime.day().month(.abbreviated).year().locale(I18n.locale)), icon: "calendar",
-                                      count: d.count, on: lib.dayFilter == d.day) {
-                                lib.dayFilter = lib.dayFilter == d.day ? nil : d.day
-                                lib.move(0)
-                            }
-                        }
-                    }
-                }
-                let tags = lib.aiReady && lib.aiEnabled.contains(.tags) ? Array(lib.tags.prefix(25)) : []
-                if !tags.isEmpty {
-                    Section(tr("Что на снимках"), isExpanded: $showTags) {
-                        ForEach(tags, id: \.id) { t in
-                            toggleRow(TagNames.title(t.id), icon: "tag", count: t.count, on: lib.tagFilter == t.id) {
-                                lib.tagFilter = lib.tagFilter == t.id ? nil : t.id
-                                lib.move(0)
-                            }
-                        }
-                    }
-                }
-                if lib.scenes.count > 1 {
-                    Section(tr("Сцены"), isExpanded: $showScenes) {
-                        ForEach(lib.scenes) { sc in
-                            HStack {
-                                Label(sc.title, systemImage: "film.stack").lineLimit(1)
-                                Spacer()
-                                Text("\(lib.sceneProgress(sc))/\(sc.count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                                    .help(tr("Решено (оставлено или в браке) из всех кадров сцены"))
-                            }
-                            .tag(PhotoFilter.scene(sc.id))
-                        }
-                    }
-                }
-                Section(isExpanded: $showCull) {
-                    if lib.aiOn {
-                        row(.recommended, tint: .green)
-                        row(.suspects, tint: .orange)
-                        row(.leaders, tint: .green)
-                        if lib.count(.smiling) > 0 { row(.smiling, tint: .yellow) }
-                        ForEach(CullReason.allCases.filter { lib.count(.reason($0)) > 0 }) { r in
-                            row(.reason(r), tint: r.isDefect ? .orange : .yellow)
-                        }
-                    } else if lib.aiRunning {
-                        Label(tr("AI-анализ \(lib.aiDone)/\(lib.aiTotal)"), systemImage: "hourglass")
-                            .font(.callout).foregroundStyle(.secondary).selectionDisabled()
-                    } else if lib.aiReady {
-                        Text(tr("Подсказки выключены")).font(.callout).foregroundStyle(.secondary).selectionDisabled()
-                    } else {
-                        Button { lib.startAI() } label: { Label(tr("Запустить AI-анализ"), systemImage: "sparkles") }
-                            .buttonStyle(.plain).foregroundStyle(Color.accentColor)
-                            .disabled(lib.analyzed < lib.photos.count)
-                            .selectionDisabled()
-                    }
-                } header: {
-                    Label(tr("AI-отбор"), systemImage: "sparkles")
-                }
-                Section(tr("Серии и дубли"), isExpanded: $showAnalysis) {
-                    row(.best, tint: Theme.star)
-                    row(.duplicates)
-                    if lib.seriesCount > 0 {
-                        Label(tr("Серий похожих: \(lib.seriesCount)"), systemImage: "square.stack.3d.up")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .selectionDisabled()
-                    }
-                }
-            }
-        }
-        .listStyle(.sidebar)
     }
 
     private func icon(for u: URL) -> String {
@@ -181,54 +55,148 @@ struct Sidebar: View {
         default: "folder"
         }
     }
+}
 
-    /// Toggle row: works together with the main filter (e.g. ★3 and an 85 mm lens).
-    private func toggleRow(_ title: String, icon: String, count: Int, on: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: on ? "checkmark.circle.fill" : icon)
-                    .foregroundStyle(on ? Color.accentColor : .secondary)
-                    .frame(width: 16)
-                Text(title).lineLimit(1).truncationMode(.middle)
-                    .fontWeight(on ? .semibold : .regular)
-                Spacer(minLength: 4)
-                Text("\(count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+/// A folder you worked on: one click opens it where you stopped; the bar shows how much is decided.
+struct RecentRow: View {
+    let url: URL
+    @Environment(Library.self) private var lib
+
+    var body: some View {
+        let isOpen = lib.folder?.standardizedFileURL == url.standardizedFileURL
+        let p = progress(isOpen)
+        Button { if !isOpen { lib.open(url) } } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Image(systemName: isOpen ? "folder.fill" : "folder")
+                        .foregroundStyle(isOpen ? Color.accentColor : .secondary).frame(width: 16)
+                    Text(FolderBrowser.displayName(url)).lineLimit(1).truncationMode(.middle)
+                        .fontWeight(isOpen ? .semibold : .regular)
+                    Spacer(minLength: 4)
+                    if let f = p.fraction {
+                        Text(f >= 1 ? "✓" : "\(Int(f * 100))%").font(.caption.monospacedDigit())
+                            .foregroundStyle(f >= 1 ? .green : .secondary)
+                    }
+                }
+                if let f = p.fraction {
+                    ProgressView(value: min(f, 1)).progressViewStyle(.linear).controlSize(.mini)
+                        .tint(f >= 1 ? .green : .accentColor)
+                        .padding(.leading, 22)
+                }
+                Text(p.text).font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.head)
+                    .padding(.leading, 22)
             }
+            .padding(.vertical, 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .selectionDisabled()
-    }
-
-    private func row(_ f: PhotoFilter, tint: Color? = nil) -> some View {
-        HStack {
-            Label {
-                Text(f.title)
-            } icon: {
-                Image(systemName: f.icon).foregroundStyle(tint ?? .secondary)
-            }
-            Spacer()
-            countBadge(f)
+        .help(url.path)
+        .contextMenu {
+            Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+            Button(lib.browser.isFavorite(url) ? tr("Убрать из избранного") : tr("Добавить в избранное")) { lib.browser.toggleFavorite(url) }
+            Divider()
+            Button(tr("Убрать из списка")) { lib.browser.removeRecent(url) }.disabled(isOpen)
         }
-        .tag(f)
     }
 
-    private func starRow(_ n: Int) -> some View {
-        HStack(spacing: 2) {
-            ForEach(0..<5, id: \.self) { i in
-                Image(systemName: i < n ? "star.fill" : "star")
-                    .font(.caption)
-                    .foregroundStyle(i < n ? Theme.star : .secondary.opacity(0.4))
-            }
-            Spacer()
-            countBadge(.stars(n))
+    /// Live numbers for the open folder, the ones saved when it was left for the rest.
+    private func progress(_ isOpen: Bool) -> (fraction: Double?, text: String) {
+        let parent = url.deletingLastPathComponent().path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+        var total = 0, done = 0
+        if isOpen, !lib.photos.isEmpty {
+            let d = lib.decided
+            total = lib.photos.count; done = d.kept + d.rejected
+        } else if let s = FolderState.load(url), let t = s.total, t > 0 {
+            total = t; done = (s.kept ?? 0) + (s.rejected ?? 0)
         }
-        .tag(PhotoFilter.stars(n))
+        guard total > 0 else { return (nil, parent) }
+        return (Double(done) / Double(total), tr("Решено \(done) из \(total)"))
     }
+}
 
-    private func countBadge(_ f: PhotoFilter) -> some View {
-        Text("\(lib.count(f))")
-            .font(.caption.monospacedDigit())
-            .foregroundStyle(.secondary)
+/// A camera card: how many photos are new, and Import right in the row.
+struct CardRow: View {
+    let url: URL
+    @Environment(Library.self) private var lib
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sdcard.fill").foregroundStyle(Color.accentColor).frame(width: 16)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(FolderBrowser.displayName(url)).lineLimit(1)
+                Group {
+                    if let n = lib.browser.newOnCard[url] {
+                        Text(n == 0 ? tr("Всё уже импортировано") : tr("Новых: \(n)"))
+                    } else {
+                        Text(tr("Считаю новые…"))
+                    }
+                }
+                .font(.caption2).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+            Button(tr("Импорт")) {
+                lib.importer.scan(url)
+                lib.showImport = true
+            }
+            .controlSize(.small)
+        }
+        .contextMenu {
+            Button(tr("Открыть как папку")) { lib.open(url) }
+            Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+        }
+    }
+}
+
+/// The folder selected in the tree: what's inside, how far culling got, and Open.
+struct SelectedFolderCard: View {
+    let url: URL
+    @Environment(Library.self) private var lib
+    @State private var info: (photos: Int, folders: Int)?
+
+    var body: some View {
+        @Bindable var lib = lib
+        let isOpen = lib.folder?.standardizedFileURL == url.standardizedFileURL
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "folder.fill").foregroundStyle(Color.accentColor)
+                Text(FolderBrowser.displayName(url)).font(.headline).lineLimit(1).truncationMode(.middle)
+                Spacer(minLength: 0)
+                Button { lib.browser.selected = nil } label: { Image(systemName: "xmark").font(.caption2.weight(.bold)) }
+                    .buttonStyle(.plain).foregroundStyle(.secondary).help(tr("Закрыть"))
+            }
+            Group {
+                if let info {
+                    Text(tr("Фото: \(info.photos)") + (info.folders > 0 ? tr(" · подпапок: \(info.folders)") : ""))
+                } else {
+                    Text(tr("Считаю…"))
+                }
+            }
+            .font(.caption).foregroundStyle(.secondary)
+            if let s = FolderState.load(url), let p = s.progress {
+                ProgressView(value: min(p, 1)) {
+                    Text(tr("Решено \((s.kept ?? 0) + (s.rejected ?? 0)) из \(s.total ?? 0)")).font(.caption2).foregroundStyle(.secondary)
+                }
+                .controlSize(.mini)
+            }
+            Toggle(tr("С вложенными папками"), isOn: $lib.includeSubfolders)
+                .toggleStyle(.checkbox).font(.caption)
+                .help(tr("Показывать снимки из всех подпапок"))
+            HStack {
+                Button(isOpen ? tr("Открыта") : tr("Открыть")) { lib.open(url); lib.browser.selected = nil }
+                    .buttonStyle(.borderedProminent).disabled(isOpen)
+                Button { lib.browser.toggleFavorite(url) } label: {
+                    Image(systemName: lib.browser.isFavorite(url) ? "star.fill" : "star")
+                }
+                .help(lib.browser.isFavorite(url) ? tr("Убрать из избранного") : tr("Добавить в избранное"))
+                Spacer()
+            }
+            .controlSize(.small)
+        }
+        .padding(12)
+        .task(id: url) {
+            info = nil
+            let u = url
+            info = await Task.detached(priority: .utility) { (FolderBrowser.photoCount(in: u), FolderBrowser.subfolders(of: u).count) }.value
+        }
     }
 }

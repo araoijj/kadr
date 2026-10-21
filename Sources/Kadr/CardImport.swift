@@ -103,6 +103,13 @@ final class CardImporter {
             .sorted { $0.date < $1.date }
     }
 
+    /// How many photos on the card haven't been imported yet (the same check as "Only new").
+    nonisolated static func newCount(on volume: URL) -> Int {
+        let root = isCameraCard(volume) ? volume.appendingPathComponent("DCIM") : volume
+        let done = loadRegistry()
+        return listFiles(root).filter { !done.contains($0.key) }.count
+    }
+
     // MARK: - Copying
 
     /// Copies, verifies size, marks as imported. When finished, calls done with the folder to open.

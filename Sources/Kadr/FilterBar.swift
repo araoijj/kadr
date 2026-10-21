@@ -1,0 +1,252 @@
+import AppKit
+import SwiftUI
+
+/// Bar above the photos: where you are, the main culling filters one click away, and the rest under "More".
+/// Replaces the "Filters" tab of the sidebar, so narrowing a folder down never needs a tab switch.
+struct FilterBar: View {
+    @Environment(Library.self) private var lib
+
+    var body: some View {
+        HStack(spacing: 10) {
+            breadcrumb
+            Spacer(minLength: 6)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) { decisions(compact: false); stars; labels; more }
+                HStack(spacing: 8) { decisions(compact: true); stars; more }
+                HStack(spacing: 8) { decisionsMenu; more }
+            }
+            Spacer(minLength: 6)
+            shown
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .background(.black.opacity(0.18))
+        .overlay(alignment: .bottom) { Divider() }
+    }
+
+    // MARK: - Where
+
+    /// Folder name; the menu goes up to the parent folders.
+    private var breadcrumb: some View {
+        Menu {
+            if let f = lib.folder {
+                ForEach(parents(of: f), id: \.self) { p in
+                    Button(FolderBrowser.displayName(p)) { lib.open(p) }
+                }
+                Divider()
+                Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([f]) }
+            }
+        } label: {
+            Label(lib.folder.map(FolderBrowser.displayName) ?? "", systemImage: "folder")
+                .lineLimit(1).truncationMode(.middle)
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .frame(maxWidth: 220, alignment: .leading)
+        .help(lib.folder.map { tr("Открыта: \($0.path)") + "\n" + tr("Меню — перейти в папку выше") } ?? "")
+    }
+
+    private func parents(of u: URL) -> [URL] {
+        var out: [URL] = [], p = u.deletingLastPathComponent()
+        while p.path != "/" && out.count < 6 {
+            out.append(p)
+            if p.path == "/Volumes" { break }
+            p = p.deletingLastPathComponent()
+        }
+        return out
+    }
+
+    // MARK: - Decisions
+
+    private static let main: [PhotoFilter] = [.all, .undecided, .picked, .rejected]
+
+    private func name(_ f: PhotoFilter) -> String {
+        switch f {
+        case .all: tr("Все")
+        case .undecided: tr("Без решения")
+        case .picked: tr("Оставлено")
+        case .rejected: tr("Брак")
+        default: f.title
+        }
+    }
+
+    private func decisions(compact: Bool) -> some View {
+        HStack(spacing: 2) {
+            ForEach(Self.main, id: \.self) { f in
+                let on = lib.filter == f
+                Button { set(f) } label: {
+                    HStack(spacing: 4) {
+                        if f == .rejected { Image(systemName: "xmark").font(.caption2.weight(.bold)).foregroundStyle(Theme.reject) }
+                        if f == .picked { Image(systemName: "checkmark").font(.caption2.weight(.bold)).foregroundStyle(.green) }
+                        if !compact || on { Text(name(f)) }
+                        Text("\(lib.count(f))").monospacedDigit().foregroundStyle(on ? .primary : .secondary)
+                    }
+                    .font(.callout.weight(on ? .semibold : .regular))
+                    .padding(.horizontal, 9).padding(.vertical, 4)
+                    .background(on ? Color.accentColor.opacity(0.35) : .clear, in: Capsule())
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .help(name(f))
+            }
+        }
+        .padding(2)
+        .background(.white.opacity(0.06), in: Capsule())
+    }
+
+    private var decisionsMenu: some View {
+        Menu {
+            ForEach(Self.main, id: \.self) { f in Button("\(name(f)) · \(lib.count(f))") { set(f) } }
+        } label: {
+            Text(Self.main.contains(lib.filter) ? name(lib.filter) : lib.filter.title)
+        }
+        .fixedSize()
+    }
+
+    private var stars: some View {
+        let n: Int? = if case .stars(let k) = lib.filter { k } else { nil }
+        return Menu {
+            Button(tr("Любая оценка")) { set(.all) }
+            ForEach((1...5).reversed(), id: \.self) { k in
+                Button(String(repeating: "★", count: k) + (k < 5 ? tr(" и выше") : "") + " · \(lib.count(.stars(k)))") { set(.stars(k)) }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: n == nil ? "star" : "star.fill").foregroundStyle(n == nil ? .secondary : Theme.star)
+                if let n { Text("≥\(n)").monospacedDigit() }
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(tr("Фильтр по звёздам"))
+    }
+
+    private var labels: some View {
+        HStack(spacing: 5) {
+            ForEach(ColorLabel.allCases) { l in
+                let on = lib.filter == .label(l)
+                Button { set(on ? .all : .label(l)) } label: {
+                    Circle().fill(l.color).frame(width: 12, height: 12)
+                        .overlay(Circle().strokeBorder(.white, lineWidth: on ? 2 : 0))
+                        .opacity(on || lib.count(.label(l)) > 0 ? 1 : 0.35)
+                }
+                .buttonStyle(.plain)
+                .help(l.title + " · \(lib.count(.label(l)))")
+            }
+        }
+    }
+
+    // MARK: - More
+
+    private var more: some View {
+        @Bindable var lib = lib
+        let extra = !Self.main.contains(lib.filter) && !isStars && !isLabel
+        return Menu {
+            Section(tr("Серии")) {
+                pick(.best)
+                pick(.duplicates)
+            }
+            if lib.aiOn {
+                Section(tr("AI-отбор")) {
+                    pick(.recommended)
+                    pick(.suspects)
+                    pick(.leaders)
+                    if lib.count(.smiling) > 0 { pick(.smiling) }
+                    ForEach(CullReason.allCases.filter { lib.count(.reason($0)) > 0 }) { r in pick(.reason(r)) }
+                }
+            } else if !lib.aiReady && !lib.aiRunning {
+                Button(tr("Запустить AI-анализ")) { lib.startAI() }.disabled(lib.analyzed < lib.photos.count)
+            }
+            if lib.scenes.count > 1 {
+                Menu(tr("Сцены")) {
+                    ForEach(lib.scenes) { sc in
+                        Button("\(sc.title) · \(lib.sceneProgress(sc))/\(sc.count)") { set(.scene(sc.id)) }
+                    }
+                }
+            }
+            if lib.lenses.count > 1 {
+                Menu(tr("Объективы")) {
+                    ForEach(lib.lenses, id: \.name) { l in
+                        Toggle("\(l.name) · \(l.count)", isOn: Binding(get: { lib.lensFilter == l.name },
+                                                                    set: { lib.lensFilter = $0 ? l.name : nil; lib.move(0) }))
+                    }
+                }
+            }
+            if lib.days.count > 1 {
+                Menu(tr("Даты")) {
+                    ForEach(lib.days, id: \.day) { d in
+                        Toggle("\(d.day.formatted(.dateTime.day().month(.abbreviated).year().locale(I18n.locale))) · \(d.count)",
+                               isOn: Binding(get: { lib.dayFilter == d.day }, set: { lib.dayFilter = $0 ? d.day : nil; lib.move(0) }))
+                    }
+                }
+            }
+            let tags = lib.aiReady && lib.aiEnabled.contains(.tags) ? Array(lib.tags.prefix(25)) : []
+            if !tags.isEmpty {
+                Menu(tr("Что на снимках")) {
+                    ForEach(tags, id: \.id) { t in
+                        Toggle("\(TagNames.title(t.id)) · \(t.count)", isOn: Binding(get: { lib.tagFilter == t.id },
+                                                                                     set: { lib.tagFilter = $0 ? t.id : nil; lib.move(0) }))
+                    }
+                }
+            }
+            Divider()
+            Toggle(tr("Скрыть брак (H)"), isOn: $lib.hideRejected)
+            Toggle(tr("С вложенными папками"), isOn: $lib.includeSubfolders)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "line.3.horizontal.decrease.circle" + (extra ? ".fill" : ""))
+                Text(extra ? lib.filter.title : tr("Ещё")).lineLimit(1)
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(tr("Серии, дубли, AI-отбор, сцены, объективы, даты"))
+    }
+
+    private var isStars: Bool { if case .stars = lib.filter { true } else { false } }
+    private var isLabel: Bool { if case .label = lib.filter { true } else { false } }
+
+    private func pick(_ f: PhotoFilter) -> some View {
+        Toggle("\(f.title) · \(lib.count(f))", isOn: Binding(get: { lib.filter == f }, set: { set($0 ? f : .all) }))
+    }
+
+    private func set(_ f: PhotoFilter) {
+        lib.filter = f
+        lib.move(0)
+    }
+
+    // MARK: - Shown
+
+    /// Extra filters as chips, and how many photos are shown.
+    private var shown: some View {
+        HStack(spacing: 6) {
+            if let l = lib.lensFilter { chip(l, icon: "camera.aperture") { lib.lensFilter = nil } }
+            if let d = lib.dayFilter {
+                chip(d.formatted(.dateTime.day().month(.abbreviated).locale(I18n.locale)), icon: "calendar") { lib.dayFilter = nil }
+            }
+            if let t = lib.tagFilter { chip(TagNames.title(t), icon: "tag") { lib.tagFilter = nil } }
+            if lib.hideRejected && lib.filter != .rejected {
+                chip(tr("брак скрыт"), icon: "eye.slash") { lib.hideRejected = false }
+            }
+            Text(tr("\(lib.visible.count) из \(lib.photos.count)"))
+                .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                .fixedSize()
+        }
+    }
+
+    private func chip(_ text: String, icon: String, clear: @escaping () -> Void) -> some View {
+        Button(action: clear) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                Text(text).lineLimit(1)
+                Image(systemName: "xmark").font(.caption2.weight(.bold))
+            }
+            .font(.caption)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Color.accentColor.opacity(0.2), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        .help(tr("Снять фильтр"))
+    }
+}

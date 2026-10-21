@@ -123,11 +123,16 @@ struct SharpPreview: View {
                 sharp = img; sharpFor = url
             }
             guard !Task.isCancelled else { return }
-            // Next frame in the queue, in advance, so it's already sharp when browsing forward.
+            // Neighbors in the queue, in advance, so they are already sharp when browsing: two ahead, one back.
+            // Camera previews of the next few are read too, so even a fast flick shows a picture at once.
             let vis = lib.visible
-            if let i = vis.firstIndex(where: { $0.id == photo.id }), i + 1 < vis.count, vis[i + 1].adj.isIdentity,
-               ImageStore.rawExtensions.contains(vis[i + 1].url.pathExtension.lowercased()) {
-                Renderer.shared.prewarm(vis[i + 1].url, maxSide: side)
+            if let i = vis.firstIndex(where: { $0.id == photo.id }) {
+                for j in [i + 1, i + 2, i - 1] where vis.indices.contains(j) && vis[j].adj.isIdentity
+                    && ImageStore.rawExtensions.contains(vis[j].url.pathExtension.lowercased()) {
+                    Renderer.shared.prewarm(vis[j].url, maxSide: side)
+                }
+                let ahead = vis[min(i + 1, vis.count)..<min(i + 6, vis.count)].map(\.url)
+                Task.detached(priority: .utility) { for u in ahead { _ = ImageStore.shared.preview(u) } }
             }
         }
     }
