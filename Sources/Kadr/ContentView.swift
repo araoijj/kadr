@@ -121,6 +121,16 @@ struct ContentView: View {
                             .buttonStyle(.borderless).help(tr("Остановить AI-анализ"))
                     }
                 }
+                if lib.denoiseRunning {
+                    // A long GPU job: visible from anywhere, with a way to stop it.
+                    HStack(spacing: 6) {
+                        Image(systemName: "wand.and.stars").foregroundStyle(Color.accentColor)
+                        Text(tr("Шумоподавление \(lib.denoiseDone + 1)/\(lib.denoiseTotal)"))
+                            .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                        Button { lib.stopDenoise() } label: { Image(systemName: "stop.circle") }
+                            .buttonStyle(.borderless).help(tr("Остановить шумоподавление"))
+                    }
+                }
                 Menu {
                     Picker(tr("Сортировать"), selection: $lib.sortKey) {
                         ForEach(SortKey.allCases, id: \.self) { Text($0.title).tag($0) }

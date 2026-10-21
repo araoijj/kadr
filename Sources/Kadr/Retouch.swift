@@ -292,6 +292,11 @@ struct RemoveView: View {
                 }
                 .frame(width: shown.width, height: shown.height)
                 .offset(x: origin.x, y: origin.y)
+                // The frame marks the mode: clicks here select objects, they don't zoom or pick photos.
+                Rectangle().strokeBorder(Color.accentColor, lineWidth: 3)
+                    .frame(width: shown.width + 6, height: shown.height + 6)
+                    .offset(x: origin.x - 3, y: origin.y - 3)
+                    .allowsHitTesting(false)
                 if let m = lib.removeMask {
                     Rectangle().fill(Color.red.opacity(0.45))
                         .mask(Image(decorative: m, scale: 1).resizable().luminanceToAlpha())
@@ -325,18 +330,20 @@ struct RemoveBar: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Label(tr("Убрать объект"), systemImage: "eraser").font(.callout.weight(.semibold))
+            Label(tr("Режим «Убрать объект»"), systemImage: "eraser").font(.callout.weight(.semibold))
+                .foregroundStyle(Color.accentColor)
             Text(lib.removeMask == nil ? tr("Кликните по объекту — AI выделит его целиком; ещё клик — добавить часть")
                                        : tr("Enter — убрать · клик — добавить к выделению · Esc — сбросить"))
                 .font(.caption).foregroundStyle(.secondary)
             Spacer(minLength: 8)
             Button(tr("Сбросить выделение")) { lib.clearRemoveSelection() }.disabled(lib.removePoints.isEmpty)
             Button(tr("Убрать (Enter)")) { lib.applyRemove() }.buttonStyle(.borderedProminent).disabled(lib.removeMask == nil || lib.removeBusy)
-            Button(tr("Готово")) { lib.finishRemove() }
+            Button(tr("Выйти из режима")) { lib.finishRemove() }
         }
         .controlSize(.small)
         .padding(.horizontal, 14).padding(.vertical, 10)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.white.opacity(0.1)))
+        .background(Color.accentColor.opacity(0.15), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.accentColor.opacity(0.7), lineWidth: 1.5))
     }
 }

@@ -59,7 +59,10 @@ final class Library {
     var folder: URL?
     var photos: [Photo] = []
     var filter: PhotoFilter = .all
-    var currentID: URL?
+    var currentID: URL? {
+        // "Remove Object" belongs to one photo: moving on closes it, so clicks on the next photo don't select.
+        didSet { if removeMode, currentID != removeFor { finishRemove() } }
+    }
     var loupe = false
     /// Loupe zoom: nil = fit to window, 1 = 100% (one image pixel = one screen pixel), 2 = 200%…
     var loupeZoom: CGFloat?
@@ -403,7 +406,11 @@ final class Library {
         let before = snapshot(targets.map(\.id))
         for t in targets {
             guard let i = index[t.id] else { continue }
-            photos[i].adj = Self.withAbsoluteWB(a, fromAsShot: srcK, to: t.url)
+            var b = Self.withAbsoluteWB(a, fromAsShot: srcK, to: t.url)
+            // Removed objects and AI denoise are computed from this photo's own pixels: never carried over.
+            b.removals = photos[i].adj.removals
+            b.aiDenoise = photos[i].adj.aiDenoise
+            photos[i].adj = b
         }
         scheduleEditsSave()
         record(tr("Вставка обработки") + countSuffix, before: before)

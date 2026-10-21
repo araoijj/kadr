@@ -38,6 +38,13 @@ struct LoupeView: View {
                           icon: p.isBestInSeries ? "sparkles" : "square.stack.3d.up",
                           tint: p.isBestInSeries ? Theme.star : .white.opacity(0.8))
                 }
+                // AI edits in effect on this photo — always visible, so nothing works unnoticed.
+                if p.adj.aiDenoise > 0, Denoiser.shared.hasResult(p.url) {
+                    Badge(text: tr("AI-шумоподавление \(Int(p.adj.aiDenoise))"), icon: "wand.and.stars", tint: Color.accentColor)
+                }
+                if !p.adj.removals.isEmpty {
+                    Badge(text: tr("Убрано объектов: \(p.adj.removals.count)"), icon: "eraser", tint: Color.accentColor)
+                }
                 Spacer()
 
             }

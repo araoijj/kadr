@@ -4248,5 +4248,70 @@
   "Samsung AI (advimman/lama); Core ML by mlboydaisuke",
   "Samsung AI (advimman/lama); Core ML de mlboydaisuke",
   "Samsung AI (advimman/lama); Core ML di mlboydaisuke"
+ ],
+ "Шумоподавление {}/{}": [
+  "Denoise {}/{}",
+  "Reducción de ruido {}/{}",
+  "Riduzione rumore {}/{}"
+ ],
+ "Остановить шумоподавление": [
+  "Stop Denoise",
+  "Detener reducción de ruido",
+  "Interrompi riduzione rumore"
+ ],
+ "Выйти из «Убрать объект» (Esc)": [
+  "Exit Remove Object (Esc)",
+  "Salir de Quitar objeto (Esc)",
+  "Esci da Rimuovi oggetto (Esc)"
+ ],
+ "Режим включён: клик по фото выделяет объект, Enter — убрать.": [
+  "Mode on: click the photo to select an object, Enter removes it.",
+  "Modo activo: haga clic en la foto para seleccionar un objeto; Intro lo quita.",
+  "Modalità attiva: clic sulla foto per selezionare un oggetto, Invio lo rimuove."
+ ],
+ "Применить к этому кадру": [
+  "Apply to this photo",
+  "Aplicar a esta foto",
+  "Applica a questa foto"
+ ],
+ "Запускается только этой кнопкой. Модель SCUNet на видеокарте: ~1 минута на кадр 24 Мп, потом — мгновенно. Света из RAW не теряются.": [
+  "Runs only when you click this button. SCUNet on the GPU: ~1 minute per 24 MP photo, then instant. RAW highlights are kept.",
+  "Solo se ejecuta con este botón. SCUNet en la GPU: ~1 minuto por foto de 24 MP, luego al instante. Se conservan las altas luces del RAW.",
+  "Si avvia solo con questo pulsante. SCUNet sulla GPU: ~1 minuto per foto da 24 MP, poi istantaneo. Le alte luci del RAW restano."
+ ],
+ "считается…": [
+  "computing…",
+  "calculando…",
+  "in calcolo…"
+ ],
+ "не применено": [
+  "not applied",
+  "no aplicado",
+  "non applicato"
+ ],
+ "включено · {}": [
+  "on · {}",
+  "activado · {}",
+  "attivo · {}"
+ ],
+ "посчитано, выключено": [
+  "computed, off",
+  "calculado, desactivado",
+  "calcolato, disattivato"
+ ],
+ "AI-шумоподавление {}": [
+  "AI denoise {}",
+  "Reducción de ruido IA {}",
+  "Riduzione rumore IA {}"
+ ],
+ "Режим «Убрать объект»": [
+  "Remove Object mode",
+  "Modo Quitar objeto",
+  "Modalità Rimuovi oggetto"
+ ],
+ "Выйти из режима": [
+  "Exit Mode",
+  "Salir del modo",
+  "Esci dalla modalità"
  ]
 }

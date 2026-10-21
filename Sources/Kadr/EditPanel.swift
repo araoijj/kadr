@@ -108,13 +108,24 @@ struct EditPanel: View {
                      : tr("Форматы Instagram: пост 4:5, квадрат, сторис 9:16, горизонтальный 1.91:1."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Button { lib.removeMode ? lib.finishRemove() : lib.startRemove() } label: {
-                Label(lib.removeMode ? tr("Готово") : tr("Убрать объект (AI)"), systemImage: "eraser").frame(maxWidth: .infinity)
+            if lib.removeMode {
+                // Active tool: a filled button and a line saying what clicks on the photo do now.
+                Button { lib.finishRemove() } label: {
+                    Label(tr("Выйти из «Убрать объект» (Esc)"), systemImage: "eraser.fill").frame(maxWidth: .infinity)
+                }
+                .controlSize(.large)
+                .buttonStyle(.borderedProminent)
+                Text(tr("Режим включён: клик по фото выделяет объект, Enter — убрать."))
+                    .font(.caption).foregroundStyle(Color.accentColor)
+            } else {
+                Button { lib.startRemove() } label: {
+                    Label(tr("Убрать объект (AI)"), systemImage: "eraser").frame(maxWidth: .infinity)
+                }
+                .controlSize(.large)
+                .disabled(!Retouch.shared.installed || lib.current == nil)
+                .help(Retouch.shared.installed ? tr("Клик по лишнему объекту — AI выделит и закрасит его. Убранное хранится отдельно, ⌘Z возвращает.")
+                                                : tr("Модели «Убрать объект» не установлены (Настройки → AI)"))
             }
-            .controlSize(.large)
-            .disabled(!Retouch.shared.installed)
-            .help(Retouch.shared.installed ? tr("Клик по лишнему объекту — AI выделит и закрасит его. Убранное хранится отдельно, ⌘Z возвращает.")
-                                            : tr("Модели «Убрать объект» не установлены (Настройки → AI)"))
             if !p.adj.removals.isEmpty {
                 HStack {
                     Text(tr("Убрано объектов: \(p.adj.removals.count)")).font(.caption).foregroundStyle(.secondary)
@@ -127,6 +138,9 @@ struct EditPanel: View {
                 HStack {
                     Label(tr("AI-шумоподавление"), systemImage: "sparkles").font(.headline)
                     Spacer()
+                    // State at a glance: what this photo has right now.
+                    Text(denoiseState(p)).font(.caption.weight(.semibold))
+                        .foregroundStyle(p.adj.aiDenoise > 0 && Denoiser.shared.hasResult(p.url) ? Color.accentColor : .secondary)
                 }
                 if lib.denoiseRunning {
                     ProgressView(value: (Double(lib.denoiseDone) + lib.denoiseFraction) / Double(max(lib.denoiseTotal, 1)))
@@ -136,16 +150,21 @@ struct EditPanel: View {
                         Button(tr("Стоп")) { lib.stopDenoise() }.controlSize(.small)
                     }
                 } else if Denoiser.shared.hasResult(p.url) {
+                    Toggle(tr("Применить к этому кадру"), isOn: Binding(get: { p.adj.aiDenoise > 0 }, set: { on in
+                        var a = p.adj; a.aiDenoise = on ? 70 : 0; lib.setAdjustments(a)
+                    }))
+                    .toggleStyle(.switch)
                     HStack {
                         Slider(value: Binding(get: { p.adj.aiDenoise }, set: { v in var a = p.adj; a.aiDenoise = v.rounded(); lib.setAdjustments(a) }), in: 0...100)
                         Text("\(Int(p.adj.aiDenoise))").font(.caption.monospacedDigit()).frame(width: 28)
                     }
+                    .disabled(p.adj.aiDenoise == 0)
                 } else if Denoiser.shared.installed {
                     Button { lib.denoiseTargets() } label: {
                         Label(lib.multiSelected ? tr("Убрать шум у выделенных (\(lib.targets.count))") : tr("Убрать шум"), systemImage: "wand.and.stars")
                             .frame(maxWidth: .infinity)
                     }
-                    Text(tr("Модель SCUNet на видеокарте: ~1 минута на кадр 24 Мп, потом — мгновенно. Света из RAW не теряются."))
+                    Text(tr("Запускается только этой кнопкой. Модель SCUNet на видеокарте: ~1 минута на кадр 24 Мп, потом — мгновенно. Света из RAW не теряются."))
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
                     Text(tr("Модель шумоподавления не установлена (Настройки → AI)")).font(.caption).foregroundStyle(.secondary)
@@ -390,6 +409,13 @@ struct EditPanel: View {
     // MARK: - Components
 
     /// Section with a header; if it has edits, shows a "Reset section" button.
+    /// "Off", "Computing…", "Computed, off" or "On · 70" — for the denoise header.
+    private func denoiseState(_ p: Photo) -> String {
+        if lib.denoiseRunning { return tr("считается…") }
+        guard Denoiser.shared.hasResult(p.url) else { return tr("не применено") }
+        return p.adj.aiDenoise > 0 ? tr("включено · \(Int(p.adj.aiDenoise))") : tr("посчитано, выключено")
+    }
+
     private func section<C: View>(_ title: String, _ group: StyleGroup, _ p: Photo, @ViewBuilder _ content: () -> C) -> some View {
         let changed = p.adj.changedGroups.contains(group)
         return VStack(alignment: .leading, spacing: 12) {
