@@ -1240,20 +1240,36 @@ final class Library {
     // MARK: - File operations
 
     /// Moves rejected photos into the `_Отклонённые` subfolder (along with XMP and the paired JPEG). Nothing is deleted.
-    func moveRejected() {
-        let rejected = photos.filter(\.rejected)
-        guard !rejected.isEmpty else { flash(tr("Нет отклонённых")); return }
+    static let rejectedFolderName = "_Отклонённые"
+
+    /// All rejected photos of the folder → "_Отклонённые" (menu Culling, the Rejected view).
+    func moveRejected() { moveToRejectedFolder(photos.filter(\.rejected)) }
+
+    /// The clicked or selected photos → "_Отклонённые" (context menu); ones not rejected yet are rejected first.
+    func moveTargetsToRejectedFolder() { moveToRejectedFolder(targets) }
+
+    /// Moves the photos with their companions (XMP, JPEG twin) into "_Отклонённые" next to them.
+    /// The files are kept, so this is the safe way to get rejects out of the way; it can't be undone with ⌘Z.
+    func moveToRejectedFolder(_ list: [Photo], ask: Bool = true) {
+        guard !list.isEmpty else { flash(tr("Нет отклонённых")); return }
+        let fresh = list.filter { !$0.rejected }.count
+        if ask {
         let alert = NSAlert()
-        alert.messageText = tr("Перенести \(rejected.count) отклонённых в папку «_Отклонённые»?")
-        alert.informativeText = tr("Файлы не удаляются — их можно вернуть обратно вручную.")
+        alert.messageText = tr("Перенести \(list.count) кадров в папку «_Отклонённые»?")
+        alert.informativeText = tr("Папка создаётся рядом со съёмкой, файлы не удаляются — их можно вернуть в Finder. Отменить через ⌘Z нельзя.")
+            + (fresh > 0 ? "\n" + tr("Ещё не отклонённые (\(fresh)) будут помечены как брак.") : "")
         alert.addButton(withTitle: tr("Перенести"))
         alert.addButton(withTitle: tr("Отмена"))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
+        }
 
+        for p in list where !p.rejected {
+            if let i = index[p.id] { photos[i].rejected = true; writeSidecar(i) }
+        }
         let fm = FileManager.default
         var moved = 0
-        for p in rejected {
-            let dest = p.url.deletingLastPathComponent().appendingPathComponent("_Отклонённые", isDirectory: true)
+        for p in list {
+            let dest = p.url.deletingLastPathComponent().appendingPathComponent(Self.rejectedFolderName, isDirectory: true)
             try? fm.createDirectory(at: dest, withIntermediateDirectories: true)
             for f in Exporter.companions(of: p.url) where fm.fileExists(atPath: f.path) {
                 try? fm.moveItem(at: f, to: dest.appendingPathComponent(f.lastPathComponent))
@@ -1262,8 +1278,11 @@ final class Library {
         }
         photos.removeAll { !fm.fileExists(atPath: $0.url.path) }
         reindex()
+        selection = selection.filter { index[$0] != nil }
+        // The Rejected view has done its job: back to all photos instead of an empty screen.
+        if filter == .rejected && visible.isEmpty { filter = .all }
         if currentID.map({ index[$0] == nil }) ?? true { focus(visible.first?.id) }
-        flash(tr("Перенесено: \(moved)"))
+        flash(tr("Перенесено в «_Отклонённые»: \(moved)"))
     }
 
     // MARK: - Save to Folder

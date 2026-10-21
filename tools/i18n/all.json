@@ -4523,5 +4523,40 @@
   "Save the selected to a folder (⌘S)",
   "Guardar las seleccionadas en una carpeta (⌘S)",
   "Salva le selezionate in una cartella (⌘S)"
+ ],
+ "Перенести в «_Отклонённые» ({})": [
+  "Move to “_Отклонённые” ({})",
+  "Mover a «_Отклонённые» ({})",
+  "Sposta in «_Отклонённые» ({})"
+ ],
+ "Все отклонённые кадры ({}) переедут в подпапку «_Отклонённые» рядом со съёмкой. Файлы не удаляются.": [
+  "All rejected photos ({}) move into the “_Отклонённые” subfolder next to the shoot. No files are deleted.",
+  "Todas las fotos rechazadas ({}) pasan a la subcarpeta «_Отклонённые» junto a la sesión. No se borra nada.",
+  "Tutte le foto scartate ({}) passano nella sottocartella «_Отклонённые» accanto al servizio. Nessun file viene eliminato."
+ ],
+ "Перенести {} кадров в папку «_Отклонённые»?": [
+  "Move {} photos to the “_Отклонённые” folder?",
+  "¿Mover {} fotos a la carpeta «_Отклонённые»?",
+  "Spostare {} foto nella cartella «_Отклонённые»?"
+ ],
+ "Папка создаётся рядом со съёмкой, файлы не удаляются — их можно вернуть в Finder. Отменить через ⌘Z нельзя.": [
+  "The folder is created next to the shoot; nothing is deleted and the files can be moved back in Finder. This can't be undone with ⌘Z.",
+  "La carpeta se crea junto a la sesión; no se borra nada y los archivos se pueden devolver desde el Finder. No se puede deshacer con ⌘Z.",
+  "La cartella viene creata accanto al servizio; nulla viene eliminato e i file si possono riportare indietro dal Finder. Non si può annullare con ⌘Z."
+ ],
+ "Ещё не отклонённые ({}) будут помечены как брак.": [
+  "Photos not rejected yet ({}) will be marked as rejected.",
+  "Las fotos aún no rechazadas ({}) se marcarán como rechazadas.",
+  "Le foto non ancora scartate ({}) verranno segnate come scarti."
+ ],
+ "Перенесено в «_Отклонённые»: {}": [
+  "Moved to “_Отклонённые”: {}",
+  "Movidas a «_Отклонённые»: {}",
+  "Spostate in «_Отклонённые»: {}"
+ ],
+ "Перенести в «_Отклонённые»": [
+  "Move to “_Отклонённые”",
+  "Mover a «_Отклонённые»",
+  "Sposta in «_Отклонённые»"
  ]
 }
