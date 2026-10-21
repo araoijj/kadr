@@ -5293,5 +5293,20 @@
   "The queue at the top: all photos or undecided only; after AI analysis also the best and possible rejects.",
   "La cola de arriba: todas las fotos o solo sin decidir; tras el análisis AI, también las mejores y los posibles descartes.",
   "La coda in alto: tutte le foto o solo senza decisione; dopo l’analisi AI anche le migliori e i possibili scarti."
+ ],
+ "F или Esc — выйти": [
+  "F or Esc — exit",
+  "F o Esc — salir",
+  "F o Esc — esci"
+ ],
+ "Выйти из полноэкранного просмотра": [
+  "Exit Full Screen",
+  "Salir de pantalla completa",
+  "Esci dallo schermo intero"
+ ],
+ "Во весь экран": [
+  "Full Screen",
+  "Pantalla completa",
+  "Schermo intero"
  ]
 }

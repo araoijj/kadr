@@ -64,6 +64,10 @@ struct KadrApp: App {
                 Button(tr("Вписать в окно")) { library.setZoom(nil) }.keyboardShortcut("0")
                 Button(tr("Масштаб 100%")) { library.loupe = true; library.setZoom(1, at: library.loupeCenter) }.keyboardShortcut("1")
                 Divider()
+                Button(library.fullscreen ? tr("Выйти из полноэкранного просмотра") : tr("Во весь экран")) { Fullscreen.shared.toggle(library) }
+                    .keyboardShortcut("f", modifiers: [])
+                    .disabled(library.current == nil)
+                Divider()
             }
             CommandGroup(replacing: .help) {
                 Button(tr("Горячие клавиши")) { library.showShortcuts = true }.keyboardShortcut("/", modifiers: .command)
@@ -132,6 +136,15 @@ struct KeyHandler {
         if !e.modifierFlags.intersection([.command, .control, .option]).isEmpty { return false }
         let shift = e.modifierFlags.contains(.shift)
         if NSApp.keyWindow?.firstResponder is NSTextView || lib.showExport || lib.showImport { return false }
+        if lib.fullscreen {
+            // The same keys as everywhere; only the way out and "next" differ.
+            switch e.keyCode {
+            case 53: Fullscreen.shared.exit(); return true                        // Esc
+            case 49: lib.move(shift ? -1 : 1); return true                         // space: next (⇧ — back)
+            default: break
+            }
+            if ["f", "а"].contains(e.charactersIgnoringModifiers?.lowercased() ?? "") { Fullscreen.shared.exit(); return true }
+        }
         if lib.cropMode {
             switch e.keyCode {
             case 36, 76: lib.finishCrop(); return true      // Enter: done
@@ -223,6 +236,7 @@ struct KeyHandler {
             lib.flash(lib.hideRejected ? tr("Брак скрыт (H — показать)") : tr("Брак снова виден"))
         case "y", "н": lib.splitCompare.toggle(); if lib.splitCompare { lib.loupe = true }
         case "r", "к": lib.startCrop()
+        case "f", "а": if lib.current != nil { Fullscreen.shared.toggle(lib) }
         default: return false
         }
         return true
