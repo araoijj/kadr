@@ -44,6 +44,10 @@ struct ToolsBar: View {
                 lib.zoom100.toggle()
             }
 
+            tool(tr("Во весь экран"), "arrow.up.left.and.arrow.down.right", on: lib.fullscreen, key: "F", enabled: hasPhoto) {
+                Fullscreen.shared.toggle(lib)
+            }
+
             Divider().frame(height: 18).padding(.horizontal, 4)
 
             tool(tr("Обработка"), "slider.horizontal.3", on: lib.showInfo && lib.inspectorTab == .edit, key: "E", enabled: hasPhoto) {

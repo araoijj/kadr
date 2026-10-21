@@ -71,6 +71,7 @@ final class Library {
     var fitZoom: CGFloat = 0.25                    // zoom level of "Fit" mode (computed by the loupe view)
     var loupeDisplay: CGSize = .zero               // on-screen image size at the current zoom, in points
     var splitCompare = false                       // before/after split slider (Y)
+    var fullscreen = false                         // full-screen viewing window is up (F)
     var splitPos: CGFloat = 0.5                    // split slider position, fraction of width
     static let zoomSteps: [CGFloat] = [0.25, 0.5, 1, 2, 4]
 
