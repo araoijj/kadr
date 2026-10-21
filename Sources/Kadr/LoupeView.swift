@@ -12,6 +12,9 @@ struct LoupeView: View {
                     overlay(p)
                 }
             }
+            .overlay(alignment: .topLeading) {
+                if let p = lib.current, p.seriesID != nil, !lib.cropMode { seriesBadge(p).padding(16) }
+            }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay(alignment: .top) {
                 if lib.cropMode { ToolHint(id: "crop") }
@@ -32,31 +35,32 @@ struct LoupeView: View {
         }
     }
 
+    /// The burst badge: a click shows the whole burst, the arrow opens the rest. It lives outside `overlay`,
+    /// which doesn't take clicks, so the photo underneath keeps its gestures.
+    @MainActor private func seriesBadge(_ p: Photo) -> some View {
+            let s = lib.series(of: p)
+            let pos = (s.firstIndex { $0.id == p.id } ?? 0) + 1
+            // Click shows the burst; the arrow opens the rest of what you can do with it.
+            return Menu {
+                Button(tr("Показать только эту серию (\(s.count))"), systemImage: "square.stack.3d.up") { lib.showSeries(of: p) }
+                Button(tr("Выделить всю серию (⌘⇧A)"), systemImage: "checkmark.square.fill") { lib.select(p); lib.selectSeries() }
+                Button(tr("Сравнить кадры серии (C)"), systemImage: "rectangle.split.2x1") { lib.select(p); lib.startCompare() }
+                Button(tr("Турнир: выбрать лучший (T)"), systemImage: "trophy") { lib.select(p); lib.startTournament() }
+            } label: {
+                Badge(text: (lib.inSeries ? tr("Серия: \(pos) из \(s.count) · Esc — назад") : tr("Серия: \(pos) из \(s.count)"))
+                      + (p.isBestInSeries ? tr(" · самый резкий") : ""),
+                      icon: p.isBestInSeries ? "sparkles" : "square.stack.3d.up",
+                      tint: p.isBestInSeries ? Theme.star : .white.opacity(0.8))
+            } primaryAction: {
+                if lib.inSeries { lib.leaveSeries() } else { lib.showSeries(of: p) }
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help(tr("Клик — показать всю серию (Esc — назад); стрелка — выделить, сравнить, турнир"))
+    }
+
     private func overlay(_ p: Photo) -> some View {
         VStack {
-            HStack(alignment: .top) {
-                if p.seriesID != nil {
-                    let s = lib.series(of: p)
-                    let pos = (s.firstIndex { $0.id == p.id } ?? 0) + 1
-                    // The badge is a menu: everything you can do with the burst, right where you see it.
-                    Menu {
-                        Button(tr("Показать только эту серию (\(s.count))"), systemImage: "square.stack.3d.up") { lib.showSeries(of: p) }
-                        Button(tr("Выделить всю серию (⌘⇧A)"), systemImage: "checkmark.square.fill") { lib.select(p); lib.selectSeries() }
-                        Button(tr("Сравнить кадры серии (C)"), systemImage: "rectangle.split.2x1") { lib.select(p); lib.startCompare() }
-                        Button(tr("Турнир: выбрать лучший (T)"), systemImage: "trophy") { lib.select(p); lib.startTournament() }
-                    } label: {
-                        Badge(text: tr("Серия: \(pos) из \(s.count)") + (p.isBestInSeries ? tr(" · самый резкий") : "") + " ▾",
-                              icon: p.isBestInSeries ? "sparkles" : "square.stack.3d.up",
-                              tint: p.isBestInSeries ? Theme.star : .white.opacity(0.8))
-                    }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .fixedSize()
-                    .help(tr("Серия похожих кадров: показать только её, выделить, сравнить"))
-                }
-                Spacer()
-
-            }
             Spacer()
             HStack {
                 if p.rejected {

@@ -4763,5 +4763,25 @@
   "Any number of photos: tile size is the slider in the bar or the + and − keys; the rest scrolls.",
   "Cualquier cantidad de fotos: el tamaño de las fichas se ajusta con el control de la barra o las teclas + y −; el resto se desplaza.",
   "Qualsiasi numero di foto: la dimensione dei riquadri si regola con il cursore nella barra o con i tasti + e −; il resto scorre."
+ ],
+ "Все кадры": [
+  "All photos",
+  "Todas las fotos",
+  "Tutte le foto"
+ ],
+ "Показать все {} кадров серии; правый клик по кадру — выделить или сравнить серию": [
+  "Show all {} photos of the burst; right-click a photo to select or compare the burst",
+  "Mostrar las {} fotos de la ráfaga; clic derecho en una foto para seleccionar o comparar la ráfaga",
+  "Mostra tutte le {} foto della raffica; clic destro su una foto per selezionare o confrontare la raffica"
+ ],
+ "Серия: {} из {} · Esc — назад": [
+  "Burst: {} of {} · Esc — back",
+  "Ráfaga: {} de {} · Esc — volver",
+  "Raffica: {} di {} · Esc — indietro"
+ ],
+ "Клик — показать всю серию (Esc — назад); стрелка — выделить, сравнить, турнир": [
+  "Click — show the whole burst (Esc — back); the arrow — select, compare, tournament",
+  "Clic: mostrar toda la ráfaga (Esc: volver); la flecha: seleccionar, comparar, torneo",
+  "Clic: mostra tutta la raffica (Esc: indietro); la freccia: seleziona, confronta, torneo"
  ]
 }
