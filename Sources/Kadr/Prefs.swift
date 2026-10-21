@@ -12,6 +12,7 @@ enum Prefs {
     static var reopenLastFolder: Bool { bool("pref.reopenLast", true) }
     static var autoAdvance: Bool { bool("pref.autoAdvance", true) }
     static var cardBanner: Bool { bool("pref.cardBanner", true) }
+    static var checkUpdates: Bool { bool("pref.checkUpdates", true) }   // ask GitHub once a day at launch
     static var cullByDefault: Bool { bool("pref.cullDefault", false) }
     /// AI modules to compute (Settings → AI); all by default.
     static var aiModules: Set<AIModule> {
@@ -19,6 +20,7 @@ enum Prefs {
         return Set(v.split(separator: ",").compactMap { AIModule(rawValue: String($0)) })
     }
     static func setAIModules(_ m: Set<AIModule>) { d.set(m.map(\.rawValue).sorted().joined(separator: ","), forKey: "pref.aiModules") }
+    static var tagsToXMP: Bool { bool("pref.tagsToXMP", false) }      // write AI tags as XMP keywords after AI analysis
     static var aiAuto: Bool { bool("pref.aiAuto", false) }               // run AI analysis automatically after indexing (otherwise via the button)   // open the folder in "Culling" mode
     static var sceneGapMinutes: Int { int("pref.sceneGap", 10) }         // new scene after a pause, minutes
 

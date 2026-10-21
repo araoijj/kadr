@@ -234,7 +234,35 @@ enum EditStore {
         try? FileManager.default.createDirectory(at: f.deletingLastPathComponent(), withIntermediateDirectories: true)
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if let d = try? enc.encode(edits.filter { !$0.value.isIdentity }) { try? d.write(to: f, options: .atomic) }
+        guard let ours = try? enc.encode(edits.filter { !$0.value.isIdentity }),
+              let mine = (try? JSONSerialization.jsonObject(with: ours)) as? [String: [String: Any]] else { return }
+        let merged = merge(mine, into: f)
+        if let d = try? JSONSerialization.data(withJSONObject: merged, options: [.prettyPrinted, .sortedKeys]) {
+            try? d.write(to: f, options: .atomic)
+        }
+    }
+
+    /// Fields this version writes. Anything else in edits.json belongs to another version of Kadr
+    /// (for example AI noise reduction or removed objects from the beta) and is kept as is.
+    static let knownKeys: Set<String> = {
+        var a = Adjustments()
+        a.lut = ""
+        a.cropAspect = ""
+        guard let d = try? JSONEncoder().encode(a),
+              let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return [] }
+        return Set(o.keys).union(["temperature"])
+    }()
+
+    /// Our fields replace the file's; unknown fields stay, and a frame stays in the file while it still has any.
+    static func merge(_ mine: [String: [String: Any]], into f: URL) -> [String: Any] {
+        var out: [String: Any] = [:]
+        let old = (try? Data(contentsOf: f)).flatMap { (try? JSONSerialization.jsonObject(with: $0)) as? [String: Any] } ?? [:]
+        for name in Set(old.keys).union(mine.keys) {
+            var entry = (old[name] as? [String: Any] ?? [:]).filter { !knownKeys.contains($0.key) }
+            for (k, v) in mine[name] ?? [:] { entry[k] = v }
+            if !entry.isEmpty { out[name] = entry }
+        }
+        return out
     }
 }
 

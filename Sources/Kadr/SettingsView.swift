@@ -25,6 +25,7 @@ struct GeneralSettings: View {
     @AppStorage("pref.reopenLast") private var reopenLast = true
     @AppStorage("pref.cardBanner") private var cardBanner = true
     @AppStorage(Hints.enabledKey) private var hints = true
+    @AppStorage("pref.checkUpdates") private var checkUpdates = true
     @AppStorage("pref.cullDefault") private var cullDefault = false
     @AppStorage("pref.sceneGap") private var sceneGap = 10
     @State private var startLanguage = Prefs.language
@@ -59,6 +60,12 @@ struct GeneralSettings: View {
                     Toggle(tr("Показывать подсказки к инструментам"), isOn: $hints)
                     Spacer()
                     Button(tr("Показать все снова")) { Hints.resetAll() }
+                }
+                HStack {
+                    Toggle(tr("Проверять обновления при запуске"), isOn: $checkUpdates)
+                        .help(tr("Раз в день «Кадр» спрашивает GitHub, вышла ли новая версия. Ничего не скачивается без вашего согласия."))
+                    Spacer()
+                    Button(tr("Проверить сейчас")) { Task { await Updater.check(manual: true) } }
                 }
             }
             Section {
@@ -549,6 +556,7 @@ struct FaceMeshSection: View {
 struct AISettings: View {
     @Environment(Library.self) private var lib
     @AppStorage("pref.aiAuto") private var aiAuto = false
+    @AppStorage("pref.tagsToXMP") private var tagsToXMP = false
 
     var body: some View {
         Form {
@@ -585,6 +593,8 @@ struct AISettings: View {
                 }
                 Toggle(tr("Запускать AI-анализ автоматически после индексации"), isOn: $aiAuto)
                     .help(tr("Нагружает Mac. Выключено — запуск кнопкой «Запустить AI-анализ» в режиме «Отбор» (⌥⌘A)."))
+                Toggle(tr("Записывать теги в XMP как ключевые слова после AI-анализа"), isOn: $tagsToXMP)
+                    .help(tr("Capture One и Lightroom смогут искать фото по тегам. Ваши ключевые слова не удаляются. Вручную — меню «Отбор» → «Записать AI-теги в ключевые слова»."))
             }
             ModelPackagesSection()
             FaceMeshSection()

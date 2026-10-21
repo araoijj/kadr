@@ -4598,5 +4598,120 @@
   "Click a photo to make it active (colored frame): 1–5 and X rate it, ← → switch.",
   "Haz clic en una foto para activarla (marco de color): 1–5 y X la valoran, ← → cambian.",
   "Clic su una foto per renderla attiva (cornice colorata): 1–5 e X la valutano, ← → cambiano."
+ ],
+ "Проверить обновления…": [
+  "Check for Updates…",
+  "Buscar actualizaciones…",
+  "Controlla aggiornamenti…"
+ ],
+ "Записать AI-теги в ключевые слова…": [
+  "Write AI Tags as Keywords…",
+  "Escribir etiquetas AI como palabras clave…",
+  "Scrivi tag AI come parole chiave…"
+ ],
+ "Теги выключены в Настройки → AI": [
+  "Tags are turned off in Settings → AI",
+  "Las etiquetas están desactivadas en Ajustes → AI",
+  "I tag sono disattivati in Impostazioni → AI"
+ ],
+ "Тегов пока нет — запустите AI-анализ": [
+  "No tags yet — run AI analysis",
+  "Aún no hay etiquetas: ejecuta el análisis AI",
+  "Ancora nessun tag: avvia l’analisi AI"
+ ],
+ "Записать AI-теги в ключевые слова? Кадров: {}": [
+  "Write AI tags as keywords? Photos: {}",
+  "¿Escribir las etiquetas AI como palabras clave? Fotos: {}",
+  "Scrivere i tag AI come parole chiave? Foto: {}"
+ ],
+ "Теги добавятся в XMP рядом с фото (поле «Ключевые слова»), их увидят Capture One и Lightroom. Ваши ключевые слова не удаляются. Где XMP ещё нет, он будет создан.": [
+  "Tags are added to the XMP next to each photo (the Keywords field), so Capture One and Lightroom can see them. Your own keywords are kept. An XMP is created where there is none yet.",
+  "Las etiquetas se añaden al XMP junto a cada foto (campo «Palabras clave»), así Capture One y Lightroom las ven. Tus palabras clave se conservan. Si no hay XMP, se crea.",
+  "I tag vengono aggiunti all’XMP accanto a ogni foto (campo «Parole chiave»), così Capture One e Lightroom li vedono. Le tue parole chiave restano. Se l’XMP non c’è, viene creato."
+ ],
+ "Записать": [
+  "Write",
+  "Escribir",
+  "Scrivi"
+ ],
+ "Ключевые слова уже записаны": [
+  "Keywords are already there",
+  "Las palabras clave ya están escritas",
+  "Le parole chiave ci sono già"
+ ],
+ "Ключевые слова добавлены, кадров: {}": [
+  "Keywords added, photos: {}",
+  "Palabras clave añadidas, fotos: {}",
+  "Parole chiave aggiunte, foto: {}"
+ ],
+ "Проверять обновления при запуске": [
+  "Check for updates at launch",
+  "Buscar actualizaciones al iniciar",
+  "Controlla aggiornamenti all’avvio"
+ ],
+ "Раз в день «Кадр» спрашивает GitHub, вышла ли новая версия. Ничего не скачивается без вашего согласия.": [
+  "Once a day Kadr asks GitHub whether a new version is out. Nothing is downloaded without your consent.",
+  "Una vez al día Kadr pregunta a GitHub si hay una versión nueva. No se descarga nada sin tu permiso.",
+  "Una volta al giorno Kadr chiede a GitHub se c’è una nuova versione. Nulla viene scaricato senza il tuo consenso."
+ ],
+ "Проверить сейчас": [
+  "Check Now",
+  "Comprobar ahora",
+  "Controlla ora"
+ ],
+ "Записывать теги в XMP как ключевые слова после AI-анализа": [
+  "Write tags to XMP as keywords after AI analysis",
+  "Escribir las etiquetas en el XMP como palabras clave tras el análisis AI",
+  "Scrivi i tag nell’XMP come parole chiave dopo l’analisi AI"
+ ],
+ "Capture One и Lightroom смогут искать фото по тегам. Ваши ключевые слова не удаляются. Вручную — меню «Отбор» → «Записать AI-теги в ключевые слова».": [
+  "Capture One and Lightroom can then search photos by tag. Your own keywords are kept. To do it by hand: Culling menu → Write AI Tags as Keywords.",
+  "Capture One y Lightroom podrán buscar fotos por etiqueta. Tus palabras clave se conservan. A mano: menú «Selección» → «Escribir etiquetas AI como palabras clave».",
+  "Capture One e Lightroom potranno cercare le foto per tag. Le tue parole chiave restano. A mano: menu «Selezione» → «Scrivi tag AI come parole chiave»."
+ ],
+ "Не удалось проверить обновления": [
+  "Couldn’t check for updates",
+  "No se pudo buscar actualizaciones",
+  "Impossibile controllare gli aggiornamenti"
+ ],
+ "Нет связи с GitHub. Попробуйте позже.": [
+  "Can’t reach GitHub. Try again later.",
+  "No se puede conectar con GitHub. Inténtalo más tarde.",
+  "GitHub non raggiungibile. Riprova più tardi."
+ ],
+ "У вас последняя версия": [
+  "You’re up to date",
+  "Tienes la última versión",
+  "Hai l’ultima versione"
+ ],
+ "«Кадр» {} — новее на GitHub нет.": [
+  "Kadr {} — there is nothing newer on GitHub.",
+  "Kadr {}: no hay nada más reciente en GitHub.",
+  "Kadr {}: su GitHub non c’è niente di più recente."
+ ],
+ "Вышла новая версия «Кадра»: {}": [
+  "A new version of Kadr is out: {}",
+  "Hay una nueva versión de Kadr: {}",
+  "È uscita una nuova versione di Kadr: {}"
+ ],
+ "У вас {}. Скачайте архив со страницы выпуска и замените приложение — оценки, правки и настройки сохранятся.": [
+  "You have {}. Download the archive from the release page and replace the app — ratings, edits and settings are kept.",
+  "Tienes {}. Descarga el archivo desde la página de la versión y reemplaza la app: valoraciones, ajustes y preferencias se conservan.",
+  "Hai {}. Scarica l’archivio dalla pagina della versione e sostituisci l’app: voti, modifiche e impostazioni restano."
+ ],
+ "Это бета-версия.": [
+  "This is a beta.",
+  "Es una versión beta.",
+  "È una versione beta."
+ ],
+ "Открыть страницу загрузки": [
+  "Open Download Page",
+  "Abrir página de descarga",
+  "Apri pagina di download"
+ ],
+ "Пропустить эту версию": [
+  "Skip This Version",
+  "Omitir esta versión",
+  "Salta questa versione"
  ]
 }
