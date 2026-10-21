@@ -4898,5 +4898,145 @@
   "What this is and how to set it up",
   "Qué es esto y cómo configurarlo",
   "Che cos’è e come configurarlo"
+ ],
+ "Сканировать": [
+  "Scan",
+  "Escanear",
+  "Scansiona"
+ ],
+ "Пока пусто. Выберите папку в «Избранном» или «Проводнике» и нажмите «Сканировать».": [
+  "Nothing yet. Pick a folder in Favorites or Explorer and press Scan.",
+  "Vacío por ahora. Elija una carpeta en Favoritos o Explorador y pulse Escanear.",
+  "Ancora vuoto. Scegli una cartella nei Preferiti o nell’Esplora e premi Scansiona."
+ ],
+ "Съёмки": [
+  "Shoots",
+  "Sesiones",
+  "Servizi"
+ ],
+ "Папки, с которыми вы работаете. Сюда попадает только то, что вы отсканировали; порядок — перетаскиванием.": [
+  "The folders you work on. Only what you scanned gets here; drag to reorder.",
+  "Las carpetas con las que trabaja. Solo entra lo que ha escaneado; arrastre para reordenar.",
+  "Le cartelle su cui lavori. Qui arriva solo ciò che hai scansionato; trascina per riordinare."
+ ],
+ "Сканировать папку…": [
+  "Scan Folder…",
+  "Escanear carpeta…",
+  "Scansiona cartella…"
+ ],
+ "Убрать все, кроме открытой": [
+  "Remove all but the open one",
+  "Quitar todas menos la abierta",
+  "Rimuovi tutte tranne quella aperta"
+ ],
+ "Закладки на папки, где лежат съёмки. Добавьте через ⋯ или перетащите папку из Finder.": [
+  "Bookmarks to where your shoots live. Add via ⋯ or drop a folder from Finder.",
+  "Marcadores a las carpetas con sus sesiones. Añada con ⋯ o arrastre una carpeta desde el Finder.",
+  "Segnalibri alle cartelle dei tuoi servizi. Aggiungi con ⋯ o trascina una cartella dal Finder."
+ ],
+ "Закладки: места, где вы ищете съёмки. Клик по папке — карточка с кнопкой «Сканировать».": [
+  "Bookmarks: the places you look for shoots. Click a folder for its card with a Scan button.",
+  "Marcadores: los lugares donde busca sesiones. Clic en una carpeta para ver su tarjeta con el botón Escanear.",
+  "Segnalibri: i posti dove cerchi i servizi. Clic su una cartella per la scheda con il pulsante Scansiona."
+ ],
+ "Проводник": [
+  "Explorer",
+  "Explorador",
+  "Esplora"
+ ],
+ "Вся файловая система: домашняя папка и диски. Клик — карточка папки, «Сканировать» — в «Съёмки».": [
+  "The whole file system: home and drives. Click for the folder card; Scan adds it to Shoots.",
+  "Todo el sistema de archivos: carpeta personal y discos. Clic para la tarjeta; Escanear la añade a Sesiones.",
+  "L’intero file system: home e dischi. Clic per la scheda; Scansiona la aggiunge ai Servizi."
+ ],
+ "Убрать из съёмок (файлы остаются на месте)": [
+  "Remove from Shoots (files stay where they are)",
+  "Quitar de Sesiones (los archivos se quedan donde están)",
+  "Rimuovi dai Servizi (i file restano dove sono)"
+ ],
+ "Показать в проводнике": [
+  "Show in Explorer",
+  "Mostrar en el Explorador",
+  "Mostra in Esplora"
+ ],
+ "Убрать из съёмок": [
+  "Remove from Shoots",
+  "Quitar de Sesiones",
+  "Rimuovi dai Servizi"
+ ],
+ "Сканировать как папку": [
+  "Scan as a Folder",
+  "Escanear como carpeta",
+  "Scansiona come cartella"
+ ],
+ "Папка уже в «Съёмках»": [
+  "The folder is already in Shoots",
+  "La carpeta ya está en Sesiones",
+  "La cartella è già nei Servizi"
+ ],
+ "Папка попадёт в «Съёмки» и откроется": [
+  "The folder goes to Shoots and opens",
+  "La carpeta irá a Sesiones y se abrirá",
+  "La cartella va nei Servizi e si apre"
+ ],
+ "Закладки: места, где вы ищете съёмки. Клик открывает это место в «Проводнике».": [
+  "Bookmarks: the places you look for shoots. A click opens the place in the Explorer.",
+  "Marcadores: los lugares donde busca sesiones. Un clic abre el lugar en el Explorador.",
+  "Segnalibri: i posti dove cerchi i servizi. Un clic apre il posto in Esplora."
+ ],
+ "Собрана вместе с подпапками": [
+  "Gathered together with its subfolders",
+  "Reunida junto con sus subcarpetas",
+  "Raccolta insieme alle sottocartelle"
+ ],
+ "Пересканировать только эту папку": [
+  "Rescan this folder only",
+  "Volver a escanear solo esta carpeta",
+  "Riscansiona solo questa cartella"
+ ],
+ "Пересканировать с подпапками": [
+  "Rescan with subfolders",
+  "Volver a escanear con subcarpetas",
+  "Riscansiona con le sottocartelle"
+ ],
+ "Открыть это место в «Проводнике»": [
+  "Open this place in the Explorer",
+  "Abrir este lugar en el Explorador",
+  "Apri questo posto in Esplora"
+ ],
+ "Здесь: {}": [
+  "Here: {}",
+  "Aquí: {}",
+  "Qui: {}"
+ ],
+ " · в подпапках: {} · подпапок: {}": [
+  " · in subfolders: {} · subfolders: {}",
+  " · en subcarpetas: {} · subcarpetas: {}",
+  " · nelle sottocartelle: {} · sottocartelle: {}"
+ ],
+ "Открыта сейчас": [
+  "Open now",
+  "Abierta ahora",
+  "Aperta ora"
+ ],
+ " · с подпапками": [
+  " · with subfolders",
+  " · con subcarpetas",
+  " · con le sottocartelle"
+ ],
+ "Только снимки из этой папки → в «Съёмки»": [
+  "Only the photos in this folder → Shoots",
+  "Solo las fotos de esta carpeta → Sesiones",
+  "Solo le foto in questa cartella → Servizi"
+ ],
+ "С подпапками": [
+  "With Subfolders",
+  "Con subcarpetas",
+  "Con le sottocartelle"
+ ],
+ "Снимки из этой папки и всех вложенных одним списком → в «Съёмки»": [
+  "Photos from this folder and all nested ones as one list → Shoots",
+  "Las fotos de esta carpeta y de todas las anidadas en una lista → Sesiones",
+  "Le foto di questa cartella e di tutte quelle annidate in un unico elenco → Servizi"
  ]
 }

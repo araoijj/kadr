@@ -86,8 +86,9 @@ struct FilterBar: View {
                 Text(FolderBrowser.displayName(f))
                 Text(FolderBrowser.shortPath(f))
                 Divider()
+                // Parents are shown in the explorer, not scanned: scanning is a deliberate step.
                 ForEach(parents(of: f), id: \.self) { p in
-                    Button(FolderBrowser.displayName(p)) { lib.open(p) }
+                    Button(FolderBrowser.displayName(p)) { lib.browser.reveal(p) }
                 }
                 Divider()
                 Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([f]) }
