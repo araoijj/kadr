@@ -36,6 +36,9 @@ struct KadrApp: App {
         }
         .commands {
             // ⌘Z / ⇧⌘Z — Kadr's history; in text fields, regular input undo.
+            CommandGroup(after: .appInfo) {
+                Button(tr("Проверить обновления…")) { Task { await Updater.check(manual: true) } }
+            }
             CommandGroup(replacing: .undoRedo) {
                 Button(library.undoTitle.map { tr("Отменить: \($0)") } ?? tr("Отменить")) {
                     if let um = NSApp.keyWindow?.firstResponder as? NSTextView { um.undoManager?.undo() } else { library.undo() }
@@ -104,6 +107,8 @@ struct KadrApp: App {
                         .keyboardShortcut("a", modifiers: [.command, .option])
                         .disabled(library.folder == nil || library.analyzed < library.photos.count || library.aiPending == 0)
                 }
+                Button(tr("Записать AI-теги в ключевые слова…")) { library.writeTagKeywords() }
+                    .disabled(library.folder == nil || library.aiRunning)
                 AutoCropMenu(lib: library).disabled(library.folder == nil)
                 Button(tr("Пересчитать анализ папки")) { library.reanalyze() }
                 Button(tr("Показать в Finder")) { library.revealCurrent() }

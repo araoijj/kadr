@@ -979,6 +979,7 @@ final class Library {
                 self.saveIndex()
                 self.aiRunning = false
                 self.finishAnalysis()   // best in series and medians, now taking faces and eyes into account
+                if Prefs.tagsToXMP, !Task.isCancelled { self.writeTagKeywords(ask: false) }
             }
         }
     }

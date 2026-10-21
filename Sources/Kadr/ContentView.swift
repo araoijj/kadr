@@ -51,6 +51,7 @@ struct ContentView: View {
                 for w in NSApp.windows where w.tabGroup?.isTabBarVisible == true { w.toggleTabBar(nil) }
                 for w in NSApp.windows { w.tabbingMode = .disallowed }
             }
+            Updater.checkAtLaunch()
             // kadr /path/to/folder — open it right away
             if lib.folder == nil, CommandLine.arguments.count > 1 {
                 let u = URL(fileURLWithPath: CommandLine.arguments[1])
