@@ -130,14 +130,18 @@ struct FiltersPanel: View {
     }
 
     @ViewBuilder private var ai: some View {
-        if lib.aiOn {
-            FSection(tr("AI-отбор"), key: "ai", hint: tr("анализ готов")) {
-                row(.recommended, PhotoFilter.recommended.title, icon: "sparkles", tint: Color.accentColor)
-                row(.leaders, PhotoFilter.leaders.title, icon: "crown")
-                row(.suspects, PhotoFilter.suspects.title, icon: "questionmark.circle")
-                if lib.count(.smiling) > 0 { row(.smiling, PhotoFilter.smiling.title, icon: "face.smiling") }
+        if lib.aiReady && !lib.aiRunning {
+            // Hints off: the section stays, so they can be turned back on; the AI queues hide with them.
+            FSection(tr("AI-отбор"), key: "ai", hint: lib.aiOn ? tr("анализ готов") : tr("подсказки выключены")) {
+                aiControls
+                if lib.aiOn {
+                    row(.recommended, PhotoFilter.recommended.title, icon: "sparkles", tint: Color.accentColor)
+                    row(.leaders, PhotoFilter.leaders.title, icon: "crown")
+                    row(.suspects, PhotoFilter.suspects.title, icon: "questionmark.circle")
+                    if lib.count(.smiling) > 0 { row(.smiling, PhotoFilter.smiling.title, icon: "face.smiling") }
+                }
             }
-            let reasons = CullReason.allCases.filter { lib.count(.reason($0)) > 0 }
+            let reasons = lib.aiOn ? CullReason.allCases.filter { lib.count(.reason($0)) > 0 } : []
             if !reasons.isEmpty {
                 FSection(tr("Проблемы"), key: "problems", hint: tr("почему в сомнительных")) {
                     ForEach(reasons) { r in row(.reason(r), r.title, icon: "exclamationmark.triangle") }
@@ -183,6 +187,38 @@ struct FiltersPanel: View {
                     .font(.caption2).foregroundStyle(.tertiary).padding(.horizontal, 8)
             }
         }
+    }
+
+    /// What the former culling mode kept in its top bar: hints on/off, strictness, the bulk AI actions.
+    private var aiControls: some View {
+        @Bindable var lib = lib
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Toggle(tr("Подсказки"), isOn: $lib.cullHints).toggleStyle(.switch).controlSize(.mini)
+                    .help(tr("Показывать находки AI-анализа: значки брака, AI-очереди и лица"))
+                Spacer()
+                if lib.aiPending > 0 {
+                    Button(tr("Досчитать (\(lib.aiPending))")) { lib.startAI() }.controlSize(.mini)
+                        .help(tr("Новые кадры или кадры, посчитанные до установки сетки лица"))
+                }
+            }
+            if lib.cullHints {
+                HStack(spacing: 6) {
+                    Text(tr("мягко")).font(.caption2).foregroundStyle(.secondary).fixedSize()
+                    Slider(value: $lib.cullStrictness, in: 0...1).controlSize(.mini)
+                    Text(tr("строго")).font(.caption2).foregroundStyle(.secondary).fixedSize()
+                }
+                .help(tr("Строгость поиска брака: мягко — только явный, строго — всё сомнительное"))
+                Menu(tr("AI-действия")) {
+                    Button(tr("Отклонить предложенный брак…")) { lib.acceptSuggestions() }
+                    Button(tr("Оставить лучшие в сериях, остальные в брак…")) { lib.keepBestInSeries() }
+                    Divider()
+                    AutoCropMenu(lib: lib)
+                }
+                .controlSize(.small).fixedSize()
+            }
+        }
+        .padding(.horizontal, 8).padding(.vertical, 4)
     }
 
     @ViewBuilder private var tags: some View {

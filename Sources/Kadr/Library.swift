@@ -131,9 +131,10 @@ final class Library {
 
     private var index: [URL: Int] = [:]
 
-    // "Culling" mode (Cull.swift, CullView.swift).
+    // The "Culling" layer (Cull.swift, CullView.swift): AI verdicts on the frames, faces at 100%, progress of
+    // the pass. A layer over the grid and the loupe, not a view of its own: the view stays as it is.
     var culling = false {
-        didSet { if culling { loupe = false; comparing = false; if let c = currentID { viewed.insert(c) } } }
+        didSet { if culling, let c = currentID { viewed.insert(c) } }
     }
     var cullHints = Prefs.d.object(forKey: "pref.cullHints") as? Bool ?? true {
         didSet { Prefs.d.set(cullHints, forKey: "pref.cullHints") }

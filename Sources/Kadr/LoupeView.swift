@@ -6,6 +6,8 @@ struct LoupeView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            GeometryReader { g in
+            HStack(spacing: 0) {
             ZStack {
                 if let p = lib.current {
                     if lib.cropMode { CropEditor(photo: p) } else if lib.removeMode { RemoveView(photo: p) } else { ZoomableLoupe(photo: p) }
@@ -14,15 +16,19 @@ struct LoupeView: View {
             }
             .overlay(alignment: .topLeading) {
                 if let p = lib.current {
-                    HStack(spacing: 6) {
-                        if p.seriesID != nil, !lib.cropMode, !lib.removeMode { seriesBadge(p) }
-                        // AI edits in effect on this photo — always visible, so nothing works unnoticed.
-                        if p.adj.aiDenoise > 0, Denoiser.shared.hasResult(p.url) {
-                            Badge(text: tr("AI-шумоподавление \(Int(p.adj.aiDenoise))"), icon: "wand.and.stars", tint: Color.accentColor)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 6) {
+                            if p.seriesID != nil, !lib.cropMode, !lib.removeMode { seriesBadge(p) }
+                            // AI edits in effect on this photo — always visible, so nothing works unnoticed.
+                            if p.adj.aiDenoise > 0, Denoiser.shared.hasResult(p.url) {
+                                Badge(text: tr("AI-шумоподавление \(Int(p.adj.aiDenoise))"), icon: "wand.and.stars", tint: Color.accentColor)
+                            }
+                            if !p.adj.removals.isEmpty {
+                                Badge(text: tr("Убрано объектов: \(p.adj.removals.count)"), icon: "eraser", tint: Color.accentColor)
+                            }
                         }
-                        if !p.adj.removals.isEmpty {
-                            Badge(text: tr("Убрано объектов: \(p.adj.removals.count)"), icon: "eraser", tint: Color.accentColor)
-                        }
+                        // The culling layer: decision, AI reasons with their fixes, the score.
+                        if lib.culling, !lib.cropMode, !lib.removeMode { CullOverlay(photo: p).frame(maxWidth: .infinity) }
                     }
                     .padding(16)
                 }
@@ -32,6 +38,15 @@ struct LoupeView: View {
                 if lib.cropMode { ToolHint(id: "crop") }
                 else if lib.removeMode { ToolHint(id: "remove") }
                 else if lib.splitCompare, lib.current?.adj.isIdentity == false { ToolHint(id: "split") }
+                else if lib.culling { ToolHint(id: "cull") }
+            }
+            // Faces at 100% while culling, if the frame still has room (narrow window: faces are viewed via zoom).
+            if lib.culling, lib.aiOn, g.size.width >= 640, !lib.cropMode, !lib.removeMode,
+               let p = lib.current, !(p.cull?.faces.isEmpty ?? true) {
+                Divider()
+                FacesColumn(photo: p).frame(width: 210)
+            }
+            }
             }
             .overlay(alignment: .bottom) {
                 if lib.cropMode { CropBar().padding(.bottom, 12) } else if lib.removeMode { RemoveBar().padding(.bottom, 12) } else { ZoomBar().padding(.bottom, 12) }
