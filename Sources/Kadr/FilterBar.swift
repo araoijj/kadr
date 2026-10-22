@@ -16,7 +16,9 @@ struct FilterBar: View {
                     if lib.filter == .rejected { rejectedAction(caption: false) }
                     if lib.inSeries { backFromSeries(caption: false) }
                     if lib.culling { cullStatus(full: false) }
-                    Spacer(minLength: 6); count
+                    Spacer(minLength: 6)
+                    if !lib.loupe { thumbSize(width: 56) }
+                    count
                 }
             }
         }
@@ -37,7 +39,7 @@ struct FilterBar: View {
             Spacer(minLength: 6)
             if lib.culling { cullStatus(full: full) }
             if full { chips }
-            if full, !lib.loupe { thumbSize }
+            if !lib.loupe { thumbSize(width: full ? 80 : 64) }
             count
         }
     }
@@ -98,11 +100,12 @@ struct FilterBar: View {
     }
 
     /// Size of the previews in the grid; it lived in the toolbar, where it ate 110 px of every mode.
-    private var thumbSize: some View {
+    /// In every variant of the bar: with the sidebar and the inspector open, the full one rarely fits.
+    private func thumbSize(width: CGFloat) -> some View {
         @Bindable var lib = lib
         return HStack(spacing: 4) {
             Image(systemName: "square.grid.3x3").font(.caption).foregroundStyle(.secondary)
-            Slider(value: $lib.thumbSize, in: 120...420).frame(width: 80).controlSize(.mini)
+            Slider(value: $lib.thumbSize, in: 120...420).frame(width: width).controlSize(.mini)
         }
         .help(tr("Размер превью"))
     }
