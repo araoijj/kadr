@@ -176,7 +176,18 @@ struct EmptyState: View {
     @Environment(Library.self) private var lib
     @State private var hover = false
 
+    // Never dictates the column's size: with the sidebar and the inspector open, a 1000-pt window leaves
+    // the photos under 400 pt, and a min size above that re-lays the split view round and round
+    // (macOS 27 aborts the app at launch). Without room, the key hints go first.
     var body: some View {
+        ViewThatFits {
+            card(hints: true)
+            card(hints: false)
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+    }
+
+    private func card(hints: Bool) -> some View {
         VStack(spacing: 22) {
             Image(systemName: "camera.aperture")
                 .font(.system(size: 64, weight: .thin))
@@ -193,7 +204,7 @@ struct EmptyState: View {
             Button(tr("Выбрать папку…")) { lib.chooseFolder() }
                 .controlSize(.large)
                 .buttonStyle(.borderedProminent)
-            KeyHints().padding(.top, 18)
+            if hints { KeyHints().padding(.top, 18) }
         }
         .padding(60)
         .background(
