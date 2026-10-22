@@ -133,6 +133,18 @@ final class Library {
     var culling = false {
         didSet { if culling, let c = currentID { viewed.insert(c) } }
     }
+
+    /// O / the toolbar toggle: switch the layer and say what it changed, because without an AI analysis
+    /// the difference on screen is small (progress, the summary, the decision tag).
+    func toggleCullingLayer() {
+        culling.toggle()
+        guard folder != nil else { return }
+        if !culling { flash(tr("Слой «Отбор» выключен")); return }
+        if aiOn { flash(tr("Слой «Отбор»: ярлыки AI на кадрах, лица на 100%, прогресс просмотра"), seconds: 2.5) }
+        else if aiRunning { flash(tr("Слой «Отбор» включён — ярлыки появятся, когда AI-анализ закончится"), seconds: 2.5) }
+        else if aiReady { flash(tr("Слой «Отбор» включён — подсказки AI выключены, включите их в панели «Фильтры»"), seconds: 3) }
+        else { flash(tr("Слой «Отбор» включён — запустите AI-анализ, чтобы увидеть ярлыки брака и лица"), seconds: 3) }
+    }
     var cullHints = Prefs.d.object(forKey: "pref.cullHints") as? Bool ?? true {
         didSet { Prefs.d.set(cullHints, forKey: "pref.cullHints") }
     }

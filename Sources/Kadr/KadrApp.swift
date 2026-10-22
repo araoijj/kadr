@@ -102,9 +102,11 @@ struct KadrApp: App {
                 Toggle(tr("Показать до обработки"), isOn: $library.showOriginal)
             }
             CommandMenu(tr("Отбор")) {
-                Toggle(tr("Слой «Отбор»: ярлыки AI, лица, прогресс (O)"), isOn: $library.culling)
+                Toggle(tr("Слой «Отбор»: ярлыки AI, лица, прогресс (O)"), isOn: Binding(get: { library.culling }, set: { _ in library.toggleCullingLayer() }))
                 Button(tr("Итог отбора…")) { library.showCullSummary = true }
                     .disabled(library.folder == nil)
+                Button(tr("Турнир: лучший кадр серии (T)")) { library.startTournament() }
+                    .disabled(!library.canCompare)
                 Divider()
                 Button(tr("Перенести отклонённые в «_Отклонённые»")) { library.moveRejected() }
                     .keyboardShortcut(.delete, modifiers: .command)
@@ -234,7 +236,7 @@ struct KeyHandler {
         case "s", "ы": lib.quickSend()
         case "c", "с": lib.startCompare()
         case "p", "з": lib.keep()
-        case "o", "щ": lib.culling.toggle()
+        case "o", "щ": lib.toggleCullingLayer()
         case "t", "е": lib.startTournament()
         case "u", "г": lib.unflag()
         case "h", "р":
