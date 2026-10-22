@@ -225,7 +225,8 @@ struct Badge: View {
             .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(tint)
             .padding(.horizontal, 6).padding(.vertical, 3)
-            .background(.black.opacity(0.55), in: Capsule())
+            .background(.black.opacity(0.8), in: Capsule())   // solid enough to read over a bright photo
+            .overlay(Capsule().strokeBorder(.white.opacity(0.18)))
     }
 }
 
@@ -283,13 +284,14 @@ struct SeriesBadge: View {
             HStack(spacing: 4) {
                 Image(systemName: inside ? "arrow.uturn.backward" : photo.isBestInSeries ? "sparkles" : "square.stack.3d.up")
                 Text(inside ? tr("Все кадры") : photo.isBestInSeries ? tr("Лучший") : tr("Серия"))
-                if hover && !inside { Text("\(n)").opacity(0.8) }
+                if !inside { Text("\(n)").monospacedDigit().opacity(0.8) }
             }
             .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(photo.isBestInSeries && !inside ? Theme.star : .white.opacity(hover ? 1 : 0.75))
+            .foregroundStyle(photo.isBestInSeries && !inside ? Theme.star : .white)
             .padding(.horizontal, 6).padding(.vertical, 3)
-            .background(.black.opacity(hover ? 0.8 : 0.55), in: Capsule())
-            .overlay(Capsule().strokeBorder(.white.opacity(hover ? 0.5 : 0)))
+            // Solid, with an edge: a light photo under a see-through capsule hid the badge.
+            .background(.black.opacity(hover ? 0.9 : 0.8), in: Capsule())
+            .overlay(Capsule().strokeBorder(.white.opacity(hover ? 0.5 : 0.18)))
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
