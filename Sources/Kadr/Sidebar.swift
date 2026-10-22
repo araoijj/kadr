@@ -77,10 +77,14 @@ struct Sidebar: View {
                         }
                     }
                     Section(isExpanded: $showExplorer) {
-                        ForEach(lib.browser.explorerRoots, id: \.self) { FolderRow(url: $0, icon: $0 == FolderBrowser.home ? "house" : "externaldrive") }
+                        ForEach(lib.browser.explorerRoots, id: \.self) { u in
+                            let card = lib.browser.cards.contains(u)
+                            FolderRow(url: u, title: card ? tr("\(FolderBrowser.displayName(u)) · карта") : nil,
+                                      icon: u == FolderBrowser.home ? "house" : card ? "sdcard.fill" : "externaldrive")
+                        }
                     } header: {
                         SectionTitle(tr("Проводник")) {
-                            Text(tr("Вся файловая система: домашняя папка и диски. Клик — карточка папки, «Сканировать» — в «Съёмки»."))
+                            Text(tr("Вся файловая система: домашняя папка, диски и карты памяти. Клик — карточка папки, «Сканировать» — в «Съёмки»."))
                         }
                     }
                 }
@@ -328,9 +332,10 @@ struct SelectedFolderCard: View {
     var body: some View {
         let isOpen = lib.folder?.standardizedFileURL == url.standardizedFileURL
         let isShoot = lib.browser.isShoot(url)
+        let card = lib.browser.card(containing: url)
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Image(systemName: "folder.fill").foregroundStyle(Color.accentColor)
+                Image(systemName: card == url ? "sdcard.fill" : "folder.fill").foregroundStyle(Color.accentColor)
                 Text(FolderBrowser.displayName(url)).font(.headline).lineLimit(1).truncationMode(.middle)
                 Spacer(minLength: 0)
                 Button { lib.browser.selected = nil } label: { Image(systemName: "xmark").font(.caption2.weight(.bold)) }
@@ -357,6 +362,14 @@ struct SelectedFolderCard: View {
             if isOpen {
                 Text(tr("Открыта сейчас") + (lib.includeSubfolders ? tr(" · с подпапками") : "")).font(.caption).foregroundStyle(.secondary)
             }
+            // On a camera card the usual way is to copy the photos off it first; browsing and scanning
+            // in place stay possible (a card is a drive like any other). Its own row: three buttons
+            // do not fit a narrow sidebar.
+            if let card {
+                Button(tr("Импорт с карты…")) { lib.importer.scan(card); lib.showImport = true }
+                    .buttonStyle(.borderedProminent).controlSize(.small)
+                    .help(tr("Скопировать новые снимки с карты на диск с проверкой, как через ⌘I"))
+            }
             HStack(spacing: 6) {
                 if isOpen {
                     Button(tr("Открыта")) {}.disabled(true)
@@ -368,12 +381,12 @@ struct SelectedFolderCard: View {
                     let hereEmpty = info.map { $0.here == 0 } ?? false
                     let hasDeep = info.map { $0.folders > 0 && $0.deep > 0 } ?? false
                     Button(tr("Сканировать")) { lib.scan(url, recursive: false); lib.browser.selected = nil }
-                        .prominent(!(hereEmpty && hasDeep))
+                        .prominent(card == nil && !(hereEmpty && hasDeep))
                         .disabled(info != nil && hereEmpty)
                         .help(tr("Только снимки из этой папки → в «Съёмки»"))
                     if hasDeep {
                         Button(tr("С подпапками")) { lib.scan(url, recursive: true); lib.browser.selected = nil }
-                            .prominent(hereEmpty)
+                            .prominent(card == nil && hereEmpty)
                             .help(tr("Снимки из этой папки и всех вложенных одним списком → в «Съёмки»"))
                     }
                 }

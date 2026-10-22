@@ -106,7 +106,14 @@ final class FolderBrowser {
     }
 
     /// Roots of the explorer: home first, then the drives (cards have their own section).
-    var explorerRoots: [URL] { [Self.home] + drives }
+    /// Home, the drives, then the camera cards: a card is a device like any other, browsable as a file
+    /// system; the «Карты памяти» section above is only the shortcut to importing from it.
+    var explorerRoots: [URL] { [Self.home] + drives + cards }
+
+    /// The camera card `u` is, or lives on (nil for anything else).
+    func card(containing u: URL) -> URL? {
+        cards.first { $0.standardizedFileURL == u.standardizedFileURL || Self.isInside(u, $0) }
+    }
 
     /// The folder the explorer should unfold down to and scroll to (set by `reveal`).
     var revealTarget: URL?

@@ -5883,5 +5883,20 @@
   "What you did to the frame; any step can be revisited.",
   "Lo que hiciste con la foto; se puede volver a cualquier paso.",
   "Cosa hai fatto alla foto; si può tornare a qualsiasi passaggio."
+ ],
+ "{} · карта": [
+  "{} · card",
+  "{} · tarjeta",
+  "{} · scheda"
+ ],
+ "Вся файловая система: домашняя папка, диски и карты памяти. Клик — карточка папки, «Сканировать» — в «Съёмки».": [
+  "The whole file system: home, drives and memory cards. A click shows the folder card, Scan puts it in Shoots.",
+  "Todo el sistema de archivos: carpeta personal, discos y tarjetas de memoria. Un clic muestra la ficha de la carpeta, «Escanear» la añade a «Sesiones».",
+  "Tutto il file system: cartella home, dischi e schede di memoria. Un clic mostra la scheda della cartella, «Scansiona» la aggiunge a «Servizi»."
+ ],
+ "Скопировать новые снимки с карты на диск с проверкой, как через ⌘I": [
+  "Copy the new photos off the card to a disk, verified, as with ⌘I",
+  "Copiar las fotos nuevas de la tarjeta al disco con verificación, como con ⌘I",
+  "Copia le foto nuove dalla scheda al disco con verifica, come con ⌘I"
  ]
 }
