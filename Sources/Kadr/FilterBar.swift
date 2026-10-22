@@ -57,6 +57,14 @@ struct FilterBar: View {
                     .font(.caption.weight(.semibold)).monospacedDigit().lineLimit(1).fixedSize()
             }
             .help(tr("Сколько кадров вы уже видели со включённым слоем «Отбор»"))
+            // The layer shows little until the analysis has run: the way to start it is right here.
+            if !lib.aiReady && !lib.aiRunning && lib.analyzed >= lib.photos.count && !lib.photos.isEmpty {
+                Button { lib.startAI() } label: {
+                    HStack(spacing: 4) { Image(systemName: "sparkles"); if full { Text(tr("AI-анализ")).fixedSize() } }
+                }
+                .controlSize(.small).fixedSize()
+                .help(tr("Найдёт смаз, моргание, пересвет и лучшие кадры в сериях. Нагружает Mac: ~1 минута на 1000 кадров (⌥⌘A)."))
+            }
             Button(tr("Итог…")) { lib.showCullSummary = true }.controlSize(.small).fixedSize()
                 .help(tr("Итог отбора: сколько оставлено и отклонено, что делать дальше"))
             HintButton(id: "cull")

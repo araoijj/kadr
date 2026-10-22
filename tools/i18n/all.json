@@ -5723,5 +5723,40 @@
   "Tournament — for a burst or 2+ selected frames: ← / → — which frame is better",
   "Torneo: para una ráfaga o 2+ fotos seleccionadas: ← / → indica cuál es mejor",
   "Torneo: per una raffica o 2+ foto selezionate: ← / → indica quale è migliore"
+ ],
+ "AI-анализ": [
+  "AI analysis",
+  "Análisis IA",
+  "Analisi IA"
+ ],
+ "Турнир: лучший кадр серии (T)": [
+  "Tournament: the best frame of a burst (T)",
+  "Torneo: la mejor foto de la ráfaga (T)",
+  "Torneo: la foto migliore della raffica (T)"
+ ],
+ "Слой «Отбор» выключен": [
+  "Culling layer off",
+  "Capa «Selección» desactivada",
+  "Livello «Selezione» disattivato"
+ ],
+ "Слой «Отбор»: ярлыки AI на кадрах, лица на 100%, прогресс просмотра": [
+  "Culling layer: AI tags on the frames, faces at 100%, progress of the pass",
+  "Capa «Selección»: etiquetas IA en las fotos, caras al 100 %, progreso",
+  "Livello «Selezione»: etichette IA sulle foto, volti al 100%, avanzamento"
+ ],
+ "Слой «Отбор» включён — ярлыки появятся, когда AI-анализ закончится": [
+  "Culling layer on — the tags appear when the AI analysis finishes",
+  "Capa «Selección» activada: las etiquetas aparecerán cuando termine el análisis IA",
+  "Livello «Selezione» attivo: le etichette appariranno al termine dell'analisi IA"
+ ],
+ "Слой «Отбор» включён — подсказки AI выключены, включите их в панели «Фильтры»": [
+  "Culling layer on — AI hints are off, turn them on in the Filters panel",
+  "Capa «Selección» activada: las sugerencias IA están desactivadas, actívalas en el panel «Filtros»",
+  "Livello «Selezione» attivo: i suggerimenti IA sono disattivati, attivali nel pannello «Filtri»"
+ ],
+ "Слой «Отбор» включён — запустите AI-анализ, чтобы увидеть ярлыки брака и лица": [
+  "Culling layer on — run the AI analysis to see reject tags and faces",
+  "Capa «Selección» activada: ejecuta el análisis IA para ver las etiquetas de descarte y las caras",
+  "Livello «Selezione» attivo: avvia l'analisi IA per vedere le etichette degli scarti e i volti"
  ]
 }

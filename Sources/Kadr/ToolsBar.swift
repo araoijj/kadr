@@ -22,9 +22,11 @@ struct ToolsBar: View {
             .frame(width: 70)
             .help(tr("Сетка / Кадр (пробел)"))
 
+            // No tournament button: the toolbar must not grow (with the inspector open it would squeeze the
+            // sidebar below its minimum); T, the burst badge and the «Отбор» menu start one.
             tool(tr("Отбор"), "checkmark.rectangle.stack", on: lib.culling, key: "O", enabled: true,
                  help: tr("Слой «Отбор» (O): ярлыки AI на кадрах, лица на 100%, прогресс просмотра — в сетке и в кадре")) {
-                lib.culling.toggle()
+                lib.toggleCullingLayer()
             }
 
             Divider().frame(height: 18).padding(.horizontal, 4)
@@ -42,11 +44,6 @@ struct ToolsBar: View {
                  enabled: lib.comparing || lib.canCompare,
                  disabledHelp: tr("Выделите 2–8 кадров (⌘-клик или рамкой) или встаньте на кадр серии")) {
                 lib.comparing ? lib.stopCompare() : lib.startCompare()
-            }
-            tool(tr("Турнир"), "trophy", on: lib.tournamentActive, key: "T",
-                 enabled: lib.tournamentActive || lib.canCompare,
-                 disabledHelp: tr("Турнир — для серии или 2+ выделенных кадров: ← / → — какой кадр лучше")) {
-                if lib.tournamentActive { lib.cancelTournament() } else { lib.startTournament() }
             }
             tool("100%", "plus.magnifyingglass", on: lib.zoom100, key: "Z", enabled: hasPhoto && !lib.cropMode) {
                 lib.loupe = true
