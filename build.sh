@@ -2,7 +2,21 @@
 # Builds Kadr.app: swift build → .app bundle → ~/Applications
 set -e
 cd "$(dirname "$0")"
-swift build -c release
+# Command Line Tools 27 bring the macOS 27 SDK, where @State is a macro, but not its SwiftUIMacros plugin
+# (only Xcode has it): without Xcode, build against the macOS 26 SDK that ships alongside.
+DEV=$(xcode-select -p)
+if [ -z "$SDKROOT" ] && [[ $DEV == */CommandLineTools ]] && [ ! -e "$DEV/usr/lib/swift/host/plugins/libSwiftUIMacros.dylib" ] \
+  && grep -qs SwiftUIMacros "$DEV"/SDKs/MacOSX.sdk/System/Library/Frameworks/SwiftUICore.framework/Modules/SwiftUICore.swiftmodule/arm64e-apple-macos.swiftinterface; then
+  SDKS=("$DEV"/SDKs/MacOSX26.*.sdk(N))
+  if [ ${#SDKS} -gt 0 ]; then export SDKROOT=${SDKS[-1]}; echo "Сборка с SDK $(basename $SDKROOT): в Command Line Tools нет плагина SwiftUIMacros"; fi
+fi
+# With SDKROOT set, the linker stamps the binary as built with SDK 14.0, and macOS then runs it in
+# the old-SDK compatibility mode (older look, layout loops tolerated): stamp the real SDK version.
+LINK=()
+if [ -n "$SDKROOT" ]; then
+  LINK=(-Xlinker -platform_version -Xlinker macos -Xlinker 14.0 -Xlinker "$(xcrun --sdk "$SDKROOT" --show-sdk-version)")
+fi
+swift build -c release "${LINK[@]}"
 APP=build/Kadr.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
