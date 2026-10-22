@@ -223,6 +223,7 @@ struct Badge: View {
     var body: some View {
         Label(text, systemImage: icon)
             .font(.system(size: 10, weight: .semibold))
+            .lineLimit(1).fixedSize()   // never wrapped letter by letter when the tile is crowded
             .foregroundStyle(tint)
             .padding(.horizontal, 6).padding(.vertical, 3)
             .background(.black.opacity(0.8), in: Capsule())   // solid enough to read over a bright photo
@@ -287,6 +288,7 @@ struct SeriesBadge: View {
                 if !inside { Text("\(n)").monospacedDigit().opacity(0.8) }
             }
             .font(.system(size: 10, weight: .semibold))
+            .lineLimit(1).fixedSize()   // a crowded tile wrapped «Серия» letter by letter
             .foregroundStyle(photo.isBestInSeries && !inside ? Theme.star : .white)
             .padding(.horizontal, 6).padding(.vertical, 3)
             // Solid, with an edge: a light photo under a see-through capsule hid the badge.

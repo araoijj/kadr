@@ -68,21 +68,35 @@ struct LoupeView: View {
     @MainActor private func seriesBadge(_ p: Photo) -> some View {
             let s = lib.series(of: p)
             let pos = (s.firstIndex { $0.id == p.id } ?? 0) + 1
-            // Click shows the burst; the arrow opens the rest of what you can do with it.
-            return Menu {
-                Button(tr("Показать только эту серию (\(s.count))"), systemImage: "square.stack.3d.up") { lib.showSeries(of: p) }
-                Button(tr("Выделить всю серию (⌘⇧A)"), systemImage: "checkmark.square.fill") { lib.select(p); lib.selectSeries() }
-                Button(tr("Сравнить кадры серии (C)"), systemImage: "rectangle.split.2x1") { lib.select(p); lib.startCompare() }
-                Button(tr("Турнир: выбрать лучший (T)"), systemImage: "trophy") { lib.select(p); lib.startTournament() }
-            } label: {
-                Badge(text: (lib.inSeries ? tr("Серия: \(pos) из \(s.count) · Esc — назад") : tr("Серия: \(pos) из \(s.count)"))
-                      + (p.isBestInSeries ? tr(" · самый резкий") : ""),
-                      icon: p.isBestInSeries ? "sparkles" : "square.stack.3d.up",
-                      tint: p.isBestInSeries ? Theme.star : .white.opacity(0.8))
-            } primaryAction: {
-                if lib.inSeries { lib.leaveSeries() } else { lib.showSeries(of: p) }
+            // Click shows the burst; the arrow opens the rest of what you can do with it. Plain button and
+            // menu, not a borderless menu: on macOS 26+ that one redraws its label and drops the capsule.
+            return HStack(spacing: 4) {
+                Button {
+                    if lib.inSeries { lib.leaveSeries() } else { lib.showSeries(of: p) }
+                } label: {
+                    Badge(text: (lib.inSeries ? tr("Серия: \(pos) из \(s.count) · Esc — назад") : tr("Серия: \(pos) из \(s.count)"))
+                          + (p.isBestInSeries ? tr(" · самый резкий") : ""),
+                          icon: p.isBestInSeries ? "sparkles" : "square.stack.3d.up",
+                          tint: p.isBestInSeries ? Theme.star : .white)
+                }
+                .buttonStyle(.plain)
+                Menu {
+                    Button(tr("Показать только эту серию (\(s.count))"), systemImage: "square.stack.3d.up") { lib.showSeries(of: p) }
+                    Button(tr("Выделить всю серию (⌘⇧A)"), systemImage: "checkmark.square.fill") { lib.select(p); lib.selectSeries() }
+                    Button(tr("Сравнить кадры серии (C)"), systemImage: "rectangle.split.2x1") { lib.select(p); lib.startCompare() }
+                    Button(tr("Турнир: выбрать лучший (T)"), systemImage: "trophy") { lib.select(p); lib.startTournament() }
+                } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 20, height: 20)
+                        .background(.black.opacity(0.8), in: Circle())
+                        .overlay(Circle().strokeBorder(.white.opacity(0.18)))
+                }
+                .menuStyle(.button)
+                .buttonStyle(.plain)
+                .menuIndicator(.hidden)
             }
-            .menuStyle(.borderlessButton)
             .fixedSize()
             .help(tr("Клик — показать всю серию (Esc — назад); стрелка — выделить, сравнить, турнир"))
     }
