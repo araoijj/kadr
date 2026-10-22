@@ -259,9 +259,12 @@ enum Exporter {
         }
         let e2 = img.extent
         let k = CGFloat(plan.width) / e2.width
-        img = img.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k])
+        // Lanczos and the sub-pixel scale below sample past the edge of the image, where a CIImage is
+        // transparent: the outermost column came out half transparent and turned into a light 1-px stripe
+        // on the JPEG. Clamp first (edge pixels repeat outward), crop to the plan's pixels last.
+        img = img.clampedToExtent().applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k])
         // Bring it to the plan's exact pixels (1080×1350, not 1080×1349 due to rounding).
-        let e3 = img.extent
+        let e3 = CGSize(width: e2.width * k, height: e2.height * k)
         img = img.transformed(by: CGAffineTransform(scaleX: CGFloat(plan.width) / e3.width, y: CGFloat(plan.height) / e3.height))
         return img.cropped(to: CGRect(x: 0, y: 0, width: plan.width, height: plan.height))
     }

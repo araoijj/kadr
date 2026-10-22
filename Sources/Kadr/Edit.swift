@@ -675,8 +675,13 @@ enum EditPipeline {
         }
         guard var img = CIImage(contentsOf: url, options: [.applyOrientationProperty: true]) else { return nil }
         if let maxSide {
-            let k = maxSide / max(img.extent.width, img.extent.height)
-            if k < 1 { img = img.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k]) }
+            let e = img.extent
+            let k = maxSide / max(e.width, e.height)
+            // Clamped before and cropped after, or the edge pixels sample transparency (a light 1-px line).
+            if k < 1 {
+                img = img.clampedToExtent().applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k])
+                    .cropped(to: CGRect(x: e.minX * k, y: e.minY * k, width: e.width * k, height: e.height * k).integral)
+            }
         }
         return img
     }
