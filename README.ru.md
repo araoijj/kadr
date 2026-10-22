@@ -87,11 +87,11 @@
 
 ## Установка
 
-Готовое приложение — в [выпусках](https://github.com/araoijj/kadr/releases/latest): нужен Mac на Apple Silicon и macOS 14+ (поиск брака — macOS 15+). Распакуйте и перенесите «Кадр» в «Программы». Приложение не нотаризовано Apple, поэтому при первом запуске: правый клик → «Открыть» → «Открыть» (или `xattr -dr com.apple.quarantine /Applications/Kadr.app`).
+Готовое приложение — в [выпусках](https://github.com/araoijj/kadr/releases/latest): нужен Mac на Apple Silicon и macOS 14+ (поиск брака — macOS 15+). Проверено на macOS 26 Tahoe и macOS 27 (Apple M2); на macOS 14 и 15 приложение собирается, но ещё не проверялось — будем рады отзывам. На macOS 27 нужна версия 1.4.9 / 1.5.0 бета 10 или новее: старые там закрываются сразу после запуска. Распакуйте и перенесите «Кадр» в «Программы». Приложение не нотаризовано Apple, поэтому при первом запуске: правый клик → «Открыть» → «Открыть» (или `xattr -dr com.apple.quarantine /Applications/Kadr.app`).
 
 ## Сборка
 
-Нужны macOS 14+ и Command Line Tools (Xcode не требуется):
+Нужны macOS 14+ и Command Line Tools (Xcode не требуется; с Command Line Tools 27 `build.sh` собирает против SDK macOS 26, который идёт в комплекте):
 
 ```sh
 xcode-select --install   # если ещё не установлены
