@@ -86,15 +86,17 @@ struct ContentView: View {
         @Bindable var lib = lib
         ToolbarItem(placement: .navigation) {
             Button { lib.chooseFolder() } label: { Label(tr("Открыть"), systemImage: "folder") }
-                .help(tr("Открыть папку (⌘O)"))
+                .tip(tr("Открыть папку"), key: "⌘O", icon: "folder", tr("Папка со съёмкой: она появится в «Съёмках» и проиндексируется."))
         }
         ToolbarItemGroup(placement: .navigation) {
             Button { lib.undo() } label: { Label(tr("Отменить"), systemImage: "arrow.uturn.backward") }
                 .disabled(!lib.canUndo)
-                .help(lib.undoTitle.map { tr("Отменить: \($0) (⌘Z)") } ?? tr("Нечего отменять"))
+                .tip(tr("Отменить"), key: "⌘Z", icon: "arrow.uturn.backward",
+                     lib.undoTitle.map { tr("Вернуть как было: \($0).") } ?? tr("Нечего отменять: оценки и обработка ещё не менялись."))
             Button { lib.redo() } label: { Label(tr("Вернуть"), systemImage: "arrow.uturn.forward") }
                 .disabled(!lib.canRedo)
-                .help(lib.redoTitle.map { tr("Вернуть: \($0) (⇧⌘Z)") } ?? tr("Нечего возвращать"))
+                .tip(tr("Вернуть"), key: "⇧⌘Z", icon: "arrow.uturn.forward",
+                     lib.redoTitle.map { tr("Повторить отменённое: \($0).") } ?? tr("Нечего возвращать."))
         }
         ToolbarItem(placement: .principal) {
             ToolsBar()
@@ -104,14 +106,14 @@ struct ContentView: View {
                 // Decisions right in the toolbar: easy to find without knowing the keys.
                 ControlGroup {
                     Button { lib.keep() } label: { Label(tr("Оставить"), systemImage: "checkmark.circle") }
-                        .help(tr("Оставить (P) — ★, если оценки ещё нет"))
+                        .tip(tr("Оставить"), key: "P", icon: "checkmark.circle", tr("Кадр идёт в отобранные: ★, если оценки ещё нет. Следующий откроется сам."))
                     Button { lib.toggleReject() } label: { Label(tr("Брак"), systemImage: "xmark.circle") }
-                        .help(tr("В брак / вернуть (X или Delete)"))
+                        .tip(tr("Брак"), key: "X", icon: "xmark.circle", tr("Отклонить кадр или вернуть из брака. Файл остаётся на месте."))
                 }
                 .disabled(lib.current == nil)
             }
             Button { lib.showShortcuts = true } label: { Label(tr("Клавиши"), systemImage: "keyboard") }
-                .help(tr("Шпаргалка по клавишам и интерфейсу (?)"))
+                .tip(tr("Клавиши"), key: "?", icon: "keyboard", tr("Шпаргалка: все горячие клавиши на одном экране."))
             if lib.folder != nil {
                 if lib.analyzed < lib.photos.count {
                     HStack(spacing: 6) {
@@ -125,7 +127,7 @@ struct ContentView: View {
                         Text(tr("AI-анализ \(lib.aiDone)/\(lib.aiTotal)"))
                             .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                         Button { lib.stopAI() } label: { Image(systemName: "stop.circle") }
-                            .buttonStyle(.borderless).help(tr("Остановить AI-анализ"))
+                            .buttonStyle(.borderless).tip(tr("Остановить AI-анализ"), icon: "stop.circle", tr("Посчитанное останется, остальное досчитается потом."))
                     }
                 }
                 if lib.denoiseRunning {
@@ -135,13 +137,13 @@ struct ContentView: View {
                         Text(tr("Шумоподавление \(lib.denoiseDone + 1)/\(lib.denoiseTotal)"))
                             .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                         Button { lib.stopDenoise() } label: { Image(systemName: "stop.circle") }
-                            .buttonStyle(.borderless).help(tr("Остановить шумоподавление"))
+                            .buttonStyle(.borderless).tip(tr("Остановить шумоподавление"), icon: "stop.circle", tr("Готовые кадры останутся обработанными."))
                     }
                 }
                 Button { lib.showExport = true } label: {
                     Label(tr("Сохранить в папку"), systemImage: "square.and.arrow.down.on.square")
                 }
-                .help(tr("Сохранить отобранные в папку (⌘S). S — текущий кадр сразу"))
+                .tip(tr("Сохранить в папку"), key: "⌘S", icon: "square.and.arrow.down.on.square", tr("Скопировать отобранные кадры в другую папку, RAW или JPEG. S — текущий кадр сразу."))
                 Menu {
                     Button(tr("Перенести отклонённые в «_Отклонённые»"), systemImage: "trash") { lib.moveRejected() }
                     Button(tr("Сохранить в папку…"), systemImage: "square.and.arrow.down") { lib.showExport = true }
@@ -151,6 +153,7 @@ struct ContentView: View {
                 } label: {
                     Label(tr("Действия"), systemImage: "ellipsis.circle")
                 }
+                .tip(tr("Действия"), icon: "ellipsis.circle", tr("Перенести брак в подпапку, открыть в Capture One, показать в Finder."))
             }
         }
     }

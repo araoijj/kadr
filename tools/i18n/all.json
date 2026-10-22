@@ -5758,5 +5758,130 @@
   "Culling layer on — run the AI analysis to see reject tags and faces",
   "Capa «Selección» activada: ejecuta el análisis IA para ver las etiquetas de descarte y las caras",
   "Livello «Selezione» attivo: avvia l'analisi IA per vedere le etichette degli scarti e i volti"
+ ],
+ "Открыть папку": [
+  "Open Folder",
+  "Abrir carpeta",
+  "Apri cartella"
+ ],
+ "Папка со съёмкой: она появится в «Съёмках» и проиндексируется.": [
+  "A folder with a shoot: it joins Shoots and gets indexed.",
+  "Una carpeta con una sesión: aparecerá en «Sesiones» y se indexará.",
+  "Una cartella con un servizio: comparirà in «Servizi» e verrà indicizzata."
+ ],
+ "Вернуть как было: {}.": [
+  "Put back as it was: {}.",
+  "Dejar como estaba: {}.",
+  "Rimettere com'era: {}."
+ ],
+ "Нечего отменять: оценки и обработка ещё не менялись.": [
+  "Nothing to undo: no ratings or edits changed yet.",
+  "Nada que deshacer: aún no cambiaron valoraciones ni ajustes.",
+  "Niente da annullare: valutazioni e modifiche non sono ancora cambiate."
+ ],
+ "Повторить отменённое: {}.": [
+  "Redo what was undone: {}.",
+  "Rehacer lo deshecho: {}.",
+  "Ripetere ciò che è stato annullato: {}."
+ ],
+ "Нечего возвращать.": [
+  "Nothing to redo.",
+  "Nada que rehacer.",
+  "Niente da ripetere."
+ ],
+ "Кадр идёт в отобранные: ★, если оценки ещё нет. Следующий откроется сам.": [
+  "The frame joins the picks: ★ if it has no rating yet. The next one opens by itself.",
+  "La foto pasa a las elegidas: ★ si aún no tiene valoración. La siguiente se abre sola.",
+  "La foto va tra le scelte: ★ se non ha ancora una valutazione. La successiva si apre da sola."
+ ],
+ "Отклонить кадр или вернуть из брака. Файл остаётся на месте.": [
+  "Reject the frame, or take it back. The file stays where it is.",
+  "Descartar la foto o recuperarla. El archivo se queda donde está.",
+  "Scarta la foto o recuperala. Il file resta dov'è."
+ ],
+ "Шпаргалка: все горячие клавиши на одном экране.": [
+  "Cheat sheet: every shortcut on one screen.",
+  "Chuleta: todos los atajos en una pantalla.",
+  "Promemoria: tutte le scorciatoie in una schermata."
+ ],
+ "Посчитанное останется, остальное досчитается потом.": [
+  "What is done stays; the rest can finish later.",
+  "Lo calculado se conserva; el resto se termina después.",
+  "Ciò che è calcolato resta; il resto si completa dopo."
+ ],
+ "Готовые кадры останутся обработанными.": [
+  "Finished frames keep their result.",
+  "Las fotos terminadas conservan el resultado.",
+  "Le foto finite mantengono il risultato."
+ ],
+ "Скопировать отобранные кадры в другую папку, RAW или JPEG. S — текущий кадр сразу.": [
+  "Copy the picks to another folder, RAW or JPEG. S sends the current frame right away.",
+  "Copiar las elegidas a otra carpeta, RAW o JPEG. S envía la foto actual al instante.",
+  "Copia le scelte in un'altra cartella, RAW o JPEG. S invia subito la foto corrente."
+ ],
+ "Перенести брак в подпапку, открыть в Capture One, показать в Finder.": [
+  "Move rejects to a subfolder, open in Capture One, show in Finder.",
+  "Mover descartes a una subcarpeta, abrir en Capture One, mostrar en el Finder.",
+  "Sposta gli scarti in una sottocartella, apri in Capture One, mostra nel Finder."
+ ],
+ "Все кадры папки плитками. Двойной клик или пробел открывает кадр крупно.": [
+  "Every frame of the folder as tiles. Double-click or Space opens one large.",
+  "Todas las fotos de la carpeta en mosaico. Doble clic o espacio abre una en grande.",
+  "Tutte le foto della cartella a riquadri. Doppio clic o spazio ne apre una in grande."
+ ],
+ "Один снимок крупно, лента кадров снизу. Колёсико или Z — зум.": [
+  "One frame large, the filmstrip below. Scroll wheel or Z zooms.",
+  "Una foto en grande, la tira de fotos abajo. La rueda o Z hacen zoom.",
+  "Una foto in grande, la striscia sotto. La rotella o Z fanno lo zoom."
+ ],
+ "Слой поверх вида: ярлыки AI-анализа на кадрах, лица на 100%, прогресс просмотра.": [
+  "A layer over the view: AI analysis tags on the frames, faces at 100%, progress of the pass.",
+  "Una capa sobre la vista: etiquetas del análisis IA en las fotos, caras al 100 %, progreso.",
+  "Un livello sopra la vista: etichette dell'analisi IA sulle foto, volti al 100%, avanzamento."
+ ],
+ "Рамка и горизонт. Enter — готово, Esc — отмена. Исходный файл не меняется.": [
+  "Frame and horizon. Enter — done, Esc — cancel. The original file is untouched.",
+  "Encuadre y horizonte. Intro: listo, Esc: cancelar. El archivo original no cambia.",
+  "Inquadratura e orizzonte. Invio: fatto, Esc: annulla. Il file originale non cambia."
+ ],
+ "Шторка: слева исходник, справа кадр с обработкой.": [
+  "A split: the original on the left, the edited frame on the right.",
+  "Una cortina: a la izquierda el original, a la derecha la foto editada.",
+  "Una tendina: a sinistra l'originale, a destra la foto modificata."
+ ],
+ "У кадра нет обработки — сравнивать не с чем.": [
+  "The frame has no edits — nothing to compare with.",
+  "La foto no tiene ajustes: no hay con qué comparar.",
+  "La foto non ha modifiche: non c'è nulla da confrontare."
+ ],
+ "Несколько кадров рядом, чтобы выбрать, какой оставить.": [
+  "Several frames side by side, to choose which one to keep.",
+  "Varias fotos juntas para elegir cuál conservar.",
+  "Più foto affiancate per scegliere quale tenere."
+ ],
+ "Выделите 2–8 кадров (⌘-клик или рамкой) или встаньте на кадр серии.": [
+  "Select 2–8 frames (⌘-click or a marquee) or stand on a frame of a burst.",
+  "Selecciona 2–8 fotos (⌘-clic o con el marco) o sitúate en una foto de la ráfaga.",
+  "Seleziona 2–8 foto (⌘-clic o con la cornice) o posizionati su una foto della raffica."
+ ],
+ "Пиксель в пиксель: проверить резкость и глаза.": [
+  "Pixel for pixel: check sharpness and eyes.",
+  "Píxel a píxel: comprobar nitidez y ojos.",
+  "Pixel per pixel: controllare nitidezza e occhi."
+ ],
+ "Снимок на весь экран без панелей. Esc — назад.": [
+  "The frame full screen, no panels. Esc goes back.",
+  "La foto a pantalla completa sin paneles. Esc vuelve.",
+  "La foto a schermo intero senza pannelli. Esc torna indietro."
+ ],
+ "Экспозиция, баланс белого, стили и LUT — в инспекторе справа.": [
+  "Exposure, white balance, styles and LUTs — in the inspector on the right.",
+  "Exposición, balance de blancos, estilos y LUT, en el inspector de la derecha.",
+  "Esposizione, bilanciamento del bianco, stili e LUT, nell'ispettore a destra."
+ ],
+ "Что вы делали с кадром; к любому шагу можно вернуться.": [
+  "What you did to the frame; any step can be revisited.",
+  "Lo que hiciste con la foto; se puede volver a cualquier paso.",
+  "Cosa hai fatto alla foto; si può tornare a qualsiasi passaggio."
  ]
 }
