@@ -5203,5 +5203,65 @@
   "⌥⌘1 — sources, ⌥⌘2 — filters",
   "⌥⌘1: fuentes, ⌥⌘2: filtros",
   "⌥⌘1: sorgenti, ⌥⌘2: filtri"
+ ],
+ "Сколько кадров вы уже видели со включённым слоем «Отбор»": [
+  "How many frames you have seen with the Culling layer on",
+  "Cuántas fotos ya has visto con la capa «Selección» activada",
+  "Quante foto hai già visto con il livello «Selezione» attivo"
+ ],
+ "брак": [
+  "rejects",
+  "descartes",
+  "scarti"
+ ],
+ "Итог отбора: сколько оставлено и отклонено, что делать дальше": [
+  "Culling summary: how many kept and rejected, what to do next",
+  "Resumen de la selección: cuántas se quedan y cuántas se descartan, qué hacer después",
+  "Riepilogo della selezione: quante tenute e quante scartate, cosa fare dopo"
+ ],
+ "подсказки выключены": [
+  "hints are off",
+  "sugerencias desactivadas",
+  "suggerimenti disattivati"
+ ],
+ "1–5 — звёзды, пробел — сетка или кадр, Z — 100%, C — сравнить серию, T — турнир, H — скрыть брак, ⌘Z — отменить.": [
+  "1–5 — stars, Space — grid or frame, Z — 100%, C — compare the burst, T — tournament, H — hide rejects, ⌘Z — undo.",
+  "1–5: estrellas, espacio: cuadrícula o foto, Z: 100 %, C: comparar la ráfaga, T: torneo, H: ocultar descartes, ⌘Z: deshacer.",
+  "1–5: stelle, spazio: griglia o foto, Z: 100%, C: confronta la raffica, T: torneo, H: nascondi scarti, ⌘Z: annulla."
+ ],
+ "Слой «Отбор» (O) добавляет ярлыки AI-анализа, лица на 100% и прогресс просмотра; что листать — в панели «Фильтры» (⌥⌘2).": [
+  "The Culling layer (O) adds the AI analysis tags, faces at 100% and the progress of the pass; what to flip through is set in the Filters panel (⌥⌘2).",
+  "La capa «Selección» (O) añade las etiquetas del análisis IA, las caras al 100 % y el progreso; qué recorrer se elige en el panel «Filtros» (⌥⌘2).",
+  "Il livello «Selezione» (O) aggiunge le etichette dell'analisi IA, i volti al 100% e l'avanzamento; cosa scorrere si sceglie nel pannello «Filtri» (⌥⌘2)."
+ ],
+ "Слой «Отбор»: ярлыки AI, лица, прогресс (O)": [
+  "Culling layer: AI tags, faces, progress (O)",
+  "Capa «Selección»: etiquetas IA, caras, progreso (O)",
+  "Livello «Selezione»: etichette IA, volti, avanzamento (O)"
+ ],
+ "Итог отбора…": [
+  "Culling Summary…",
+  "Resumen de la selección…",
+  "Riepilogo della selezione…"
+ ],
+ "Включать слой «Отбор» при открытии папки": [
+  "Turn the Culling layer on when a folder opens",
+  "Activar la capa «Selección» al abrir una carpeta",
+  "Attiva il livello «Selezione» all'apertura di una cartella"
+ ],
+ "слой «Отбор»: ярлыки AI, лица, прогресс": [
+  "Culling layer: AI tags, faces, progress",
+  "capa «Selección»: etiquetas IA, caras, progreso",
+  "livello «Selezione»: etichette IA, volti, avanzamento"
+ ],
+ "Слой «Отбор» (O): ярлыки AI на кадрах, лица на 100%, прогресс просмотра — в сетке и в кадре": [
+  "Culling layer (O): AI tags on the frames, faces at 100%, progress of the pass — in the grid and in the loupe",
+  "Capa «Selección» (O): etiquetas IA en las fotos, caras al 100 %, progreso; en la cuadrícula y en la foto",
+  "Livello «Selezione» (O): etichette IA sulle foto, volti al 100%, avanzamento; nella griglia e nella foto"
+ ],
+ "Турнир — для серии или 2+ выделенных кадров: ← / → — какой кадр лучше": [
+  "Tournament — for a burst or 2+ selected frames: ← / → — which frame is better",
+  "Torneo: para una ráfaga o 2+ fotos seleccionadas: ← / → indica cuál es mejor",
+  "Torneo: per una raffica o 2+ foto selezionate: ← / → indica quale è migliore"
  ]
 }

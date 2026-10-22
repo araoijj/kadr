@@ -15,7 +15,7 @@ struct GridView: View {
         let sections = lib.sections
         let list = sections.flatMap(\.photos)
         VStack(spacing: 0) {
-        ToolHint(id: "browse")
+        if lib.culling { ToolHint(id: "cull") }
         GeometryReader { geo in
             ScrollViewReader { proxy in
                 ScrollView {
@@ -166,13 +166,27 @@ struct Thumbnail: View {
                 if photo.duplicateOf != nil {
                     Badge(text: tr("Дубль"), icon: "doc.on.doc", tint: .orange)
                 }
-                if lib.aiOn, lib.verdict(photo).suspect, !photo.rejected {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.orange)
-                        .padding(4)
-                        .background(.black.opacity(0.55), in: Circle())
-                        .help(lib.verdict(photo).reasons.filter(\.isDefect).map(\.title).joined(separator: ", "))
+                if lib.aiOn, !photo.rejected {
+                    let v = lib.verdict(photo)
+                    if lib.culling {
+                        // The culling layer: every reason as its icon (the name on hover) — a tile has no room
+                        // for words; "Дубль" already has its badge above.
+                        ForEach(v.reasons.filter { $0 != .duplicate }) { r in
+                            Image(systemName: r.icon)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(r.isDefect ? .orange : .yellow)
+                                .padding(4)
+                                .background(.black.opacity(0.55), in: Circle())
+                                .help(r.title + "\n" + lib.explain(r, photo))
+                        }
+                    } else if v.suspect {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.orange)
+                            .padding(4)
+                            .background(.black.opacity(0.55), in: Circle())
+                            .help(v.reasons.filter(\.isDefect).map(\.title).joined(separator: ", "))
+                    }
                 }
                 if !photo.adj.isIdentity {
                     Image(systemName: "slider.horizontal.3")
@@ -187,6 +201,12 @@ struct Thumbnail: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title3)
                         .foregroundStyle(.white, Theme.reject)
+                } else if lib.culling, lib.aiOn, photo.cull != nil {
+                    Text("\(lib.verdict(photo).score)")
+                        .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                        .padding(.horizontal, 6).padding(.vertical, 3)
+                        .background(.black.opacity(0.55), in: Capsule())
+                        .help(tr("Техника и эстетика кадра, 0–100. Подсказка, а не приговор."))
                 }
             }
             Spacer()

@@ -50,7 +50,7 @@ struct GeneralSettings: View {
             }
             Section(tr("Работа")) {
                 Toggle(tr("Открывать последнюю папку при запуске"), isOn: $reopenLast)
-                Toggle(tr("Открывать папку сразу в режиме «Отбор»"), isOn: $cullDefault)
+                Toggle(tr("Включать слой «Отбор» при открытии папки"), isOn: $cullDefault)
                 Picker(tr("Новая сцена после паузы"), selection: $sceneGap) {
                     ForEach([5, 10, 20, 30, 60], id: \.self) { Text(tr("\($0) мин")).tag($0) }
                 }

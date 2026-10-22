@@ -15,6 +15,7 @@ struct FilterBar: View {
                     breadcrumb; sortMenu(caption: false); Spacer(minLength: 6); decisionsMenu; more
                     if lib.filter == .rejected { rejectedAction(caption: false) }
                     if lib.inSeries { backFromSeries(caption: false) }
+                    if lib.culling { cullStatus(full: false) }
                     Spacer(minLength: 6); count
                 }
             }
@@ -34,9 +35,31 @@ struct FilterBar: View {
             if lib.filter == .rejected { rejectedAction(caption: full) }
             if lib.inSeries { backFromSeries(caption: full) }
             Spacer(minLength: 6)
+            if lib.culling { cullStatus(full: full) }
             if full { chips }
             if full, !lib.loupe { thumbSize }
             count
+        }
+    }
+
+    // MARK: - Culling layer
+
+    /// The pass so far: how much is seen, and the summary. Only while the layer is on; it replaces the top
+    /// bar of the former culling mode. The kept / rejected / undecided counts are already on the decision
+    /// buttons to the left.
+    private func cullStatus(full: Bool) -> some View {
+        let total = lib.photos.count
+        let seen = lib.photos.filter { lib.viewed.contains($0.id) }.count
+        return HStack(spacing: 10) {
+            HStack(spacing: 6) {
+                ProgressView(value: Double(seen), total: Double(max(total, 1))).frame(width: full ? 80 : 44)
+                Text(full ? tr("Просмотрено \(seen) из \(total)") : "\(seen)/\(total)")
+                    .font(.caption.weight(.semibold)).monospacedDigit().lineLimit(1).fixedSize()
+            }
+            .help(tr("Сколько кадров вы уже видели со включённым слоем «Отбор»"))
+            Button(tr("Итог…")) { lib.showCullSummary = true }.controlSize(.small).fixedSize()
+                .help(tr("Итог отбора: сколько оставлено и отклонено, что делать дальше"))
+            HintButton(id: "cull")
         }
     }
 

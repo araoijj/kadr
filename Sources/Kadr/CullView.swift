@@ -1,247 +1,44 @@
 import AppKit
 import SwiftUI
 
-/// "Culling" mode: large frame, progress, decisions, queue and "Tournament" — manual culling.
-/// AI culling (reject reasons, AI queues, faces at 100%) appears after "Run AI Analysis" and with "Hints" enabled.
-struct CullView: View {
-    @Environment(Library.self) private var lib
-    var body: some View {
-        VStack(spacing: 0) {
-            CullTopBar()
-            GeometryReader { g in
-            HStack(spacing: 0) {
-                ZStack {
-                    if let p = lib.current {
-                        ZoomableLoupe(photo: p)
-                        CullOverlay(photo: p)
-                    } else {
-                        ContentUnavailableView(tr("Очередь пуста"), systemImage: "checkmark.circle",
-                                               description: Text(tr("В этой очереди не осталось кадров — выберите другую сверху.")))
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .overlay(alignment: .top) { ToolHint(id: "cull") }
-                // Faces only if the frame still has room (narrow window: faces are viewed via zoom).
-                if lib.aiOn, g.size.width >= 640, let p = lib.current, !(p.cull?.faces.isEmpty ?? true) {
-                    Divider()
-                    FacesColumn(photo: p).frame(width: 210)
-                }
-            }
-            }
-            Filmstrip()
-        }
-        .sheet(isPresented: Binding(get: { lib.showCullSummary }, set: { lib.showCullSummary = $0 })) {
-            CullSummary().environment(lib)
-        }
-    }
-}
-
-struct CullTopBar: View {
-    @Environment(Library.self) private var lib
-
-    var body: some View {
-        // Manual culling on top (progress, decisions, queue, tournament), with a separate AI culling strip below.
-        // Wide window: two rows, narrow: three. The bar takes the width it is given (see Chrome.swift).
-        Bar {
-        ViewThatFits(in: .horizontal) {
-            VStack(spacing: 8) {
-                HStack(spacing: 14) {
-                    progress(width: 180)
-                    counters
-                    Spacer(minLength: 8)
-                    ViewThatFits(in: .horizontal) {
-                        queuePicker.pickerStyle(.segmented).fixedSize()
-                        queuePicker.pickerStyle(.menu).fixedSize()
-                    }
-                    tournament
-                    summary
-                }
-                HStack(spacing: 12) {
-                    aiStrip(compact: false)
-                    Spacer(minLength: 8)
-                    ViewThatFits(in: .horizontal) {
-                        Text(tr("P — оставить · X — брак · U — снять · ← → — листать · 1–5 — звёзды"))
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
-                        Text(tr("P · X · U · ← →")).font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
-                        Color.clear.frame(width: 0, height: 0)
-                    }
-                }
-                .controlSize(.small)
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 12) {
-                    progress(width: 110)
-                    counters
-                }
-                HStack(spacing: 8) {
-                    queuePicker.pickerStyle(.menu).fixedSize()
-                    tournament
-                    Spacer(minLength: 0)
-                    summary
-                }
-                .controlSize(.small)
-                aiStrip(compact: true).controlSize(.small)
-            }
-        }
-        }
-    }
-
-    private func progress(width: CGFloat) -> some View {
-        let total = lib.photos.count
-        let seen = lib.photos.filter { lib.viewed.contains($0.id) }.count
-        return VStack(alignment: .leading, spacing: 3) {
-            Text(tr("Просмотрено \(seen) из \(total)")).font(.callout.weight(.semibold)).monospacedDigit().lineLimit(1).fixedSize()
-            ProgressView(value: Double(seen), total: Double(max(total, 1))).frame(width: width)
-        }
-    }
-
-    private var counters: some View {
-        let d = lib.decided
-        return HStack(spacing: 14) {
-            counter(tr("Оставлено"), d.kept, .green)
-            counter(tr("Брак"), d.rejected, Theme.reject)
-            counter(tr("Без решения"), d.undecided, .secondary)
-        }
-        .fixedSize()
-    }
-
-    /// AI culling: started by a button, then progress, then hints, strictness and AI actions.
-    /// Until it runs, culling is fully manual, with no reject badges.
-    @ViewBuilder private func aiStrip(compact: Bool) -> some View {
-        @Bindable var lib = lib
-        HStack(spacing: 10) {
-            Label("AI", systemImage: "sparkles").font(.caption.weight(.bold)).foregroundStyle(Color.accentColor).fixedSize()
-            if lib.analyzed < lib.photos.count {
-                Text(tr("доступен после индексации папки")).font(.caption).foregroundStyle(.secondary).fixedSize()
-            } else if lib.aiRunning {
-                ProgressView(value: Double(lib.aiDone), total: Double(max(lib.aiTotal, 1))).frame(width: compact ? 90 : 140)
-                Text(tr("AI-анализ \(lib.aiDone)/\(lib.aiTotal)")).font(.caption.monospacedDigit()).foregroundStyle(.secondary).fixedSize()
-                Button(tr("Стоп")) { lib.stopAI() }.fixedSize()
-            } else if !lib.aiReady {
-                Button { lib.startAI() } label: { Label(tr("Запустить AI-анализ"), systemImage: "sparkles") }
-                    .fixedSize()
-                    .help(tr("Найдёт смаз, моргание, пересвет и лучшие кадры в сериях. Нагружает Mac: ~1 минута на 1000 кадров (⌥⌘A)."))
-                if !compact {
-                    Text(tr("смаз · моргание · пересвет · лучшие в сериях")).font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
-                }
-            } else {
-                Toggle(tr("Подсказки"), isOn: $lib.cullHints)
-                    .toggleStyle(.switch).fixedSize()
-                    .help(tr("Показывать находки AI-анализа: значки брака, AI-очереди и лица"))
-                if lib.cullHints {
-                    if compact {
-                        Slider(value: $lib.cullStrictness, in: 0...1).frame(width: 90)
-                            .help(tr("Строгость поиска брака: мягко — только явный, строго — всё сомнительное"))
-                    } else {
-                        strictness(labels: true)
-                    }
-                    actions
-                }
-                if lib.aiPending > 0 {
-                    Button(tr("Досчитать (\(lib.aiPending))")) { lib.startAI() }.fixedSize()
-                        .help(tr("Новые кадры или кадры, посчитанные до установки сетки лица"))
-                }
-            }
-        }
-        .padding(.horizontal, 8).padding(.vertical, 3)
-        .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
-    }
-
-    private func strictness(labels: Bool) -> some View {
-        @Bindable var lib = lib
-        return HStack(spacing: 6) {
-            Text(tr("мягко")).font(.caption).foregroundStyle(.secondary).fixedSize()
-            Slider(value: $lib.cullStrictness, in: 0...1).frame(width: labels ? 130 : 100)
-            Text(tr("строго")).font(.caption).foregroundStyle(.secondary).fixedSize()
-        }
-        .help(tr("Строгость поиска брака: мягко — только явный, строго — всё сомнительное"))
-    }
-
-    private var actions: some View {
-        Menu(tr("AI-действия")) {
-            Button(tr("Отклонить предложенный брак…")) { lib.acceptSuggestions() }
-            Button(tr("Оставить лучшие в сериях, остальные в брак…")) { lib.keepBestInSeries() }
-            Divider()
-            AutoCropMenu(lib: lib)
-        }
-        .fixedSize()
-    }
-
-    private var tournament: some View {
-        Button { lib.startTournament() } label: { Label(tr("Турнир"), systemImage: "trophy") }
-            .fixedSize()
-            .help(tr("Турнир по серии или выделенным (T)"))
-    }
-
-    private var summary: some View {
-        HStack(spacing: 6) {
-            Button(tr("Итог…")) { lib.showCullSummary = true }
-            HintButton(id: "cull")
-        }
-        .fixedSize()
-    }
-
-    private var queuePicker: some View {
-        let total = lib.photos.count
-        return Picker("", selection: Binding(get: { lib.filter }, set: { lib.filter = $0; lib.move(0) })) {
-            Text(tr("Все") + " \(total)").tag(PhotoFilter.all)
-            Text(tr("Без решения") + " \(lib.count(.undecided))").tag(PhotoFilter.undecided)
-            if lib.aiOn {
-                Text(tr("Лучшие") + " \(lib.count(.recommended))").tag(PhotoFilter.recommended)
-                Text(tr("Возможный брак") + " \(lib.count(.suspects))").tag(PhotoFilter.suspects)
-                Text(tr("Быстрый проход") + " \(lib.count(.leaders))").tag(PhotoFilter.leaders)
-            }
-        }
-        .labelsHidden()
-        .help(tr("Очередь: какие кадры листать"))
-    }
-
-    private func counter(_ title: String, _ n: Int, _ color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(verbatim: "\(n)").font(.title3.monospacedDigit().weight(.semibold)).foregroundStyle(color)
-            Text(title).font(.caption2).foregroundStyle(.secondary)
-        }
-    }
-}
-
-/// Frame overlay: decision, reject reasons, rating, "Straighten".
+/// The "Culling" layer over the loupe and the grid (ToolsBar toggle, O): the AI verdict on the frame,
+/// faces at 100%, the summary. Progress and counts live in the FilterBar while the layer is on;
+/// the AI controls (hints, strictness, actions) in the sidebar's «Фильтры» tab.
+/// One row over the frame: decision, reject reasons with their fixes, the score. The loupe places it
+/// under its burst badge.
 struct CullOverlay: View {
     let photo: Photo
     @Environment(Library.self) private var lib
 
     var body: some View {
         let v = lib.verdict(photo)
-        VStack {
-            HStack(alignment: .top, spacing: 6) {
-                if photo.rejected {
-                    tag(tr("Брак"), "xmark.circle.fill", Theme.reject)
-                } else if photo.rating > 0 {
-                    tag(tr("Оставлено") + " " + String(repeating: "★", count: photo.rating), "checkmark.circle.fill", .green)
+        HStack(alignment: .top, spacing: 6) {
+            if photo.rejected {
+                tag(tr("Брак"), "xmark.circle.fill", Theme.reject)
+            } else if photo.rating > 0 {
+                tag(tr("Оставлено") + " " + String(repeating: "★", count: photo.rating), "checkmark.circle.fill", .green)
+            }
+            if lib.aiOn {
+                ForEach(v.reasons) { r in tag(r.title, r.icon, r.isDefect ? .orange : .yellow).help(lib.explain(r, photo)) }
+                if photo.isBestInSeries { tag(tr("Лучший в серии"), "sparkles", Theme.star) }
+                if v.reasons.contains(.underexposed) {
+                    Button { lib.brightenDark() } label: { tag(tr("Осветлить"), "sun.max", .accentColor) }
+                        .buttonStyle(.plain)
                 }
-                if lib.aiOn {
-                    ForEach(v.reasons) { r in tag(r.title, r.icon, r.isDefect ? .orange : .yellow).help(lib.explain(r, photo)) }
-                    if photo.isBestInSeries { tag(tr("Лучший в серии"), "sparkles", Theme.star) }
-                    if v.reasons.contains(.underexposed) {
-                        Button { lib.brightenDark() } label: { tag(tr("Осветлить"), "sun.max", .accentColor) }
-                            .buttonStyle(.plain)
-                    }
-                    if v.reasons.contains(.tilted) {
-                        Button { lib.straightenByHorizon() } label: { tag(tr("Выровнять"), "level", .accentColor) }
-                            .buttonStyle(.plain).allowsHitTesting(true)
-                    }
-                }
-                Spacer()
-                if lib.aiOn, photo.cull != nil {
-                    Text(tr("Оценка \(v.score)"))
-                        .font(.caption.weight(.semibold).monospacedDigit())
-                        .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(.black.opacity(0.6), in: Capsule())
-                        .help(tr("Техника и эстетика кадра, 0–100. Подсказка, а не приговор."))
+                if v.reasons.contains(.tilted) {
+                    Button { lib.straightenByHorizon() } label: { tag(tr("Выровнять"), "level", .accentColor) }
+                        .buttonStyle(.plain).allowsHitTesting(true)
                 }
             }
             Spacer()
+            if lib.aiOn, photo.cull != nil {
+                Text(tr("Оценка \(v.score)"))
+                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(.black.opacity(0.6), in: Capsule())
+                    .help(tr("Техника и эстетика кадра, 0–100. Подсказка, а не приговор."))
+            }
         }
-        .padding(12)
     }
 
     private func tag(_ t: String, _ icon: String, _ c: Color) -> some View {

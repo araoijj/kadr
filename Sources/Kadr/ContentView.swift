@@ -22,8 +22,6 @@ struct ContentView: View {
                     EmptyState()
                 } else if lib.comparing {
                     CompareView()
-                } else if lib.culling {
-                    CullView()
                 } else {
                     FilterBar()
                     if lib.loupe { LoupeView() } else { GridView() }
@@ -45,6 +43,7 @@ struct ContentView: View {
         .sheet(isPresented: $lib.showExport) { ExportSheet().environment(lib) }
         .sheet(isPresented: $lib.showImport) { ImportSheet().environment(lib) }
         .sheet(isPresented: $lib.showShortcuts) { ShortcutsView() }
+        .sheet(isPresented: $lib.showCullSummary) { CullSummary().environment(lib) }
         .navigationTitle(lib.folder?.lastPathComponent ?? I18n.appName)
         .dropDestination(for: URL.self) { urls, _ in
             guard let u = urls.first else { return false }
@@ -77,7 +76,7 @@ struct ContentView: View {
 
     /// Keeps the toast above whatever sits at the bottom: filmstrip and zoom bar, the selection bar.
     private var toastInset: CGFloat {
-        var y: CGFloat = lib.comparing ? 60 : lib.loupe || lib.culling ? 150 : 28
+        var y: CGFloat = lib.comparing ? 60 : lib.loupe ? 150 : 28
         if lib.multiSelected && lib.folder != nil && !lib.comparing { y += Theme.barHeight + 4 }
         return y
     }

@@ -6,6 +6,8 @@ struct LoupeView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            GeometryReader { g in
+            HStack(spacing: 0) {
             ZStack {
                 if let p = lib.current {
                     if lib.cropMode { CropEditor(photo: p) } else { ZoomableLoupe(photo: p) }
@@ -13,12 +15,28 @@ struct LoupeView: View {
                 }
             }
             .overlay(alignment: .topLeading) {
-                if let p = lib.current, p.seriesID != nil, !lib.cropMode { seriesBadge(p).padding(16) }
+                if let p = lib.current {
+                    VStack(alignment: .leading, spacing: 6) {
+                        if p.seriesID != nil, !lib.cropMode { seriesBadge(p) }
+                        // The culling layer: decision, AI reasons with their fixes, the score.
+                        if lib.culling, !lib.cropMode { CullOverlay(photo: p).frame(maxWidth: .infinity) }
+                    }
+                    .padding(16)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay(alignment: .top) {
                 if lib.cropMode { ToolHint(id: "crop") }
                 else if lib.splitCompare, lib.current?.adj.isIdentity == false { ToolHint(id: "split") }
+                else if lib.culling { ToolHint(id: "cull") }
+            }
+            // Faces at 100% while culling, if the frame still has room (narrow window: faces are viewed via zoom).
+            if lib.culling, lib.aiOn, g.size.width >= 640, !lib.cropMode,
+               let p = lib.current, !(p.cull?.faces.isEmpty ?? true) {
+                Divider()
+                FacesColumn(photo: p).frame(width: 210)
+            }
+            }
             }
             .overlay(alignment: .bottom) {
                 if lib.cropMode { CropBar().padding(.bottom, 12) } else { ZoomBar().padding(.bottom, 12) }

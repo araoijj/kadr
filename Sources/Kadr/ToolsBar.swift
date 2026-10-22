@@ -9,19 +9,23 @@ struct ToolsBar: View {
         @Bindable var lib = lib
         let hasPhoto = lib.current != nil
         HStack(spacing: 2) {
-            Picker(tr("Вид"), selection: Binding(get: { lib.culling ? 2 : lib.loupe ? 1 : 0 }, set: { v in
+            // Two views. "Culling" is not a third one: it is a layer over either (the toggle next to them).
+            Picker(tr("Вид"), selection: Binding(get: { lib.loupe ? 1 : 0 }, set: { v in
                 if lib.cropMode { lib.finishCrop() }
                 if lib.comparing { lib.stopCompare() }
-                lib.culling = v == 2
                 lib.loupe = v == 1
             })) {
                 Image(systemName: "square.grid.2x2").help(tr("Сетка")).tag(0)
                 Image(systemName: "rectangle").help(tr("Кадр")).tag(1)
-                Image(systemName: "checkmark.rectangle.stack").help(tr("Отбор")).tag(2)
             }
             .pickerStyle(.segmented)
-            .frame(width: 102)
-            .help(tr("Сетка / Кадр (пробел) / Отбор (O)"))
+            .frame(width: 70)
+            .help(tr("Сетка / Кадр (пробел)"))
+
+            tool(tr("Отбор"), "checkmark.rectangle.stack", on: lib.culling, key: "O", enabled: true,
+                 help: tr("Слой «Отбор» (O): ярлыки AI на кадрах, лица на 100%, прогресс просмотра — в сетке и в кадре")) {
+                lib.culling.toggle()
+            }
 
             Divider().frame(height: 18).padding(.horizontal, 4)
 
@@ -38,6 +42,11 @@ struct ToolsBar: View {
                  enabled: lib.comparing || lib.canCompare,
                  disabledHelp: tr("Выделите 2–8 кадров (⌘-клик или рамкой) или встаньте на кадр серии")) {
                 lib.comparing ? lib.stopCompare() : lib.startCompare()
+            }
+            tool(tr("Турнир"), "trophy", on: lib.tournamentActive, key: "T",
+                 enabled: lib.tournamentActive || lib.canCompare,
+                 disabledHelp: tr("Турнир — для серии или 2+ выделенных кадров: ← / → — какой кадр лучше")) {
+                if lib.tournamentActive { lib.cancelTournament() } else { lib.startTournament() }
             }
             tool("100%", "plus.magnifyingglass", on: lib.zoom100, key: "Z", enabled: hasPhoto && !lib.cropMode) {
                 lib.loupe = true
@@ -67,7 +76,7 @@ struct ToolsBar: View {
     }
 
     private func tool(_ title: String, _ icon: String, on: Bool, key: String, enabled: Bool,
-                      disabledHelp: String? = nil, action: @escaping () -> Void) -> some View {
+                      disabledHelp: String? = nil, help: String? = nil, action: @escaping () -> Void) -> some View {
         // Icon only, as in the Finder toolbar: the name and the key are in the tooltip. Six tools with
         // captions were 560 px, which forced the window wider than a laptop screen with both panels open.
         Button(action: action) {
@@ -80,6 +89,6 @@ struct ToolsBar: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
-        .help(enabled ? "\(title) (\(key))" : (disabledHelp ?? title))
+        .help(enabled ? (help ?? "\(title) (\(key))") : (disabledHelp ?? title))
     }
 }
