@@ -39,7 +39,9 @@ struct GridView: View {
                                 .onTapGesture {
                                     let e = NSApp.currentEvent
                                     let extend = e?.modifierFlags.intersection([.command, .shift, .control]).isEmpty == false
-                                    if (e?.clickCount ?? 1) >= 2 && !extend { lib.select(p); lib.loupe = true } else { lib.click(p) }
+                                    // clickCount raises on a non-mouse event (VoiceOver or keyboard activation).
+                                    let clicks = e.map { [.leftMouseDown, .leftMouseUp].contains($0.type) ? $0.clickCount : 1 } ?? 1
+                                    if clicks >= 2 && !extend { lib.select(p); lib.loupe = true } else { lib.click(p) }
                                 }
                                 .photoContextMenu(p)
                                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("grid")) } action: { frames.rects[p.id] = $0 }

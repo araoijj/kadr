@@ -358,7 +358,7 @@ struct FRow: View {
                 }
             }
             .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(on ? Color.accentColor.opacity(0.25) : .clear, in: RoundedRectangle(cornerRadius: 6))
+            .background(on ? Theme.selected : .clear, in: RoundedRectangle(cornerRadius: 6))
             .contentShape(Rectangle())
             .opacity(empty ? 0.5 : 1)
         }
@@ -418,7 +418,7 @@ struct PersonTile: View {
                 Text("\(person.photos.count)").font(.caption2).monospacedDigit().foregroundStyle(.tertiary)
             }
             .padding(4)
-            .background(on ? Color.accentColor.opacity(0.18) : .clear, in: RoundedRectangle(cornerRadius: 8))
+            .background(on ? Theme.selected : .clear, in: RoundedRectangle(cornerRadius: 8))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

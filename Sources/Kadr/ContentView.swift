@@ -249,7 +249,9 @@ enum Theme {
     static func wash(_ alpha: CGFloat, contrast: CGFloat, onCanvas: Bool = false) -> Color {
         Color(nsColor: NSColor(name: nil) { a in
             let name = a.bestMatch(from: [.darkAqua, .aqua, .accessibilityHighContrastDarkAqua, .accessibilityHighContrastAqua])
-            let dark = onCanvas || name == .darkAqua || name == .accessibilityHighContrastDarkAqua
+            // No match (a vibrant or other custom appearance): judged by its name, never left light by default.
+            let dark = onCanvas || (name.map { $0 == .darkAqua || $0 == .accessibilityHighContrastDarkAqua }
+                ?? a.name.rawValue.localizedCaseInsensitiveContains("dark"))
             let high = name == .accessibilityHighContrastDarkAqua || name == .accessibilityHighContrastAqua
             return (dark ? NSColor.white : .black).withAlphaComponent(high ? contrast : alpha)
         })
