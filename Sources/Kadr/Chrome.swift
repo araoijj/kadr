@@ -76,6 +76,7 @@ struct WindowTweaks: NSViewRepresentable {
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             guard let w = window else { return }
+            KeyHandler.window = w
             Self.apply(w)
             // State restoration can bring the tab bar back a moment later.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak w] in w.map(Self.apply) }

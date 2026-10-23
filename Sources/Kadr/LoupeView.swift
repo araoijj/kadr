@@ -283,6 +283,7 @@ struct Filmstrip: View {
             }
             .frame(height: 92)
             .background(.black.opacity(0.25))
+            .background(ClickAnchor())
             .onChange(of: lib.currentID, initial: true) { _, id in
                 guard let id else { return }
                 withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .center) }

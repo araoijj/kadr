@@ -119,6 +119,13 @@ extension Library {
     var redoTitle: String? { canRedo ? history[historyPos].title : nil }
 
     func undo() {
+        // The open crop is closed (and recorded) first: closing it inside apply() would record mid-step.
+        // ⌘Z in the editor takes back only the crop itself: an untouched editor or a review suggestion just closes.
+        if cropMode {
+            let recorded = cropEdited && autoCropQueue.isEmpty
+            closeCrop()
+            guard recorded else { return }
+        }
         guard canUndo else { flash(tr("Нечего отменять")); return }
         let e = history[historyPos - 1]
         apply(e, forward: false)
@@ -128,6 +135,7 @@ extension Library {
     }
 
     func redo() {
+        closeCrop()
         guard canRedo else { flash(tr("Нечего возвращать")); return }
         let e = history[historyPos]
         apply(e, forward: true)
@@ -138,6 +146,7 @@ extension Library {
 
     /// Go to the state "after step n" (0 = original, before all history steps).
     func jumpHistory(to n: Int) {
+        closeCrop()
         let target = min(max(n, 0), history.count)
         while historyPos > target { apply(history[historyPos - 1], forward: false); historyPos -= 1 }
         while historyPos < target { apply(history[historyPos], forward: true); historyPos += 1 }

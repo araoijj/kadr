@@ -64,8 +64,8 @@ struct KadrApp: App {
                 Button(tr("Вписать в окно")) { library.setZoom(nil) }.keyboardShortcut("0")
                 Button(tr("Масштаб 100%")) { library.loupe = true; library.setZoom(1, at: library.loupeCenter) }.keyboardShortcut("1")
                 Divider()
-                Button(library.fullscreen ? tr("Выйти из полноэкранного просмотра") : tr("Во весь экран")) { Fullscreen.shared.toggle(library) }
-                    .keyboardShortcut("f", modifiers: [])
+                // F itself is KeyHandler's: a bare menu key equivalent would fire while typing "f" in a field.
+                Button(library.fullscreen ? tr("Выйти из полноэкранного просмотра (F)") : tr("Во весь экран (F)")) { Fullscreen.shared.toggle(library) }
                     .disabled(library.current == nil)
                 Divider()
                 // The sidebar's two tabs; ⌘1 itself is zoom 100%, as in other photo apps.
@@ -108,7 +108,13 @@ struct KadrApp: App {
                 Button(tr("Турнир: лучший кадр серии (T)")) { library.startTournament() }
                     .disabled(!library.canCompare)
                 Divider()
-                Button(tr("Перенести отклонённые в «_Отклонённые»")) { library.moveRejected() }
+                // Typed in a text field, ⌘⌫ keeps deleting to the line start; typed over a sheet or in Settings it
+                // does nothing. Chosen with the mouse, it moves the rejects unless a sheet is over the library.
+                Button(tr("Перенести отклонённые в «_Отклонённые»")) {
+                    let w = NSApp.keyWindow, typed = NSApp.currentEvent?.type == .keyDown
+                    if typed, let tv = w?.firstResponder as? NSTextView { tv.deleteToBeginningOfLine(nil) }
+                    else if KeyHandler.isPhotosWindow(typed ? w : KeyHandler.window) { library.moveRejected() }
+                }
                     .keyboardShortcut(.delete, modifiers: .command)
                 Button(tr("Сохранить в папку…")) { library.showExport = true }
                     .keyboardShortcut("s", modifiers: .command)
@@ -143,14 +149,32 @@ struct KadrApp: App {
 /// Modifier-free hotkeys, as in Photo Mechanic / Capture One.
 @MainActor
 struct KeyHandler {
+    /// The library window (set by WindowTweaks). The local monitor sees keys of every window in the app.
+    static weak var window: NSWindow?
+
+    /// Only keys meant for the photos: the library window (or full screen) with no sheet, alert or modal
+    /// panel over it and no text being typed. Settings, sheets and popovers get their keys as usual.
+    private static func accepts(_ e: NSEvent) -> Bool {
+        guard let w = e.window, isPhotosWindow(w) else { return false }
+        let r = w.firstResponder
+        return !(r is NSTextView || (r as? NSTextField)?.isEditable == true)
+    }
+
+    /// The library window (or full screen) with no sheet, alert or modal panel over it.
+    static func isPhotosWindow(_ w: NSWindow?) -> Bool {
+        guard NSApp.modalWindow == nil, let w else { return false }
+        // Full screen counts only while the library has no sheet: one opened from there goes behind it.
+        return (w is FullscreenWindow || w === window) && window?.attachedSheet == nil
+    }
+
     static func handle(_ e: NSEvent, _ lib: Library) -> Bool {
-        let cmd = e.modifierFlags.contains(.command)
-        if cmd, !lib.showExport, e.charactersIgnoringModifiers?.lowercased() == "a" || e.charactersIgnoringModifiers == "ф" {
-            lib.selectAll(); return true                           // ⌘A
+        guard accepts(e), !lib.showExport, !lib.showImport else { return false }
+        let mods = e.modifierFlags.intersection([.command, .control, .option, .shift])
+        if mods == .command, e.charactersIgnoringModifiers?.lowercased() == "a" || e.charactersIgnoringModifiers == "ф" {
+            lib.selectAll(); return true                           // ⌘A (⇧⌘A, ⌥⌘A are menu items)
         }
-        if !e.modifierFlags.intersection([.command, .control, .option]).isEmpty { return false }
-        let shift = e.modifierFlags.contains(.shift)
-        if NSApp.keyWindow?.firstResponder is NSTextView || lib.showExport || lib.showImport { return false }
+        if !mods.intersection([.command, .control, .option]).isEmpty { return false }
+        let shift = mods.contains(.shift)
         if lib.fullscreen {
             // The same keys as everywhere; only the way out and "next" differ.
             switch e.keyCode {
@@ -165,6 +189,7 @@ struct KeyHandler {
             case 36, 76: lib.finishCrop(); return true      // Enter: done
             case 53: lib.cancelCrop(); return true          // Esc: cancel
             case 124 where !lib.autoCropQueue.isEmpty: lib.cancelCrop(); return true   // →: skip this suggestion
+            case 123...126: return true                     // other arrows: the editor stays on its photo
             default: break
             }
             if ["a", "ф"].contains(e.charactersIgnoringModifiers?.lowercased() ?? "") { lib.autoCropCurrent(); return true }   // A: auto crop
@@ -210,8 +235,8 @@ struct KeyHandler {
         switch e.keyCode {
         case 123: lib.move(-1, extend: shift); return true                       // ←  (⇧ extends the selection)
         case 124: lib.move(1, extend: shift); return true                        // →
-        case 126: lib.move(lib.loupe ? -1 : -lib.columns, extend: shift); return true // ↑
-        case 125: lib.move(lib.loupe ? 1 : lib.columns, extend: shift); return true   // ↓
+        case 126: lib.loupe ? lib.move(-1, extend: shift) : lib.moveRow(-1, extend: shift); return true   // ↑
+        case 125: lib.loupe ? lib.move(1, extend: shift) : lib.moveRow(1, extend: shift); return true     // ↓
         case 49:                                                   // space: grid ↔ loupe, in every mode
             lib.loupe.toggle(); lib.zoom100 = false
             return true

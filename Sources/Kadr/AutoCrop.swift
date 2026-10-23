@@ -150,6 +150,8 @@ extension Library {
         guard !list.isEmpty else {
             flash(tr("Оставьте кадры (P) или выделите нужные — им будет предложено кадрирование")); return
         }
+        // A review already running is replaced: emptied first, so closing its editor doesn't open its next photo.
+        autoCropQueue = []
         if cropMode { cancelCrop() }
         autoCropRatio = ratio
         autoCropQueue = list.map(\.id)

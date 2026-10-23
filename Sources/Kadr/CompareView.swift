@@ -147,8 +147,8 @@ struct CompareView: View {
                               : tr("Отмеченные кадры получат ★ (если оценки не было), остальные кадры сравнения — отклонены (X). Отменить — ⌘Z"))
             if long { tileSize } else { tileSizeButton }
             HintButton(id: "compare")
+            // Esc is KeyHandler's (stopCompare); a cancelAction here was registered once per ViewThatFits variant.
             Button(tr("Готово")) { lib.stopCompare() }
-                .keyboardShortcut(.cancelAction)
         }
     }
 }

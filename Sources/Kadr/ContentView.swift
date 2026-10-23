@@ -62,6 +62,8 @@ struct ContentView: View {
             if lib.folder == nil, Prefs.reopenLastFolder, let last = lib.browser.shoots.first {
                 lib.open(last)
             }
+            // onAppear can come again (window restored); one monitor is enough.
+            guard monitor == nil else { return }
             monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown, .scrollWheel]) { e in
                 MainActor.assumeIsolated {
                     if e.type == .leftMouseDown { return ClickModifiers.handle(e, lib) }
@@ -70,7 +72,7 @@ struct ContentView: View {
                 }
             }
         }
-        .onDisappear { if let monitor { NSEvent.removeMonitor(monitor) } }
+        .onDisappear { if let monitor { NSEvent.removeMonitor(monitor); self.monitor = nil } }
     }
 
     /// Keeps the toast above whatever sits at the bottom: filmstrip and zoom bar, the selection bar.
@@ -294,15 +296,35 @@ struct KeyHints: View {
 }
 
 /// ⌘-click and Ctrl-click add a frame to the selection (Ctrl, as Windows users are used to).
-/// On a Mac, Ctrl-click usually opens a menu, so we turn it into ⌘-click; the menu is on right-click.
+/// On a Mac, Ctrl-click usually opens a menu, so over the grid and the filmstrip we turn it into ⌘-click
+/// (the menu is on right-click there); everywhere else Ctrl-click keeps opening context menus.
 @MainActor
 enum ClickModifiers {
     static func handle(_ e: NSEvent, _ lib: Library) -> NSEvent? {
         lib.clickModifiers = e.modifierFlags.intersection([.command, .shift, .control])
-        guard e.modifierFlags.contains(.control) else { return e }
+        guard e.modifierFlags.contains(.control), ClickAnchor.contains(e) else { return e }
         let flags = e.modifierFlags.subtracting(.control).union(.command)
         return NSEvent.mouseEvent(with: .leftMouseDown, location: e.locationInWindow, modifierFlags: flags,
                                   timestamp: e.timestamp, windowNumber: e.windowNumber, context: nil,
                                   eventNumber: e.eventNumber, clickCount: e.clickCount, pressure: e.pressure) ?? e
+    }
+}
+
+/// Invisible marker behind the grid and the filmstrip: tells ClickModifiers the click landed on photos.
+struct ClickAnchor: NSViewRepresentable {
+    @MainActor private static let views = NSHashTable<NSView>.weakObjects()
+
+    func makeNSView(context: Context) -> NSView {
+        let v = LoupeAnchor.PassthroughView()
+        Self.views.add(v)
+        return v
+    }
+    func updateNSView(_ v: NSView, context: Context) {}
+
+    @MainActor static func contains(_ e: NSEvent) -> Bool {
+        views.allObjects.contains { v in
+            v.window != nil && v.window == e.window && !v.isHiddenOrHasHiddenAncestor
+                && v.bounds.contains(v.convert(e.locationInWindow, from: nil))
+        }
     }
 }

@@ -69,7 +69,7 @@ struct PhotoContextMenu: ViewModifier {
 
         if n > 1 || photo.seriesID != nil {
             Divider()
-            Button(n > 1 ? tr("Сравнить (\(min(n, 4)))") : tr("Сравнить кадры серии"), systemImage: "rectangle.split.2x1") { act { lib.startCompare() } }
+            Button(n > 1 ? tr("Сравнить (\(min(n, Library.compareMax)))") : tr("Сравнить кадры серии"), systemImage: "rectangle.split.2x1") { act { lib.startCompare() } }
         }
         if photo.seriesID != nil {
             Button(tr("Показать только эту серию"), systemImage: "square.stack.3d.up") { lib.showSeries(of: photo) }

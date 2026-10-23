@@ -58,6 +58,7 @@ struct GridView: View {
                     withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id) }
                 }
                 .onAppear { if let id = lib.currentID { proxy.scrollTo(id, anchor: .center) } }
+                .background(ClickAnchor())
             }
             .onChange(of: geo.size.width, initial: true) { _, w in updateColumns(w) }
             .onChange(of: lib.thumbSize) { _, _ in updateColumns(geo.size.width) }

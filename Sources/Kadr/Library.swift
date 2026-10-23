@@ -64,7 +64,11 @@ final class Library {
     var filter: PhotoFilter = .all
     var currentID: URL? {
         // "Remove Object" belongs to one photo: moving on closes it, so clicks on the next photo don't select.
-        didSet { if removeMode, currentID != removeFor { finishRemove() } }
+        didSet {
+            if removeMode, currentID != removeFor { finishRemove() }
+            // So does the crop editor: a manual crop is kept as done; an unaccepted suggestion of the review is dropped.
+            if cropMode, currentID != cropFor { closeCrop() }
+        }
     }
     var loupe = false
     /// Loupe zoom: nil = fit to window, 1 = 100% (one image pixel = one screen pixel), 2 = 200%…
@@ -281,6 +285,7 @@ final class Library {
     var removeArea = 0.0               // share of the frame selected
     var removeFor: URL?
     private var cropBackup: Adjustments?
+    private var cropFor: URL?          // the photo the crop editor was opened for; the current one may already be another
 
     // Auto crop review (AutoCrop.swift): suggestions open one by one in the crop editor.
     var autoCropQueue: [URL] = []
@@ -292,6 +297,7 @@ final class Library {
     func startCrop() {
         guard current != nil else { return }
         cropBackup = current?.adj
+        cropFor = currentID
         comparing = false
         loupe = true
         setZoom(nil)
@@ -300,7 +306,7 @@ final class Library {
     }
 
     func finishCrop() {
-        if let b = cropBackup, let id = currentID, let p = photo(id) {
+        if let b = cropBackup, let id = cropFor, let p = photo(id) {
             var s = PhotoState(p); s.adj = b
             cropMode = false
             let d = describeChange(b, p.adj, url: id)
@@ -309,13 +315,26 @@ final class Library {
         }
         cropMode = false
         cropBackup = nil
+        cropFor = nil
         autoCropAdvance(accepted: true)
     }
 
+    /// The crop editor's photo differs from how it was when the editor opened.
+    var cropEdited: Bool { cropFor.flatMap { photo($0)?.adj } != cropBackup }
+
+    /// The editor closing because the photographer went elsewhere (another photo, undo):
+    /// a manual crop is kept as done; an unaccepted suggestion ends the review.
+    func closeCrop() {
+        guard cropMode else { return }
+        if autoCropQueue.isEmpty { finishCrop() } else { stopAutoCropReview() }
+    }
+
     func cancelCrop() {
-        if let b = cropBackup { withoutHistory { setAdjustments(b) } }
+        // Restored by cropFor, not currentID: the editor may be closing because another photo was opened.
+        if let b = cropBackup, let id = cropFor, let i = index[id], photos[i].adj != b { setAdjustmentsRaw(i, b) }
         cropMode = false
         cropBackup = nil
+        cropFor = nil
         autoCropAdvance(accepted: false)
     }
 
@@ -1235,6 +1254,29 @@ final class Library {
         focus(list[n].id, extend: extend)
     }
 
+    /// ↑/↓ in the grid: one row up or down. Every section starts a new row, so the row and column are counted
+    /// within the section, not over the flat list (an incomplete last row would shift the column).
+    func moveRow(_ dir: Int, extend: Bool = false) {
+        let secs = sections.map(\.photos).filter { !$0.isEmpty }
+        let c = max(1, columns)
+        guard let id = currentID, let s = secs.firstIndex(where: { $0.contains { $0.id == id } }),
+              let i = secs[s].firstIndex(where: { $0.id == id }) else { return move(dir, extend: extend) }
+        let col = i % c, row = i / c
+        let target: Photo
+        if dir > 0 {
+            if (row + 1) * c < secs[s].count { target = secs[s][min((row + 1) * c + col, secs[s].count - 1)] }
+            else if s + 1 < secs.count { target = secs[s + 1][min(col, secs[s + 1].count - 1)] }
+            else { target = secs[s][secs[s].count - 1] }
+        } else {
+            if row > 0 { target = secs[s][(row - 1) * c + col] }
+            else if s > 0 {
+                let prev = secs[s - 1]
+                target = prev[min((prev.count - 1) / c * c + col, prev.count - 1)]
+            } else { target = secs[s][0] }
+        }
+        focus(target.id, extend: extend)
+    }
+
     /// Click: plain selects one photo, ⌘ adds/removes, ⇧ selects a range.
     /// Modifiers at mouse-down time. A SwiftUI single click fires with a delay
     /// (it waits for a possible double click), and by then ⌘ is often already released, so we capture them on mouse-down.
@@ -1386,10 +1428,17 @@ final class Library {
     /// current view (rejected in "Undecided", hidden by "Hide rejects"), continue from the same place:
     /// the next still-shown photo after it, or the previous one at the end of the list.
     private func advanceIfNeeded(after order: [URL]) {
-        guard autoAdvance, !comparing, let cur = currentID else { return }
+        guard !comparing, let cur = currentID else { return }
         let list = visible
-        guard !list.isEmpty else { return }
-        if list.contains(where: { $0.id == cur }) { move(1); return }
+        let stays = list.contains { $0.id == cur }
+        if cropMode {
+            // The crop editor stays on its photo, as with the arrows, while the photo is shown. One that left
+            // the view (X with "Hide rejects") skips to the review's next suggestion or, like moving on, closes the editor.
+            guard !stays else { return }
+            if !autoCropQueue.isEmpty { cancelCrop(); return }
+        }
+        guard autoAdvance, !list.isEmpty else { return }
+        if stays { move(1); return }
         let shown = Set(list.map(\.id))
         if let i = order.firstIndex(of: cur) {
             if let next = order[(i + 1)...].first(where: { shown.contains($0) }) { focus(next); return }
