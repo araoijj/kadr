@@ -199,10 +199,17 @@ enum Exporter {
     /// Output names for the whole save, decided one after another before anything is written: parallel
     /// JPEG workers then never pick the same free name. An original travels with its XMP and twin as one
     /// set — one name for all of them; a set whose photo is already there (same size) is skipped whole.
-    static func plan(_ items: [ExportItem], to folder: URL, _ s: ExportSettings, shootName: String?) -> [Job] {
+    static func plan(_ items: [ExportItem], to folder: URL, _ s: ExportSettings, shootName: String?,
+                     shoot: [ExportItem] = []) -> [Job] {
+        if s.format == .jpeg { removeStaleTemps(in: folder) }
         var reserved = Set<String>()
-        return items.map { item in
-            let base = baseName(item, template: s.nameTemplate, folder: shootName)
+        let bases = items.map { baseName($0, template: s.nameTemplate, folder: shootName) }
+        // A suffixed name must not be one another photo of this save or of the shoot wants (IMG_1 → IMG_1-2
+        // while IMG_1-2 is a real frame, saved now or later) or a frame already there under another extension
+        // (IMG_1-2.CR3 next to IMG_1-2.jpg).
+        let avoid = Set((bases + shoot.map { baseName($0, template: s.nameTemplate, folder: shootName) }).map { $0.lowercased() })
+            .union(takenBases(in: folder))
+        return zip(items, bases).map { item, base in
             switch s.format {
             case .original:
                 let files = existingCompanions(of: item.url)
@@ -210,26 +217,51 @@ enum Exporter {
                 if let have = size(same), have == size(item.url) {
                     return Job(item: item, base: nil)
                 }
-                return Job(item: item, base: freeBase(base, exts: setExtensions(files), in: folder, reserved: &reserved))
+                return Job(item: item, base: freeBase(base, exts: setExtensions(files), in: folder, reserved: &reserved, avoid: avoid))
             case .jpeg:
-                return Job(item: item, base: freeBase(base, exts: ["jpg"], in: folder, reserved: &reserved))
+                return Job(item: item, base: freeBase(base, exts: ["jpg"], in: folder, reserved: &reserved, avoid: avoid))
             }
         }
     }
 
     /// `base`, or `base-2`, `base-3`… — the first under which none of the set's files exists or is taken.
-    static func freeBase(_ base: String, exts: [String], in folder: URL, reserved: inout Set<String>) -> String {
+    /// A suffixed name also skips the base names in `avoid` (lowercased): other photos' names.
+    static func freeBase(_ base: String, exts: [String], in folder: URL, reserved: inout Set<String>, avoid: Set<String> = []) -> String {
         let fm = FileManager.default
         var name = base, n = 2
         // The disk is asked for the exact name (a case-sensitive volume would miss IMG_0001.CR3 asked as
         // img_0001.cr3); the names taken in this run are compared case-insensitively.
         func names(_ b: String) -> [String] { exts.map { "\(b).\($0)" } }
-        while names(name).contains(where: { reserved.contains($0.lowercased()) || fm.fileExists(atPath: folder.appendingPathComponent($0).path) }) {
+        while (name != base && avoid.contains(name.lowercased()))
+            || names(name).contains(where: { reserved.contains($0.lowercased()) || fm.fileExists(atPath: folder.appendingPathComponent($0).path) }) {
             name = "\(base)-\(n)"
             n += 1
         }
         reserved.formUnion(names(name).map { $0.lowercased() })
         return name
+    }
+
+    /// Base names of the frames already in the folder, lowercased (IMG_1 for IMG_1.CR3, IMG_1.xmp, IMG_1.CR3.xmp).
+    static func takenBases(in folder: URL) -> Set<String> {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        return Set(names.map { CardImporter.baseName(URL(fileURLWithPath: $0)).lowercased() })
+    }
+
+    /// A JPEG is written as a hidden `.<name>-<UUID>.kadr-tmp` and renamed when done; a crash or quit
+    /// in between leaves it behind. Ones older than an hour can't be a save still running: removed when
+    /// the next save into the folder starts. Only that exact pattern, nothing else in the folder.
+    static func removeStaleTemps(in folder: URL) {
+        let fm = FileManager.default, old = Date().addingTimeInterval(-3600)
+        func ours(_ n: String) -> Bool {
+            guard n.hasPrefix("."), n.hasSuffix(".kadr-tmp") else { return false }
+            let stem = n.dropLast(".kadr-tmp".count)
+            return stem.count > 38 && stem.dropLast(36).hasSuffix("-") && UUID(uuidString: String(stem.suffix(36))) != nil
+        }
+        for f in (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        where ours(f.lastPathComponent) {
+            let m = (try? f.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantFuture
+            if m < old { try? fm.removeItem(at: f) }
+        }
     }
 
     /// What a set takes up under its new name: its files, and the XMP always — a stale IMG.xmp already
@@ -348,9 +380,10 @@ enum Exporter {
 
     /// A JPG and a HEIC (PNG, TIFF…) of the same name are two photos with one IMG.xmp between them:
     /// moving one of them must leave the XMP for the other, so it goes as a copy.
+    /// An IMG.JPG.xmp is that file's own.
     static func sharesSidecar(_ url: URL) -> Bool {
         let ext = url.pathExtension.lowercased()
-        guard !ImageStore.rawExtensions.contains(ext) else { return false }
+        guard !ImageStore.rawExtensions.contains(ext), Sidecar.url(for: url).lastPathComponent != url.lastPathComponent + ".xmp" else { return false }
         let base = url.deletingPathExtension(), fm = FileManager.default
         return ImageStore.imageExtensions.subtracting([ext]).contains { e in
             [e, e.uppercased()].contains { fm.fileExists(atPath: base.appendingPathExtension($0).path) }

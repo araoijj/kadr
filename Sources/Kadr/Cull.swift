@@ -315,7 +315,7 @@ extension Library {
     /// A bulk decision's toast. If some XMP files could not be written (read-only disk), it says so:
     /// otherwise the decisions look saved and are gone after reopening the folder.
     func flashWritten(_ text: String, failed: Int) {
-        if failed == 0 { flash(text) } else { flash(text + " · " + tr("Не удалось записать XMP: \(failed) шт."), seconds: 4) }
+        if failed == 0 { flash(text) } else { flash(text + " · " + tr("Не удалось записать XMP: \(failed) шт."), seconds: 4, error: true) }
     }
 }
 

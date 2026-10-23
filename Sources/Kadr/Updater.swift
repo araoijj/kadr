@@ -18,7 +18,8 @@ enum Updater {
     }
 
     static func checkAtLaunch() {
-        guard Prefs.checkUpdates else { return }
+        // A bare binary (swift build) has no bundle version: any release would look newer.
+        guard Prefs.checkUpdates, Bundle.main.bundleIdentifier != nil, Bundle.main.bundleURL.pathExtension == "app" else { return }
         let last = UserDefaults.standard.double(forKey: lastKey)
         guard Date().timeIntervalSince1970 - last > 24 * 3600 else { return }
         Task { await check(manual: false) }

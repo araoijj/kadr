@@ -93,7 +93,7 @@ extension View {
 /// A short single choice that sets a value (profile, file format): the chosen option filled with the accent.
 /// Drawn here, not a system segmented picker: before 26 its selection is neutral and ignores the tint, so
 /// a setting looked exactly like a tab (`.tabs()`). VoiceOver still gets the segmented picker, and with
-/// keyboard focus on an option ←/→ step through them as in one.
+/// keyboard focus on the control ←/→ step through them as in one.
 struct ChoiceSegments<T: Hashable>: View {
     @Binding var selection: T
     let options: [(value: T, title: String)]
@@ -112,10 +112,14 @@ struct ChoiceSegments<T: Hashable>: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)   // one focus stop for the whole control, as a segmented control has
             }
         }
         .padding(2)
         .background(RoundedRectangle(cornerRadius: 7).fill(Theme.control))
+        // Focusable without Full Keyboard Access (Tab or a click), so ←/→ reach onMoveCommand. In the library
+        // window the photo browser's key monitor still takes the arrows first: they keep moving between photos.
+        .focusable()
         .onMoveCommand { dir in
             guard let i = options.firstIndex(where: { $0.value == selection }) else { return }
             let j = dir == .left ? i - 1 : dir == .right ? i + 1 : i

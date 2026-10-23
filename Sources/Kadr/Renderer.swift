@@ -71,9 +71,11 @@ final class Renderer: @unchecked Sendable {
     func estimateTiles(_ url: URL, _ adj: Adjustments, longSide: CGFloat, tile: CGFloat, centers: [CGPoint]) async -> [CGImage] {
         await withCheckedContinuation { cont in
             estimateQueue.async {
-                // Like thumbKey: a noise reduction result that has just appeared changes the tiles.
+                // Like thumbKey: a noise reduction result that has just appeared changes the tiles, and so does a
+                // replaced LUT (clearThumbnails can't drop tiles still being rendered with the old cube).
                 let dn = adj.aiDenoise > 0 && Denoiser.shared.hasResult(url, adj.raw) ? "|dn" : ""
-                let key = "\(url.path)|\(adj.hashValue)|\(Int(longSide))|\(Int(tile))|\(centers)\(dn)"
+                let lut = adj.lut == nil ? "" : "|l\(LUTStore.shared.generation)"
+                let key = "\(url.path)|\(adj.hashValue)|\(Int(longSide))|\(Int(tile))|\(centers)\(dn)\(lut)"
                 if let m = self.estimateMemo.first(where: { $0.key == key }) { cont.resume(returning: m.tiles); return }
                 func edited(_ maxSide: CGFloat?) -> CIImage? {
                     EditPipeline.source(url, maxSide: maxSide, raw: adj.raw).map { EditPipeline.render(adj, url, source: $0) }

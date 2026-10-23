@@ -74,7 +74,11 @@ struct CompareView: View {
                 compareRow(photos, hint: true, long: true)
                 compareRow(photos, hint: false, long: true)
                 compareRow(photos, hint: false, long: false)
+                compareRow(photos, hint: false, long: false, tiny: true)
             }
+            // The narrowest row is cut on the right rather than holding the column wider (macOS 27 aborts on that).
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            .clipped()
             .controlSize(.small)
         }
     }
@@ -105,12 +109,17 @@ struct CompareView: View {
         .popover(isPresented: $showTileSize, arrowEdge: .bottom) { tileSize.padding(12) }
     }
 
-    private func compareRow(_ photos: [Photo], hint: Bool, long: Bool) -> some View {
+    /// `tiny`: the narrow column (a 1000 pt window with both panels): icons with their counts, the words on hover.
+    private func compareRow(_ photos: [Photo], hint: Bool, long: Bool, tiny: Bool = false) -> some View {
         let marked = photos.filter { lib.compareKeep.contains($0.id) }.count
         let dropped = photos.filter { lib.compareReject.contains($0.id) }.count
-        return HStack(spacing: 14) {
-            Label(tr("Сравнение · \(photos.count)"), systemImage: "rectangle.split.2x1")
-                .font(.callout.weight(.semibold)).fixedSize()
+        return HStack(spacing: tiny ? 8 : 14) {
+            Group {
+                if tiny { Label("\(photos.count)", systemImage: "rectangle.split.2x1") }
+                else { Label(tr("Сравнение · \(photos.count)"), systemImage: "rectangle.split.2x1") }
+            }
+            .font(.callout.weight(.semibold)).fixedSize()
+            .help(tr("Сравнение · \(photos.count)"))
             if hint {
                 Group {
                     if marked == 0 && dropped == 0 {
@@ -127,12 +136,23 @@ struct CompareView: View {
             }
             Spacer(minLength: 0)
             if marked + dropped > 0 {
-                Button(tr("Снять отметки")) { lib.compareKeep = []; lib.compareReject = [] }
+                Button { lib.compareKeep = []; lib.compareReject = [] } label: {
+                    if tiny { Label(tr("Снять отметки"), systemImage: "arrow.uturn.backward").labelStyle(.iconOnly) }
+                    else { Text(tr("Снять отметки")) }
+                }
+                .help(tr("Снять отметки"))
             }
             Button {
                 lib.rejectOthersInCompare()
             } label: {
-                if dropped > 0 {
+                if tiny {
+                    // The counts stay, the words go: a cut «Остав…» said less than the icon.
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.seal")
+                        if marked + dropped > 0 { Text(dropped > 0 ? "✓ \(marked) · ✗ \(dropped)" : "✓ \(marked)") }
+                    }
+                    .fixedSize()
+                } else if dropped > 0 {
                     Label(tr("Применить ✓ \(marked) · ✗ \(dropped)"), systemImage: "checkmark.seal")
                 } else if long {
                     Label(marked > 0 ? tr("Оставить отмеченные (\(marked)), остальные отклонить") : tr("Оставить активный, остальные отклонить"),

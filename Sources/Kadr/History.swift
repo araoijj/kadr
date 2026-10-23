@@ -135,7 +135,13 @@ extension Library {
         flashWritten(tr("Отменено: \(e.title)"), failed: failed)
     }
 
+    /// The open crop has a change that closing it would record as a new step.
+    private var cropPending: Bool { cropMode && cropEdited && autoCropQueue.isEmpty }
+
     func redo() {
+        // An edited crop isn't in the history yet: closing it here would record it and drop the steps ⇧⌘Z was
+        // meant to bring back. The editor stays; the crop has to be finished (Enter) or cancelled (Esc) first.
+        if cropPending { flash(canRedo ? tr("Сначала завершите кадрирование: Enter или Esc") : tr("Нечего возвращать")); return }
         closeCrop()
         guard canRedo else { flash(tr("Нечего возвращать")); return }
         let e = history[historyPos]
@@ -147,13 +153,15 @@ extension Library {
 
     /// Go to the state "after step n" (0 = original, before all history steps).
     func jumpHistory(to n: Int) {
+        // Same as redo: recording the edited crop would cut off the later steps this click is going to.
+        if cropPending && n > historyPos { flash(tr("Сначала завершите кадрирование: Enter или Esc")); return }
         closeCrop()
         let target = min(max(n, 0), history.count)
         var failed = 0
         while historyPos > target { failed += apply(history[historyPos - 1], forward: false); historyPos -= 1 }
         while historyPos < target { failed += apply(history[historyPos], forward: true); historyPos += 1 }
         scheduleHistorySave()
-        if failed > 0 { flash(tr("Не удалось записать XMP: \(failed) шт."), seconds: 4) }
+        if failed > 0 { flash(tr("Не удалось записать XMP: \(failed) шт."), seconds: 4, error: true) }
     }
 
     /// Returns how many XMP files could not be written.

@@ -146,6 +146,8 @@ final class Library {
     var loading = false
     var analyzed = 0
     var toast: String?
+    @ObservationIgnored private var errorToastUntil = Date.distantPast
+    @ObservationIgnored private var toastSeq = 0
 
     private(set) var index: [URL: Int] = [:]
 
@@ -716,11 +718,11 @@ final class Library {
             ids = Array(s[max(0, min(i, s.count - Self.compareMax))...])
             if s.count > Self.compareMax { flash(tr("В серии \(s.count) кадров — показаны \(Self.compareMax), начиная с текущего")) }
         } else {
-            flash(tr("Выделите 2–8 кадров: ⌘-клик или рамкой"))
+            flash(tr("Выделите хотя бы 2 кадра: ⌘-клик или рамкой"))
             return
         }
         ids = Array(ids.prefix(Self.compareMax))
-        guard ids.count >= 2 else { flash(tr("Выделите 2–8 кадров: ⌘-клик или рамкой")); return }
+        guard ids.count >= 2 else { flash(tr("Выделите хотя бы 2 кадра: ⌘-клик или рамкой")); return }
         compareIDs = ids
         compareKeep = []
         compareReject = []
@@ -1579,6 +1581,15 @@ final class Library {
     func toggleReject() {
         let many = multiSelected
         let reject = !targets.allSatisfy(\.rejected)
+        // X on the cropped photo that the rejection would hide ("Hide rejects"): the editor is closed first, as
+        // done, so it never stays on a hidden photo and the crop is its own step before the rejection.
+        if reject, cropMode, autoCropQueue.isEmpty, let id = currentID, let i = index[id] {
+            let was = photos[i].rejected
+            photos[i].rejected = true
+            let hides = !visible.contains { $0.id == id }
+            photos[i].rejected = was
+            if hides { closeCrop() }
+        }
         let order = shownOrder
         update(reject ? tr("Отклонено") : tr("Возвращено")) { $0.rejected = reject }
         if reject { flashDecision(tr("Брак"), undo: tr("⌘Z или U — вернуть")) } else { flash(tr("Возвращено") + countSuffix) }
@@ -1622,7 +1633,7 @@ final class Library {
             if p.rating != old.rating || p.rejected != old.rejected || fields.isEmpty { fields.insert(.rating) }
             if !writeSidecar(i, fields) { failed += 1 }
         }
-        if failed > 0 { flash(tr("Не удалось записать XMP: \(failed) шт.")) }
+        if failed > 0 { flash(tr("Не удалось записать XMP: \(failed) шт."), seconds: 4, error: true) }
     }
 
     /// The order the photos are shown in right now (filter, sort, grouping): captured before a decision,
@@ -1654,12 +1665,17 @@ final class Library {
         focus(list.first?.id)
     }
 
-    func flash(_ text: String, seconds: Double = 1.2) {
+    /// `error`: a failure the user must see (XMP not written). It stays its time on screen: the decision
+    /// toast that follows it in the same action would otherwise replace it at once.
+    func flash(_ text: String, seconds: Double = 1.2, error: Bool = false) {
+        if error { errorToastUntil = Date().addingTimeInterval(seconds) } else if Date() < errorToastUntil { return }
         toast = text
-        let shown = text
+        // By turn, not by text: the same text shown again must not be cleared by the first one's timer.
+        toastSeq += 1
+        let shown = toastSeq
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(seconds))
-            if self.toast == shown { self.toast = nil }
+            if self.toastSeq == shown { self.toast = nil }
         }
     }
 
@@ -1706,7 +1722,10 @@ final class Library {
         let fm = FileManager.default
         var moved = 0
         var movedPairs: [(from: URL, to: URL)] = []
-        var reserved: [URL: Set<String>] = [:]
+        var reserved: [URL: Set<String>] = [:], taken: [URL: Set<String>] = [:]
+        // Suffixed names also skip the other frames of the shoot (IMG_1 → IMG_1-2 while IMG_1-2 is moved too
+        // or may be later), as in Exporter.plan.
+        let ownBases = Set(photos.map { $0.url.deletingPathExtension().lastPathComponent.lowercased() })
         for p in list {
             let dest = p.url.deletingLastPathComponent().appendingPathComponent(Self.rejectedFolderName, isDirectory: true)
             do {
@@ -1718,8 +1737,9 @@ final class Library {
             // The photo and its companions are one set: one free name for all of them (a frame with the same
             // name may already be there), so the XMP never ends up next to someone else's RAW.
             let files = Exporter.existingCompanions(of: p.url)
+            if taken[dest] == nil { taken[dest] = Exporter.takenBases(in: dest) }
             let base = Exporter.freeBase(p.url.deletingPathExtension().lastPathComponent, exts: Exporter.setExtensions(files),
-                                         in: dest, reserved: &reserved[dest, default: []])
+                                         in: dest, reserved: &reserved[dest, default: []], avoid: (taken[dest] ?? []).union(ownBases))
             let (target, errs) = Exporter.transfer(files, of: p.url, base: base, to: dest, move: true)
             errors += errs
             if let target { moved += 1; movedPairs.append((p.url, target)) }
@@ -1781,7 +1801,7 @@ final class Library {
         guard let target = Exporter.targetFolder(export, shoot: folder) else { chooseExportFolder(); return }
         export.save()
         let settings = export
-        let items = exportItems(list)
+        let items = exportItems(list), all = exportItems(photos)
         let shoot = folder?.lastPathComponent
         // Moved originals take their edits along, so the ones still waiting for the debounce go to disk first.
         if settings.format == .original && settings.move { flushEdits() }
@@ -1790,7 +1810,7 @@ final class Library {
         exportTask = Task { [weak self] in
             var ok = 0, skipped = 0
             var errors: [String] = [], moved: [(from: URL, to: URL)] = []
-            let jobs = await Task.detached { Exporter.plan(items, to: target, settings, shootName: shoot) }.value
+            let jobs = await Task.detached { Exporter.plan(items, to: target, settings, shootName: shoot, shoot: all) }.value
             // RAW → JPEG is heavy (~1–2 s per 50 MP photo), so run 3 in parallel.
             let workers = settings.format == .jpeg ? 3 : 1
             await withTaskGroup(of: Exporter.Outcome.self) { group in
@@ -1846,11 +1866,11 @@ final class Library {
         s.format = .original
         s.move = false
         guard let target = Exporter.targetFolder(s, shoot: folder) else { return }
-        let items = exportItems(list)
+        let items = exportItems(list), all = exportItems(photos)
         let shoot = folder?.lastPathComponent
         Task {
             let out = await Task.detached {
-                Exporter.plan(items, to: target, s, shootName: shoot).map { Exporter.export($0, to: target, s) }
+                Exporter.plan(items, to: target, s, shootName: shoot, shoot: all).map { Exporter.export($0, to: target, s) }
             }.value
             let ok = out.filter(\.ok).count, errors = out.flatMap(\.errors)
             // Nothing saved because of errors is not "already there": the alert says what happened.

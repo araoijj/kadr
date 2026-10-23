@@ -41,7 +41,7 @@ final class Denoiser: @unchecked Sendable {
     }
 
     /// Writes cut short by a quit or a crash (`.part.heic`, 10–20 MB each) are never read: removed once per launch.
-    /// Finished results are left alone: they are the base of a photo's edits and take minutes to compute again.
+    /// Finished results are only trimmed by `trimCache`: they are the base of a photo's edits and take minutes to compute again.
     private static let sweptPartials: Void = {
         let dir = AppFolders.support.appendingPathComponent("Cache/Denoise", isDirectory: true)
         DispatchQueue.global(qos: .utility).async {
@@ -54,9 +54,45 @@ final class Denoiser: @unchecked Sendable {
         }
     }()
 
+    /// Results are 10–20 MB each and nothing else ever removes them. Kept: everything used in the last
+    /// 180 days, up to 20 GB in all; past either limit the least recently used go first. A result is only
+    /// a cache — a photo that loses it shows "not applied" and is denoised again (about a minute) — but the
+    /// ones the open folder's edits use are never removed. Retouch patches (Cache/Retouch) are the edits
+    /// themselves, not a cache, so they are not trimmed; Camera Match cubes live in memory only.
+    static let cacheMaxBytes: Int64 = 20 << 30
+    static let cacheMaxAge: TimeInterval = 180 * 86400
+
+    /// Run once per launch in the background. `keep`: the photos (and RAW settings) whose edits ask for denoise.
+    static func trimCache(keeping keep: [(URL, RawDevelop)]) {
+        let fm = FileManager.default, dir = cacheDir
+        let protected = Set(keep.map { cacheURL($0.0, $0.1).lastPathComponent })
+        let keys: [URLResourceKey] = [.contentModificationDateKey, .totalFileAllocatedSizeKey, .fileSizeKey]
+        var files: [(url: URL, used: Date, size: Int64)] = []
+        for f in (try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: keys)) ?? []
+        where f.pathExtension == "heic" && !f.lastPathComponent.hasSuffix(".part.heic") {
+            let v = try? f.resourceValues(forKeys: Set(keys))
+            files.append((f, v?.contentModificationDate ?? .distantPast, Int64(v?.totalFileAllocatedSize ?? v?.fileSize ?? 0)))
+        }
+        var total = files.reduce(Int64(0)) { $0 + $1.size }
+        let old = Date().addingTimeInterval(-cacheMaxAge)
+        for f in files.sorted(by: { $0.used < $1.used }) where !protected.contains(f.url.lastPathComponent) {
+            guard total > cacheMaxBytes || f.used < old else { break }
+            if (try? fm.removeItem(at: f.url)) != nil { total -= f.size }
+        }
+    }
+
+    /// "Last used" is the file's modification date, set when a result is first loaded in a launch
+    /// (access dates aren't kept reliably by every volume).
+    private func markUsed(_ f: URL) {
+        guard lock.withLock({ used.insert(f.path).inserted }) else { return }
+        try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: f.path)
+    }
+    private var used = Set<String>()
+
     /// One file per photo version (path, size, modification time) and per RAW development that moves or retones
     /// the base: a result computed without lens correction would leave double edges once it is turned on.
-    /// 10-bit HEIC (8-bit from older versions, still valid).
+    /// 10-bit HEIC. 8-bit ones from older versions are still used: ignoring them would silently take the
+    /// denoise off photos already edited and exported with it.
     static func cacheURL(_ url: URL, _ raw: RawDevelop) -> URL {
         let v = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
         let r = raw.base(for: url)
@@ -71,7 +107,8 @@ final class Denoiser: @unchecked Sendable {
     func hasResult(_ url: URL, _ raw: RawDevelop) -> Bool {
         let k = Self.knownKey(url, raw), now = Date()
         if let c = lock.withLock({ known[k] }), now.timeIntervalSince(c.at) < 5 { return c.has }
-        let has = FileManager.default.fileExists(atPath: Self.cacheURL(url, raw).path)
+        let f = Self.cacheURL(url, raw)
+        let has = FileManager.default.fileExists(atPath: f.path)
         lock.withLock { known[k] = (has, now) }
         return has
     }
@@ -83,6 +120,7 @@ final class Denoiser: @unchecked Sendable {
         let f = Self.cacheURL(url, raw)
         if let c = images.object(forKey: f.path as NSString) { return c }
         guard FileManager.default.fileExists(atPath: f.path), let img = CIImage(contentsOf: f) else { return nil }
+        markUsed(f)
         images.setObject(img, forKey: f.path as NSString)
         return img
     }
@@ -97,6 +135,7 @@ final class Denoiser: @unchecked Sendable {
               let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true,
                                                                     kCGImageSourceThumbnailMaxPixelSize: 1600] as CFDictionary)
         else { return nil }
+        markUsed(f)
         smalls.setObject(cg, forKey: f.path as NSString, cost: cg.bytesPerRow * cg.height)
         return CIImage(cgImage: cg)
     }

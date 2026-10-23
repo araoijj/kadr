@@ -282,20 +282,25 @@ struct EditedImage: View {
                 image = quick
             }
             // Crop and retouch size the frame from EXIF until a preview is decoded: learn its camera crop now,
-            // alongside the exact render rather than before it (and even if this frame is left meanwhile).
-            if !shapeKnown {
+            // alongside the exact render rather than before it. Cancelled with this task: a frame flicked past
+            // doesn't decode its preview (one already decoding finishes and is still learned).
+            let learn: Task<Void, Never>? = shapeKnown ? nil : {
                 let ex = photo.exif
-                Task.detached(priority: .utility) {
+                return Task.detached(priority: .utility) {
+                    guard !Task.isCancelled else { return }
                     if ex.width == nil { _ = ImageStore.shared.headerExif(url) }
+                    guard !Task.isCancelled else { return }
                     if ImageStore.shared.preview(url) != nil { await MainActor.run { PreviewShapes.shared.learn(url, ex) } }
                 }
-            }
-            guard !Task.isCancelled else { return }
+            }()
+            guard !Task.isCancelled else { learn?.cancel(); return }
             let token = UUID()
             rendering = token
             defer { if rendering == token { rendering = nil } }
-            if let img = await Renderer.shared.render(url, a, maxSide: screen.renderSide, channel: channel),
-               !Task.isCancelled, shownFor == url {
+            let img = await withTaskCancellationHandler {
+                await Renderer.shared.render(url, a, maxSide: screen.renderSide, channel: channel)
+            } onCancel: { learn?.cancel() }
+            if let img, !Task.isCancelled, shownFor == url {
                 image = img
                 exact = true
             }

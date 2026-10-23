@@ -8,6 +8,8 @@ struct Person: Identifiable, Hashable {
     var centroids: [Data]   // one per face group: several when groups were merged by name (front and profile)
     var faces: [FaceRef]
     var photos: Set<URL>
+    /// The id, not a count: a gap after a merge or naming is better than "Person 3" turning into "Person 2"
+    /// on screen and in an active filter's chip while it is the same person.
     var title: String { name ?? tr("Человек \(id)") }
 }
 

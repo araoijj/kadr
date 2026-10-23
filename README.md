@@ -24,7 +24,7 @@ It is built in SwiftUI with Core Image and Apple Vision — no Electron, no subs
 - **Tournament (T):** compare a burst or a selection in pairs, ← or → picks the better one; the winner gets a ★, the rest can be rejected.
 - **Scenes:** the shoot is split automatically at pauses (10 minutes by default), with per-scene culling progress.
 - **Bursts and duplicates.** Similar consecutive frames (bursts, brackets) are grouped and the sharpest one is marked; exact file copies are detected.
-- **Compare 2–4 frames** side by side with shared zoom and pan.
+- **Compare any number of frames** (up to 200) side by side with shared zoom and pan.
 - **Keyboard-first.** P / X / U to keep / reject / clear, 1–5 stars, color labels, auto-advance.
 - **Works on selections.** ⌘/⇧-click, ⇧-arrows, ⌘A, rubber-band selection; ratings and labels apply to everything selected.
 - **Never deletes.** Rejects are moved to an `_Отклонённые` (“rejected”) subfolder, and only when you ask.
@@ -64,32 +64,75 @@ Download the latest build from **[Releases](https://github.com/araoijj/kadr/rele
 
 ## Keyboard shortcuts
 
+The same table as **Help → Keyboard Shortcuts** (⌘/ or ?) in the app.
+
+**Culling**
+
 | Key | Action |
 |---|---|
-| ← → ↑ ↓ | browse (with ⇧ — extend selection) |
 | P / X / U | keep (★ if unrated) / reject / clear decision |
-| O | Culling mode |
-| T | tournament: ← / → picks the better frame |
-| 1–5 / 0 | set / clear rating |
+| ⌫ | reject / restore |
+| 1–5 / 0 | stars / clear rating |
 | 6–9 | color label: red, yellow, green, blue |
-| Space / Enter | grid ↔ single frame |
-| Z / double-click | 100% at the click point / fit |
-| ⌘+ / ⌘− / ⌘0 / ⌘1 | zoom in / out / fit / 100% |
-| I | info panel |
-| S | copy selection to the save folder |
-| ⌘S | “Save to folder” window |
-| ⌘A / ⇧⌘A | select all / select burst |
+| H | hide / show rejects |
+| O | Culling layer: AI tags, faces, progress |
+| T | tournament: ← / → picks the better photo |
+| C | compare selected (or the burst) |
+| P, Space / X | in compare: mark “keep” / “reject” |
+| Enter | in compare: apply the marks |
+| Z / + / − | in compare: zoom / frame size |
+| C / Esc | leave compare |
+| ⌥⌘A | run AI analysis |
 | ⌘⌫ | move rejects to the `_Отклонённые` subfolder |
+| ⌥⌘F | clear all filters |
+
+**Viewing**
+
+| Key | Action |
+|---|---|
+| ← → ↑ ↓ | browse; with ⇧ — extend selection |
+| ⌘ / ⇧ + click | select several |
+| ⌘A / ⇧⌘A | select all / burst |
+| Space / Enter | grid ↔ photo |
+| G | back to the grid |
+| Esc | back: out of 100%, out of the burst, to the grid; clear the selection |
+| Z / double-click | 100% at the click point / fit |
+| ⌘+ / ⌘− / ⌘0 / ⌘1 | zoom in / zoom out / fit / 100% |
+| + / − | zoom in / zoom out without ⌘ |
+| pinch, ⌘ + scroll wheel | smooth zoom; scroll or drag to pan |
+| F | full screen; F or Esc to exit |
+| I | Info panel |
+| ⌥⌘1 / ⌥⌘2 | sidebar: sources / filters |
+
+**Edit**
+
+| Key | Action |
+|---|---|
 | E | Edit panel |
-| \\ | show original |
-| Y | before / after split |
 | R | crop; Enter — done, Esc — cancel |
-| C | compare selected frames (or the burst) |
+| A | in crop — AI frame suggestion |
+| Enter / Esc | “Remove Object”: remove the selection / clear it, leave |
+| Y | before / after split |
+| \\ | show original |
 | ⇧⌘C / ⇧⌘V | copy / paste edits |
-| ⇧⌘O | open in Capture One |
-| ⌘I | import from memory card |
+| ⌥⌘R | reset edits |
+| ⌥⌘M | match exposure and white balance to the current photo |
 | ⌘Z / ⇧⌘Z / ⌘Y | undo / redo / history |
-| right-click | actions for the frame or selection |
+
+**Files**
+
+| Key | Action |
+|---|---|
+| S | send to the save folder |
+| ⌘S | save to folder… |
+| ⌘O | open a folder… |
+| ⌘I | import from memory card |
+| ⇧⌘O | open in Capture One |
+| ⇧⌘R | show in Finder |
+| ? / ⌘/ | this cheat sheet |
+| right-click | actions for the photo or selection |
+
+The Russian keyboard layout works too: З / Ч / Г instead of P / X / U.
 
 ## Build from source
 

@@ -19,6 +19,14 @@ struct KadrApp: App {
         KeyHandler.trackKeyWindow(lib)
         // Bundled face mesh: loaded in the background right at launch.
         Task.detached(priority: .utility) { FaceMesh.shared.installBundledIfNeeded() }
+        // Denoise results on disk: trimmed once a launch, after the folder has opened, so the photos its edits
+        // use are known and kept.
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(30))
+            for _ in 0..<60 where lib.loading { try? await Task.sleep(for: .seconds(10)) }
+            let keep = lib.photos.filter { $0.adj.aiDenoise > 0 }.map { ($0.url, $0.adj.raw) }
+            Task.detached(priority: .background) { Denoiser.trimCache(keeping: keep) }
+        }
     }
 
     var body: some Scene {

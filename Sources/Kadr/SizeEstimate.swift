@@ -13,6 +13,7 @@ struct SizeEstimate: View {
     private struct Key: Hashable {
         let ids: [URL]
         let s: String
+        let denoised: Int   // a noise reduction result finished while the sheet is open changes the frames
     }
 
     var body: some View {
@@ -24,7 +25,7 @@ struct SizeEstimate: View {
         }
         .font(.caption)
         .foregroundStyle(.secondary)
-        .task(id: Key(ids: list.map(\.id), s: settingsKey)) {
+        .task(id: Key(ids: list.map(\.id), s: settingsKey, denoised: lib.denoiseDone)) {
             try? await Task.sleep(for: .milliseconds(250))   // the quality slider is being dragged; don't recompute on every step
             guard !Task.isCancelled else { return }
             busy = true

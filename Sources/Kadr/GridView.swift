@@ -9,6 +9,7 @@ struct GridView: View {
     // Marquee selection: preview frames and the rectangle in grid coordinates. The frames live in a plain
     // (not observed) class: every cell reports its frame while scrolling, and a @State dictionary would redraw the whole grid.
     @State private var frames = CellFrames()
+    @State private var pending = PendingJump()
     @State private var marquee: CGRect?
     @State private var marqueeBase: Set<URL> = []
     // Read once and then on its notification: plugging in or removing a mouse flips it, and the
@@ -46,6 +47,11 @@ struct GridView: View {
                                 .photoContextMenu(p)
                                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("grid")) } action: { frames.rects[p.id] = $0 }
                                 .onDisappear { frames.rects[p.id] = nil }
+                                // The jump's frame laid out at last (a big folder settles late): center it once more.
+                                .onAppear {
+                                    guard pending.target == p.id else { return }
+                                    DispatchQueue.main.async { if pending.target == p.id { proxy.scrollTo(p.id, anchor: .center) } }
+                                }
                         }
                         } header: {
                             if !section.title.isEmpty { SectionHeader(title: section.title, count: section.photos.count) }
@@ -164,16 +170,38 @@ struct GridView: View {
 extension GridView {
     /// Centers a frame far from the visible part, e.g. after a folder is read: the lazy grid lays out its
     /// 1000 cells over the next frames, so a single scroll in the same update lands at an estimate (the start
-    /// or the end of the folder). Repeated until the layout has settled.
+    /// or the end of the folder). Repeated until the layout has settled, and once more when the frame's cell
+    /// appears; a scroll by hand ends it, or the repeats would snap the grid back to the frame.
     func jump(to id: URL, _ proxy: ScrollViewProxy) {
+        let state = pending
+        state.target = id
+        state.run += 1
+        let run = state.run
+        let monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { e in
+            MainActor.assumeIsolated { if ClickAnchor.contains(e) { state.target = nil } }
+            return e
+        }
         Task { @MainActor in
-            for delay in [0, 60, 250] {
+            // Also when the user moved on: a target left behind would snap the grid back whenever its cell
+            // scrolls into view later. A later jump (to the same frame too) keeps its own.
+            defer {
+                if let monitor { NSEvent.removeMonitor(monitor) }
+                if state.run == run { state.target = nil }
+            }
+            for delay in [0, 60, 190, 350] {
                 try? await Task.sleep(for: .milliseconds(delay))
-                guard lib.currentID == id else { return }   // the user moved on meanwhile
+                // The user moved on or scrolled meanwhile.
+                guard state.target == id, lib.currentID == id else { return }
                 proxy.scrollTo(id, anchor: .center)
             }
         }
     }
+}
+
+/// The frame a jump is centering, until it is done or the user scrolls; not observed, like CellFrames.
+final class PendingJump {
+    var target: URL?
+    var run = 0
 }
 
 /// Cell frames for the marquee hit test; read only while dragging, so nothing needs to observe them.

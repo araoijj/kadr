@@ -29,6 +29,7 @@ struct FilterBar: View {
                         breadcrumb(icon: true); sortMenu(caption: false); Spacer(minLength: 4); decisionsMenu
                         more(caption: false, actions: true)
                         if !lib.loupe { thumbSizeButton }
+                        if lib.culling { cullBadge }   // last: a clipped edge takes the count, not a control
                         Spacer(minLength: 0)
                     }
                 }
@@ -83,10 +84,27 @@ struct FilterBar: View {
                 .controlSize(.small).fixedSize()
                 .help(tr("Найдёт смаз, моргание, пересвет и лучшие кадры в сериях. Нагружает Mac: ~1 минута на 1000 кадров (⌥⌘A)."))
             }
-            Button(tr("Итог…")) { lib.showCullSummary = true }.controlSize(.small).fixedSize()
+            // Not «Итог…»: on a small button the ellipsis read as a cut-off label.
+            Button(tr("Итоги")) { lib.showCullSummary = true }.controlSize(.small).fixedSize()
                 .help(tr("Итог отбора: сколько оставлено и отклонено, что делать дальше"))
             HintButton(id: "cull")
         }
+    }
+
+    /// The narrowest bar keeps the pass in sight: the viewed count, a click opens the summary.
+    private var cullBadge: some View {
+        let total = lib.photos.count
+        return Button { lib.showCullSummary = true } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "eye").font(.caption)
+                Text("\(min(lib.viewed.count, total))/\(total)").font(.caption.weight(.semibold)).monospacedDigit()
+            }
+            .foregroundStyle(.secondary)
+            .fixedSize()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(tr("Итог отбора: сколько оставлено и отклонено, что делать дальше"))
     }
 
     /// A burst is open: the way back to the photos you came from is right here, not only on Esc.

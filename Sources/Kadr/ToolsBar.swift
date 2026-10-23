@@ -49,7 +49,7 @@ struct ToolsBar: View {
             tool(tr("Сравнить"), "rectangle.on.rectangle", on: lib.comparing, key: "C",
                  enabled: lib.comparing || lib.canCompare,
                  text: tr("Несколько кадров рядом, чтобы выбрать, какой оставить."),
-                 disabledText: tr("Выделите 2–8 кадров (⌘-клик или рамкой) или встаньте на кадр серии.")) {
+                 disabledText: tr("Выделите хотя бы 2 кадра (⌘-клик или рамкой) или встаньте на кадр серии.")) {
                 lib.comparing ? lib.stopCompare() : lib.startCompare()
             }
             tool("100%", "plus.magnifyingglass", on: lib.zoom100, key: "Z", enabled: hasPhoto && !lib.cropMode,

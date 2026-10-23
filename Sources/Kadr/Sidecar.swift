@@ -11,8 +11,14 @@ enum Sidecar {
     /// so a rejected photo's stars wait in kadr:Rating and come back when the reject is lifted.
     static let kadrNS = "http://ns.kozlov.ru/kadr/1.0/"
 
+    /// IMG.xmp; some tools (and cards) name it IMG.CR3.xmp instead. That one is used only when there is no
+    /// IMG.xmp, and then for writes too: the file the other app reads gets the change, no second sidecar appears.
     static func url(for photo: URL) -> URL {
-        photo.deletingPathExtension().appendingPathExtension("xmp")
+        let plain = photo.deletingPathExtension().appendingPathExtension("xmp")
+        let fm = FileManager.default
+        guard !fm.fileExists(atPath: plain.path) else { return plain }
+        let full = photo.appendingPathExtension("xmp")
+        return fm.fileExists(atPath: full.path) ? full : plain
     }
 
     struct Values {
@@ -142,13 +148,25 @@ enum Sidecar {
         (try? Data(contentsOf: url(for: photo))).flatMap { try? XMLDocument(data: $0) }
     }
 
-    /// The existing XMP, or a fresh packet when there is none (or it has no Description to write into).
+    /// The existing XMP, or a fresh packet when there is none (or the file is empty).
+    /// A file that can't be read or parsed is never replaced: it throws and stays as it is. It may be another
+    /// app's write caught halfway, or hold fields Kadr can't see; overwriting it would lose them for good,
+    /// while the failed write shows up as an error and can be repeated once the file is fixed.
     private static func packet(_ file: URL) throws -> XMLDocument {
-        if let data = try? Data(contentsOf: file), let existing = try? XMLDocument(data: data),
-           !descriptions(in: existing).isEmpty {
-            return existing
+        guard FileManager.default.fileExists(atPath: file.path) else { return try XMLDocument(xmlString: emptyPacket, options: []) }
+        let data = try Data(contentsOf: file)
+        guard data.contains(where: { !" \t\r\n".utf8.contains($0) }) else { return try XMLDocument(xmlString: emptyPacket, options: []) }
+        let existing = try XMLDocument(data: data)
+        if descriptions(in: existing).isEmpty {
+            // A valid packet with no Description yet: one is added to its rdf:RDF, the rest stays.
+            guard let rdf = (try? existing.nodes(forXPath: "//*[local-name()='RDF']"))?.first as? XMLElement else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            let desc = XMLElement(name: "rdf:Description", uri: rdfNS)
+            desc.addAttribute(XMLNode.attribute(withName: "rdf:about", uri: rdfNS, stringValue: "") as! XMLNode)
+            rdf.addChild(desc)
         }
-        return try XMLDocument(xmlString: emptyPacket, options: [])
+        return existing
     }
 
     /// All rdf:Description blocks: Bridge and exiftool often put each namespace in a block of its own.

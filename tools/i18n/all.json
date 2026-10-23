@@ -4629,10 +4629,10 @@
   "La ráfaga tiene {} fotos: se muestran {}, desde la actual",
   "La raffica ha {} foto: ne mostro {}, a partire da quella attuale"
  ],
- "Выделите 2–8 кадров: ⌘-клик или рамкой": [
-  "Select 2–8 photos: ⌘-click or drag a box",
-  "Selecciona 2–8 fotos: ⌘-clic o un recuadro",
-  "Seleziona 2–8 foto: ⌘-clic o un riquadro"
+ "Выделите хотя бы 2 кадра: ⌘-клик или рамкой": [
+  "Select at least 2 photos: ⌘-click or drag a box",
+  "Selecciona al menos 2 fotos: ⌘-clic o un recuadro",
+  "Seleziona almeno 2 foto: ⌘-clic o un riquadro"
  ],
  "Отклонено в сравнении: {}": [
   "Rejected in Compare: {}",
@@ -4659,10 +4659,10 @@
   "Mostrar solo esta ráfaga",
   "Mostra solo questa raffica"
  ],
- "Сравнить 2–8 кадров рядом (C)": [
-  "Compare 2–8 photos side by side (C)",
-  "Comparar 2–8 fotos lado a lado (C)",
-  "Confronta 2–8 foto affiancate (C)"
+ "Сравнить выделенные кадры рядом (C)": [
+  "Compare the selected photos side by side (C)",
+  "Comparar las fotos seleccionadas lado a lado (C)",
+  "Confronta le foto selezionate affiancate (C)"
  ],
  "Все кадры (Esc)": [
   "All photos (Esc)",
@@ -5269,10 +5269,10 @@
   "Varias fotos juntas para elegir cuál conservar.",
   "Più foto affiancate per scegliere quale tenere."
  ],
- "Выделите 2–8 кадров (⌘-клик или рамкой) или встаньте на кадр серии.": [
-  "Select 2–8 frames (⌘-click or a marquee) or stand on a frame of a burst.",
-  "Selecciona 2–8 fotos (⌘-clic o con el marco) o sitúate en una foto de la ráfaga.",
-  "Seleziona 2–8 foto (⌘-clic o con la cornice) o posizionati su una foto della raffica."
+ "Выделите хотя бы 2 кадра (⌘-клик или рамкой) или встаньте на кадр серии.": [
+  "Select at least 2 frames (⌘-click or a marquee) or stand on a frame of a burst.",
+  "Selecciona al menos 2 fotos (⌘-clic o con el marco) o sitúate en una foto de la ráfaga.",
+  "Seleziona almeno 2 foto (⌘-clic o con la cornice) o posizionati su una foto della raffica."
  ],
  "Пиксель в пиксель: проверить резкость и глаза.": [
   "Pixel for pixel: check sharpness and eyes.",
@@ -5508,5 +5508,20 @@
   "select all",
   "seleccionar todo",
   "seleziona tutto"
+ ],
+ "Итоги": [
+  "Summary",
+  "Resumen",
+  "Riepilogo"
+ ],
+ "Оценка и метка всем выделенным": [
+  "Rating and label for all selected",
+  "Valoración y etiqueta para todas las seleccionadas",
+  "Valutazione ed etichetta per tutte le selezionate"
+ ],
+ "Сначала завершите кадрирование: Enter или Esc": [
+  "Finish cropping first: Enter or Esc",
+  "Termina primero el recorte: Intro o Esc",
+  "Prima termina il ritaglio: Invio o Esc"
  ]
 }
