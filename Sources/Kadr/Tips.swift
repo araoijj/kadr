@@ -16,6 +16,8 @@ final class TipPanel {
     static let shared = TipPanel()
     private var panel: NSPanel?
     private var pending: DispatchWorkItem?
+    /// The control whose card is on screen, so a live card can be refreshed without re-hovering.
+    private weak var shownAnchor: NSView?
 
     func schedule(_ tip: Tip, under anchor: NSView) {
         pending?.cancel()
@@ -30,7 +32,14 @@ final class TipPanel {
     func hide() {
         pending?.cancel()
         pending = nil
+        shownAnchor = nil
         panel?.orderOut(nil)
+    }
+
+    /// New text for the card already shown under `anchor` (live counts); nothing if it isn't shown.
+    func refresh(_ tip: Tip, under anchor: NSView) {
+        guard shownAnchor === anchor, panel?.isVisible == true else { return }
+        show(tip, under: anchor)
     }
 
     private func show(_ tip: Tip, under anchor: NSView) {
@@ -58,6 +67,7 @@ final class TipPanel {
         p.setFrame(NSRect(x: x, y: r.minY - size.height - 6, width: size.width, height: size.height), display: true)
         p.orderFront(nil)
         panel = p
+        shownAnchor = anchor
     }
 }
 
@@ -106,21 +116,28 @@ private struct AnchorView: NSViewRepresentable {
 
 private struct TipModifier: ViewModifier {
     let tip: Tip
+    let active: Bool
     @State private var anchor: NSView?
+    @State private var inside = false
 
     func body(content: Content) -> some View {
         content
             .background(AnchorView { anchor = $0 })
             .onHover { inside in
-                if inside, let anchor { TipPanel.shared.schedule(tip, under: anchor) } else { TipPanel.shared.hide() }
+                self.inside = inside
+                if inside, active, let anchor { TipPanel.shared.schedule(tip, under: anchor) } else { TipPanel.shared.hide() }
             }
             .simultaneousGesture(TapGesture().onEnded { TipPanel.shared.hide() })
+            // The card follows live text (progress counts) and goes when the control stops being active.
+            .onChange(of: tip.text) { if inside, let anchor { TipPanel.shared.refresh(tip, under: anchor) } }
+            .onChange(of: active) { if inside, !active { TipPanel.shared.hide() } }
     }
 }
 
 extension View {
     /// A hover card instead of `.help`: title, key and one line on what the control is for.
-    func tip(_ title: String, key: String? = nil, icon: String, _ text: String) -> some View {
-        modifier(TipModifier(tip: Tip(title: title, key: key, icon: icon, text: text)))
+    /// `active: false` keeps the card away, e.g. while the control is hidden.
+    func tip(_ title: String, key: String? = nil, icon: String, _ text: String, active: Bool = true) -> some View {
+        modifier(TipModifier(tip: Tip(title: title, key: key, icon: icon, text: text), active: active))
     }
 }

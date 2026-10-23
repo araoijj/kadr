@@ -24,7 +24,8 @@ struct ZoomableLoupe: View {
             let pane = geo.size
             let px = pixelSize
             let backing = NSScreen.main?.backingScaleFactor ?? 2
-            let fit = min((pane.width - 40) / px.width, (pane.height - 40) / px.height) * backing   // "Fit" as a fraction of 100%
+            // "Fit" as a fraction of 100%; floored, since a tiny pane would make it negative ("−%" in the bar).
+            let fit = min(max(pane.width - 40, 1) / max(px.width, 1), max(pane.height - 40, 1) / max(px.height, 1)) * backing
             ZStack {
                 LoupeAnchor()
                 if let z = lib.loupeZoom {
@@ -211,41 +212,75 @@ struct Navigator: View {
     }
 }
 
-/// Zoom bar below the frame.
+/// Zoom bar below the frame. Narrower variants drop the less used levels, then the captions, so the bar
+/// never asks for more than the column has.
 struct ZoomBar: View {
     @Environment(Library.self) private var lib
 
     var body: some View {
-        let z = lib.loupeZoom
-        HStack(spacing: 4) {
-            Button { lib.zoomOut() } label: { Image(systemName: "minus.magnifyingglass") }
-                .disabled(z == nil).help(tr("Уменьшить (⌘−)"))
-            Button { lib.splitCompare.toggle() } label: {
-                Label(tr("До/после"), systemImage: "rectangle.split.2x1")
-                    .font(.caption.weight(lib.splitCompare ? .semibold : .regular))
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(Capsule().fill(lib.splitCompare ? Color.accentColor.opacity(0.35) : .clear))
-            }
-            .help(tr("Шторка «до / после» (Y): тяните линию по кадру"))
-            Divider().frame(height: 14)
-            level(tr("Вписать"), nil, active: z == nil, help: tr("⌘0 или двойной клик"))
-            level("50%", 0.5, active: z == 0.5)
-            level("100%", 1, active: z == 1, help: tr("⌘1 или Z"))
-            level("200%", 2, active: z == 2)
-            Button { lib.zoomIn() } label: { Image(systemName: "plus.magnifyingglass") }.help(tr("Увеличить (⌘+)"))
-            Text("\(Int(((z ?? lib.fitZoom) * 100).rounded()))%")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(width: 44)
+        ViewThatFits(in: .horizontal) {
+            row(levels: [0.5, 1, 2], splitTitle: true)
+            row(levels: [1], splitTitle: false)
+            row(levels: nil, splitTitle: false)
         }
         .buttonStyle(.plain)
         .floatingBar()
+    }
+
+    /// `levels`: the fixed zoom steps after "Fit"; nil leaves out "Fit" too.
+    private func row(levels: [CGFloat]?, splitTitle: Bool) -> some View {
+        let z = lib.loupeZoom
+        return HStack(spacing: 4) {
+            Button { lib.zoomOut() } label: { Image(systemName: "minus.magnifyingglass") }
+                .disabled(z == nil).help(tr("Уменьшить (⌘−)"))
+            Button { lib.splitCompare.toggle() } label: {
+                Group {
+                    if splitTitle { Label(tr("До/после"), systemImage: "rectangle.split.2x1") } else { Image(systemName: "rectangle.split.2x1") }
+                }
+                .font(.caption.weight(lib.splitCompare ? .semibold : .regular))
+                .lineLimit(1).fixedSize()
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(Capsule().fill(lib.splitCompare ? Color.accentColor.opacity(0.35) : .clear))
+            }
+            .help(tr("Шторка «до / после» (Y): тяните линию по кадру"))
+            if let levels {
+                Divider().frame(height: 14)
+                level(tr("Вписать"), nil, active: z == nil, help: tr("⌘0 или двойной клик"))
+                ForEach(levels, id: \.self) { v in
+                    level("\(Int(v * 100))%", v, active: z == v, help: v == 1 ? tr("⌘1 или Z") : "")
+                }
+            }
+            Button { lib.zoomIn() } label: { Image(systemName: "plus.magnifyingglass") }.help(tr("Увеличить (⌘+)"))
+            if levels == nil {
+                // No room for the levels: the percentage itself opens them.
+                Menu {
+                    Button(tr("Вписать")) { lib.setZoom(nil, at: lib.loupeCenter) }
+                    ForEach([0.5, 1, 2] as [CGFloat], id: \.self) { v in
+                        Button("\(Int(v * 100))%") { lib.setZoom(v, at: lib.loupeCenter) }
+                    }
+                } label: { percent(z) }
+                .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+                .fixedSize()
+                .help(tr("Масштаб: вписать, 50%, 100%, 200%"))
+            } else {
+                percent(z)
+            }
+        }
+    }
+
+    private func percent(_ z: CGFloat?) -> some View {
+        Text("\(Int(((z ?? lib.fitZoom) * 100).rounded()))%")
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .frame(width: 44)
     }
 
     private func level(_ title: String, _ value: CGFloat?, active: Bool, help: String = "") -> some View {
         Button { lib.setZoom(value, at: lib.loupeCenter) } label: {
             Text(title)
                 .font(.caption.weight(active ? .semibold : .regular))
+                .lineLimit(1).fixedSize()
                 .padding(.horizontal, 8).padding(.vertical, 3)
                 .background(Capsule().fill(active ? Color.accentColor.opacity(0.35) : .clear))
         }

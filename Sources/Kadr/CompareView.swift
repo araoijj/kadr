@@ -6,12 +6,12 @@ import SwiftUI
 /// visible in every frame.
 struct CompareView: View {
     @Environment(Library.self) private var lib
+    @State private var showTileSize = false
 
     var body: some View {
         let photos = lib.comparePhotos
         VStack(spacing: 0) {
             toolbar(photos)
-            ToolHint(id: lib.tournamentActive ? "tournament" : "compare")
             GeometryReader { geo in
                 let lay = CompareLayout(count: photos.count, available: geo.size, wanted: lib.compareTile)
                 ScrollViewReader { proxy in
@@ -32,6 +32,8 @@ struct CompareView: View {
                     }
                 }
             }
+            // Over the frames, not above them: a card in the column's flow would set the column's min size.
+            .overlay(alignment: .top) { ToolHint(id: lib.tournamentActive ? "tournament" : "compare") }
         }
     }
 
@@ -92,6 +94,17 @@ struct CompareView: View {
         .help(tr("Размер кадров: ползунок или клавиши + и −. «Авто» — заполнить окно; если кадров много, появится прокрутка"))
     }
 
+    /// The short bar: the slider folds into a button, the slider itself floats in a popover.
+    private var tileSizeButton: some View {
+        Button { showTileSize.toggle() } label: {
+            Image(systemName: "square.grid.2x2").font(.caption).foregroundStyle(.secondary)
+                .frame(width: 22, height: 20).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(tr("Размер кадров: ползунок или клавиши + и −. «Авто» — заполнить окно; если кадров много, появится прокрутка"))
+        .popover(isPresented: $showTileSize, arrowEdge: .bottom) { tileSize.padding(12) }
+    }
+
     private func compareRow(_ photos: [Photo], hint: Bool, long: Bool) -> some View {
         let marked = photos.filter { lib.compareKeep.contains($0.id) }.count
         let dropped = photos.filter { lib.compareReject.contains($0.id) }.count
@@ -132,7 +145,7 @@ struct CompareView: View {
             .tint(marked + dropped > 0 ? Theme.keep : .accentColor)
             .help(dropped > 0 ? tr("✓ получат ★ (если оценки не было), ✗ — в брак, остальные кадры не меняются. Отменить — ⌘Z")
                               : tr("Отмеченные кадры получат ★ (если оценки не было), остальные кадры сравнения — отклонены (X). Отменить — ⌘Z"))
-            if long { tileSize }
+            if long { tileSize } else { tileSizeButton }
             HintButton(id: "compare")
             Button(tr("Готово")) { lib.stopCompare() }
                 .keyboardShortcut(.cancelAction)
@@ -219,7 +232,8 @@ struct ComparePane: View {
                     let long = CGFloat(max(photo.exif.width ?? img.width, photo.exif.height ?? img.height))
                     let aspect = CGFloat(img.width) / CGFloat(img.height)
                     let iw = aspect >= 1 ? long : long * aspect, ih = aspect >= 1 ? long / aspect : long
-                    let fit = min(pane.width / iw, pane.height / ih)
+                    // Floors: a zero-size pane on first layout or a missing size would give 0 and an infinite 100%.
+                    let fit = min(max(pane.width, 1) / max(iw, 1), max(pane.height, 1) / max(ih, 1))
                     let s = fit * lib.compareZoom
                     let size = CGSize(width: iw * s, height: ih * s)
                     let c = clamp(lib.compareCenter, size: size, pane: pane)
@@ -229,7 +243,9 @@ struct ComparePane: View {
                         .frame(width: size.width, height: size.height)
                         .position(x: pane.width / 2 + (0.5 - c.x) * size.width, y: pane.height / 2 + (0.5 - c.y) * size.height)
                         .opacity((photo.rejected && !marked) || dropped ? 0.45 : 1)
-                        .onAppear { lib.compareZoom100 = 1 / (fit * (NSScreen.main?.backingScaleFactor ?? 2)) }
+                        // Kept in step with the pane; a pane not laid out yet would give a bogus 100% (thousands ×).
+                        .onAppear { setZoom100(fit, pane: pane) }
+                        .onChange(of: fit) { _, f in setZoom100(f, pane: pane) }
                         .gesture(DragGesture(minimumDistance: 2)
                             .onChanged { v in
                                 guard lib.compareZoom > 1 else { return }
@@ -363,6 +379,12 @@ struct ComparePane: View {
         }
         .padding(8)
         .allowsHitTesting(false)
+    }
+
+    /// Zoom that shows the frame at 100% (one image pixel per screen pixel). Skipped until the pane has a size.
+    private func setZoom100(_ fit: CGFloat, pane: CGSize) {
+        guard pane.width > 1, pane.height > 1 else { return }
+        lib.compareZoom100 = 1 / (fit * (NSScreen.main?.backingScaleFactor ?? 2))
     }
 
     /// Keeps the frame from being pushed past the edge: the center stays at least half a window from the border.

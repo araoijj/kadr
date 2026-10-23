@@ -5,34 +5,49 @@ import SwiftUI
 /// else narrows the view. The full set of filters lives in the sidebar's «Фильтры» tab (FiltersPanel).
 struct FilterBar: View {
     @Environment(Library.self) private var lib
+    @State private var showThumbSize = false
 
     var body: some View {
         Bar {
-            ViewThatFits(in: .horizontal) {
-                row(full: true)
-                row(full: false)
-                HStack(spacing: 8) {
-                    breadcrumb; sortMenu(caption: false); Spacer(minLength: 6); decisionsMenu; more
-                    if lib.filter == .rejected { rejectedAction(caption: false) }
-                    if lib.inSeries { backFromSeries(caption: false) }
-                    if lib.culling { cullStatus(full: false) }
-                    Spacer(minLength: 6)
-                    if !lib.loupe { thumbSize(width: 56) }
-                    count
+            // The count sits outside the variants, so it stays in sight however narrow the column is; the
+            // variants get what is left, and the last one is cut on the right instead of pushing it out.
+            HStack(spacing: 8) {
+                ViewThatFits(in: .horizontal) {
+                    row(full: true)
+                    row(full: false)
+                    HStack(spacing: 8) {
+                        breadcrumb(icon: false); sortMenu(caption: false); Spacer(minLength: 6); decisionsMenu; more(caption: true)
+                        if lib.filter == .rejected { rejectedAction(caption: false) }
+                        if lib.inSeries { backFromSeries(caption: false) }
+                        if lib.culling { cullStatus(full: false) }
+                        Spacer(minLength: 6)
+                        if !lib.loupe { thumbSize(width: 56) }
+                    }
+                    // About 300 pt: the folder name is in its menu, the preview size in a popover, and the
+                    // situational actions (burst, rejects, culling) in «Ещё» — a clipped edge must not hide them.
+                    HStack(spacing: 6) {
+                        breadcrumb(icon: true); sortMenu(caption: false); Spacer(minLength: 4); decisionsMenu
+                        more(caption: false, actions: true)
+                        if !lib.loupe { thumbSizeButton }
+                        Spacer(minLength: 0)
+                    }
                 }
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                .clipped()
+                count
             }
         }
     }
 
     private func row(full: Bool) -> some View {
         HStack(spacing: 10) {
-            breadcrumb
+            breadcrumb(icon: false)
             sortMenu(caption: true)
             Spacer(minLength: 6)
             if full {
-                decisions(compact: false); stars; labels; more
+                decisions(compact: false); stars; labels; more(caption: true)
             } else {
-                decisions(compact: true); stars; more
+                decisions(compact: true); stars; more(caption: true)
             }
             if lib.filter == .rejected { rejectedAction(caption: full) }
             if lib.inSeries { backFromSeries(caption: full) }
@@ -40,7 +55,6 @@ struct FilterBar: View {
             if lib.culling { cullStatus(full: full) }
             if full { chips }
             if !lib.loupe { thumbSize(width: full ? 80 : 64) }
-            count
         }
     }
 
@@ -110,10 +124,24 @@ struct FilterBar: View {
         .help(tr("Размер превью"))
     }
 
+    /// The narrowest bar: the slider folds into a button, the slider itself floats in a popover.
+    private var thumbSizeButton: some View {
+        @Bindable var lib = lib
+        return Button { showThumbSize.toggle() } label: {
+            Image(systemName: "square.grid.3x3").font(.caption).foregroundStyle(.secondary)
+                .frame(width: 22, height: 20).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(tr("Размер превью"))
+        .popover(isPresented: $showThumbSize, arrowEdge: .bottom) {
+            Slider(value: $lib.thumbSize, in: 120...420).frame(width: 160).controlSize(.small).padding(12)
+        }
+    }
+
     // MARK: - Where
 
-    /// Folder name; the menu goes up to the parent folders.
-    private var breadcrumb: some View {
+    /// Folder name (only the icon in the narrowest bar); the menu goes up to the parent folders.
+    private func breadcrumb(icon: Bool) -> some View {
         Menu {
             if let f = lib.folder {
                 // The full name and path, for when the label had to be shortened.
@@ -130,8 +158,12 @@ struct FilterBar: View {
         } label: {
             // Shortened in code, not by the layout: the label keeps `.fixedSize()` so ViewThatFits
             // measures its true width; a layout-truncated label would overflow onto the sort menu.
-            Label(lib.folder.map { Self.shortName(FolderBrowser.displayName($0)) } ?? "", systemImage: "folder")
-                .lineLimit(1)
+            if icon {
+                Image(systemName: "folder")
+            } else {
+                Label(lib.folder.map { Self.shortName(FolderBrowser.displayName($0)) } ?? "", systemImage: "folder")
+                    .lineLimit(1)
+            }
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
@@ -283,12 +315,13 @@ struct FilterBar: View {
 
     // MARK: - More
 
-    private var more: some View {
+    private func more(caption: Bool, actions: Bool = false) -> some View {
         @Bindable var lib = lib
         let extra = !Self.main.contains(lib.filter) && !isStars && !isLabel
         // Series, AI picks, scenes, lenses, days, people and tags moved to the sidebar's «Фильтры» tab:
         // one click each, with counts, instead of two levels of menus.
         return Menu {
+            if actions { situationalActions }
             Button(tr("Все фильтры в панели… (⌥⌘2)")) { Sidebar.show(.filters) }
             if extra { Button(tr("Снять фильтр «\(lib.filter.title)»")) { set(.all) } }
             Divider()
@@ -297,12 +330,28 @@ struct FilterBar: View {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "line.3.horizontal.decrease.circle" + (extra ? ".fill" : ""))
-                Text(extra ? lib.filter.title : tr("Ещё")).lineLimit(1)
+                if caption { Text(extra ? lib.filter.title : tr("Ещё")).lineLimit(1) }
             }
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
         .help(tr("Панель фильтров (⌥⌘2), скрыть брак, подпапки"))
+    }
+
+    /// The bar's situational buttons as menu items, for the narrowest bar.
+    @ViewBuilder private var situationalActions: some View {
+        if lib.inSeries { Button(tr("Все кадры (Esc)")) { lib.leaveSeries() } }
+        if lib.filter == .rejected {
+            let n = lib.count(.rejected)
+            Button(tr("Перенести в «_Отклонённые» (\(n))")) { lib.moveRejected() }.disabled(n == 0)
+        }
+        if lib.culling {
+            if !lib.aiReady && !lib.aiRunning && lib.analyzed >= lib.photos.count && !lib.photos.isEmpty {
+                Button(tr("AI-анализ")) { lib.startAI() }
+            }
+            Button(tr("Итог…")) { lib.showCullSummary = true }
+        }
+        if lib.inSeries || lib.filter == .rejected || lib.culling { Divider() }
     }
 
     private var isStars: Bool { if case .stars = lib.filter { true } else { false } }

@@ -113,7 +113,8 @@ struct CropEditor: View {
             let a = lib.imageAspect(photo)
             // Room at the bottom for the format panel so it doesn't cover the bottom handles of the box.
             let barSpace: CGFloat = 120
-            let fit = min((pane.width - 60) / CGFloat(a), pane.height - 40 - barSpace)
+            // Floor: a short or narrow pane would otherwise give a negative size.
+            let fit = max(1, min((pane.width - 60) / CGFloat(a), pane.height - 40 - barSpace))
             let shown = CGSize(width: fit * CGFloat(a), height: fit)
             let origin = CGPoint(x: (pane.width - shown.width) / 2, y: 20 + (pane.height - 40 - barSpace - shown.height) / 2)
             let r = rect ?? photo.adj.cropRect
@@ -240,7 +241,8 @@ struct CropEditor: View {
     }
 }
 
-/// Crop panel below the frame: formats, rotation, done/cancel.
+/// Crop panel below the frame: formats, rotation, done/cancel. Each row has a compact variant for a
+/// narrow column (formats in a menu, icon buttons): squeezed, the full row wrapped its labels letter by letter.
 struct CropBar: View {
     @Environment(Library.self) private var lib
 
@@ -249,59 +251,137 @@ struct CropBar: View {
         VStack(spacing: 8) {
             if !lib.autoCropQueue.isEmpty {
                 // Auto crop review: one suggestion at a time, the photographer decides.
-                HStack(spacing: 10) {
-                    Label(tr("Автокадрирование \(lib.autoCropPos + 1) из \(lib.autoCropQueue.count)"), systemImage: "sparkles")
-                        .font(.callout.weight(.semibold)).foregroundStyle(Color.accentColor)
-                    Text(tr("Enter — принять (можно поправить рамку) · Esc или → — пропустить"))
-                        .font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Button(tr("Закончить")) { lib.stopAutoCropReview() }.controlSize(.small)
+                ViewThatFits(in: .horizontal) {
+                    reviewRow(hint: true)
+                    reviewRow(hint: false)
                 }
             }
-            HStack(spacing: 4) {
-                Button { lib.autoCropCurrent() } label: {
-                    HStack(spacing: 4) {
-                        if lib.autoCropBusy { ProgressView().controlSize(.mini) } else { Image(systemName: "sparkles") }
-                        Text(tr("Авто")).font(.caption.weight(.semibold))
-                    }
-                    .padding(.horizontal, 8).padding(.vertical, 6)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.accentColor.opacity(0.25)))
-                }
-                .buttonStyle(.plain)
-                .help(tr("AI предложит рамку и горизонт: лица и главный объект — по третям, в выбранном формате (A)"))
-                ForEach(CropFormat.all) { f in
-                    Button { lib.applyCropFormat(f) } label: {
-                        VStack(spacing: 0) {
-                            Text(f.title).font(.caption.weight(.semibold))
-                            if !f.hint.isEmpty { Text(f.hint).font(.system(size: 9)).foregroundStyle(.secondary) }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 4) {
+                    autoButton
+                    ForEach(CropFormat.all) { f in
+                        Button { lib.applyCropFormat(f) } label: {
+                            VStack(spacing: 0) {
+                                Text(f.title).font(.caption.weight(.semibold))
+                                if !f.hint.isEmpty { Text(f.hint).font(.system(size: 9)).foregroundStyle(.secondary) }
+                            }
+                            .lineLimit(1).fixedSize()
+                            .padding(.horizontal, 8).padding(.vertical, 4)
+                            .background(RoundedRectangle(cornerRadius: 6).fill((adj.cropAspect ?? "free") == f.id ? Color.accentColor.opacity(0.4) : .white.opacity(0.06)))
                         }
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(RoundedRectangle(cornerRadius: 6).fill((adj.cropAspect ?? "free") == f.id ? Color.accentColor.opacity(0.4) : .white.opacity(0.06)))
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    flipButton
                 }
-                Button { lib.flipCropOrientation() } label: { Image(systemName: "rotate.right") }
-                    .buttonStyle(.plain).help(tr("Повернуть рамку: вертикальная ↔ горизонтальная"))
+                HStack(spacing: 6) {
+                    autoButton
+                    formatMenu(adj)
+                    flipButton
+                }
             }
-            HStack(spacing: 10) {
-                Image(systemName: "level").foregroundStyle(.secondary)
-                Text(tr("Горизонт")).font(.caption)
-                Slider(value: Binding(get: { adj.angle }, set: { v in
-                    guard var a = lib.current?.adj else { return }
-                    a.angle = (v * 10).rounded() / 10
-                    lib.setAdjustments(a)
-                }), in: -15...15)
-                .frame(width: 220)
-                Text(String(format: "%+.1f°", adj.angle)).font(.caption.monospacedDigit()).frame(width: 46)
-                Divider().frame(height: 16)
-                Button(tr("Сбросить")) { lib.resetCrop() }
-                if lib.multiSelected { Button(tr("На все выделенные")) { lib.applyCropToTargets() } }
-                Button(tr("Отмена")) { lib.cancelCrop() }
-                Button(tr("Готово")) { lib.finishCrop() }.buttonStyle(.borderedProminent)
-                HintButton(id: "crop")
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    Image(systemName: "level").foregroundStyle(.secondary)
+                    Text(tr("Горизонт")).font(.caption).lineLimit(1).fixedSize()
+                    angleSlider(adj).frame(width: 220)
+                    angleValue(adj)
+                    Divider().frame(height: 16)
+                    Button(tr("Сбросить")) { lib.resetCrop() }.fixedSize()
+                    if lib.multiSelected { Button(tr("На все выделенные")) { lib.applyCropToTargets() }.fixedSize() }
+                    Button(tr("Отмена")) { lib.cancelCrop() }.fixedSize()
+                    Button(tr("Готово")) { lib.finishCrop() }.buttonStyle(.borderedProminent).fixedSize()
+                    HintButton(id: "crop")
+                }
+                // Last option: the slider gives way, so the row never asks for more than the column has.
+                HStack(spacing: 6) {
+                    Image(systemName: "level").foregroundStyle(.secondary).help(tr("Горизонт"))
+                    angleSlider(adj).frame(minWidth: 40, maxWidth: 220)
+                    angleValue(adj)
+                    Divider().frame(height: 16)
+                    Button { lib.resetCrop() } label: { Image(systemName: "arrow.counterclockwise") }.help(tr("Сбросить"))
+                    if lib.multiSelected {
+                        Button { lib.applyCropToTargets() } label: { Image(systemName: "square.stack") }.help(tr("На все выделенные"))
+                    }
+                    Button { lib.cancelCrop() } label: { Image(systemName: "xmark") }.help(tr("Отмена"))
+                    Button { lib.finishCrop() } label: { Image(systemName: "checkmark") }
+                        .buttonStyle(.borderedProminent).help(tr("Готово"))
+                    HintButton(id: "crop")
+                }
             }
             .controlSize(.small)
         }
         .floatingBar(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func reviewRow(hint: Bool) -> some View {
+        HStack(spacing: 10) {
+            Label(tr("Автокадрирование \(lib.autoCropPos + 1) из \(lib.autoCropQueue.count)"), systemImage: "sparkles")
+                .font(.callout.weight(.semibold)).foregroundStyle(Color.accentColor).lineLimit(1)
+            if hint {
+                Text(tr("Enter — принять (можно поправить рамку) · Esc или → — пропустить"))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
+            }
+            Spacer(minLength: 0)
+            Button(tr("Закончить")) { lib.stopAutoCropReview() }.controlSize(.small).fixedSize()
+        }
+        .help(tr("Enter — принять (можно поправить рамку) · Esc или → — пропустить"))
+    }
+
+    private var autoButton: some View {
+        Button { lib.autoCropCurrent() } label: {
+            HStack(spacing: 4) {
+                if lib.autoCropBusy { ProgressView().controlSize(.mini) } else { Image(systemName: "sparkles") }
+                Text(tr("Авто")).font(.caption.weight(.semibold)).lineLimit(1)
+            }
+            .fixedSize()
+            .padding(.horizontal, 8).padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.accentColor.opacity(0.25)))
+        }
+        .buttonStyle(.plain)
+        .help(tr("AI предложит рамку и горизонт: лица и главный объект — по третям, в выбранном формате (A)"))
+    }
+
+    private var flipButton: some View {
+        Button { lib.flipCropOrientation() } label: { Image(systemName: "rotate.right") }
+            .buttonStyle(.plain).help(tr("Повернуть рамку: вертикальная ↔ горизонтальная"))
+    }
+
+    /// All formats in one menu. Plain button style, not borderless: on macOS 26+ that one redraws the label
+    /// and drops its background.
+    private func formatMenu(_ adj: Adjustments) -> some View {
+        let cur = CropFormat.byID(adj.cropAspect ?? "free") ?? CropFormat.all[0]
+        return Menu {
+            ForEach(CropFormat.all) { f in
+                let title = f.hint.isEmpty ? f.title : f.title + " · " + f.hint
+                Button { lib.applyCropFormat(f) } label: {
+                    if f.id == cur.id { Label(title, systemImage: "checkmark") } else { Text(title) }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(cur.title).font(.caption.weight(.semibold)).lineLimit(1)
+                Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+            }
+            .fixedSize()
+            .padding(.horizontal, 8).padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.accentColor.opacity(0.4)))
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(tr("Формат: \(cur.title)"))
+    }
+
+    private func angleSlider(_ adj: Adjustments) -> some View {
+        Slider(value: Binding(get: { adj.angle }, set: { v in
+            guard var a = lib.current?.adj else { return }
+            a.angle = (v * 10).rounded() / 10
+            lib.setAdjustments(a)
+        }), in: -15...15)
+    }
+
+    private func angleValue(_ adj: Adjustments) -> some View {
+        Text(String(format: "%+.1f°", adj.angle)).font(.caption.monospacedDigit()).frame(width: 46)
     }
 }

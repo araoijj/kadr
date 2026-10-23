@@ -29,17 +29,19 @@ struct LoupeView: View {
                         }
                         // The culling layer: decision, AI reasons with their fixes, the score.
                         if lib.culling, !lib.cropMode, !lib.removeMode { CullOverlay(photo: p).frame(maxWidth: .infinity) }
+                        // Below the badges, so the hint never covers the burst badge or the culling layer;
+                        // in a frame too low for it, left out rather than run over the bar at the bottom.
+                        ViewThatFits(in: .vertical) {
+                            toolHint.frame(maxWidth: .infinity)
+                            Color.clear.frame(height: 0)
+                        }
                     }
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .padding(16)
+                    .padding(.bottom, lib.cropMode ? 130 : 56)   // the zoom / remove bar; the crop bar has up to three rows
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(alignment: .top) {
-                if lib.cropMode { ToolHint(id: "crop") }
-                else if lib.removeMode { ToolHint(id: "remove") }
-                else if lib.splitCompare, lib.current?.adj.isIdentity == false { ToolHint(id: "split") }
-                else if lib.culling { ToolHint(id: "cull") }
-            }
             // Faces at 100% while culling, if the frame still has room (narrow window: faces are viewed via zoom).
             if lib.culling, lib.aiOn, g.size.width >= 640, !lib.cropMode, !lib.removeMode,
                let p = lib.current, !(p.cull?.faces.isEmpty ?? true) {
@@ -49,7 +51,10 @@ struct LoupeView: View {
             }
             }
             .overlay(alignment: .bottom) {
-                if lib.cropMode { CropBar().padding(.bottom, 12) } else if lib.removeMode { RemoveBar().padding(.bottom, 12) } else { ZoomBar().padding(.bottom, 12) }
+                Group {
+                    if lib.cropMode { CropBar() } else if lib.removeMode { RemoveBar() } else { ZoomBar() }
+                }
+                .padding(.horizontal, 12).padding(.bottom, 12)
             }
             .task(id: lib.currentID) {
                 // Prepare the current frame's RAW in advance so the first style applies instantly.
@@ -63,8 +68,15 @@ struct LoupeView: View {
         }
     }
 
-    /// The burst badge: a click shows the whole burst, the arrow opens the rest. It lives outside `overlay`,
-    /// which doesn't take clicks, so the photo underneath keeps its gestures.
+    @ViewBuilder private var toolHint: some View {
+        if lib.cropMode { ToolHint(id: "crop") }
+        else if lib.removeMode { ToolHint(id: "remove") }
+        else if lib.splitCompare, lib.current?.adj.isIdentity == false { ToolHint(id: "split") }
+        else if lib.culling { ToolHint(id: "cull") }
+    }
+
+    /// The burst badge: a click shows the whole burst, the arrow opens the rest. It lives outside `overlay(_:)`,
+    /// the info layer that doesn't take clicks, so the photo underneath keeps its gestures.
     @MainActor private func seriesBadge(_ p: Photo) -> some View {
             let s = lib.series(of: p)
             let pos = (s.firstIndex { $0.id == p.id } ?? 0) + 1

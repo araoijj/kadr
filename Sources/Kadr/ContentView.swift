@@ -38,7 +38,6 @@ struct ContentView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
-        .frame(minWidth: 980, minHeight: 600)
         .toolbar { toolbar }
         .sheet(isPresented: $lib.showExport) { ExportSheet().environment(lib) }
         .sheet(isPresented: $lib.showImport) { ImportSheet().environment(lib) }
@@ -115,31 +114,9 @@ struct ContentView: View {
             Button { lib.showShortcuts = true } label: { Label(tr("Клавиши"), systemImage: "keyboard") }
                 .tip(tr("Клавиши"), key: "?", icon: "keyboard", tr("Шпаргалка: все горячие клавиши на одном экране."))
             if lib.folder != nil {
-                if lib.analyzed < lib.photos.count {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.small)
-                        Text(tr("Индексация \(lib.analyzed)/\(lib.photos.count)"))
-                            .font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                    }
-                } else if lib.aiRunning {
-                    HStack(spacing: 6) {
-                        Image(systemName: "sparkles").foregroundStyle(Color.accentColor)
-                        Text(tr("AI-анализ \(lib.aiDone)/\(lib.aiTotal)"))
-                            .font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                        Button { lib.stopAI() } label: { Image(systemName: "stop.circle") }
-                            .buttonStyle(.borderless).tip(tr("Остановить AI-анализ"), icon: "stop.circle", tr("Посчитанное останется, остальное досчитается потом."))
-                    }
-                }
-                if lib.denoiseRunning {
-                    // A long GPU job: visible from anywhere, with a way to stop it.
-                    HStack(spacing: 6) {
-                        Image(systemName: "wand.and.stars").foregroundStyle(Color.accentColor)
-                        Text(tr("Шумоподавление \(lib.denoiseDone + 1)/\(lib.denoiseTotal)"))
-                            .font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                        Button { lib.stopDenoise() } label: { Image(systemName: "stop.circle") }
-                            .buttonStyle(.borderless).tip(tr("Остановить шумоподавление"), icon: "stop.circle", tr("Готовые кадры останутся обработанными."))
-                    }
-                }
+                // One fixed-width ring for indexing, AI and denoise: captions with growing numbers made the
+                // toolbar wider mid-work, which re-lays the split view (see EmptyState).
+                BackgroundJobs()
                 Button { lib.showExport = true } label: {
                     Label(tr("Сохранить в папку"), systemImage: "square.and.arrow.down.on.square")
                 }
@@ -156,6 +133,75 @@ struct ContentView: View {
                 .tip(tr("Действия"), icon: "ellipsis.circle", tr("Перенести брак в подпапку, открыть в Capture One, показать в Finder."))
             }
         }
+    }
+}
+
+/// Background work as one ring of constant size, present while a folder is open so the toolbar never
+/// changes width; the numbers are in the hover card, the stop buttons in the popover.
+struct BackgroundJobs: View {
+    @Environment(Library.self) private var lib
+    @State private var open = false
+
+    private struct Job { let icon: String, title: String, done: Int, total: Int, stop: (() -> Void)?; var stopText = "" }
+
+    private var jobs: [Job] {
+        var out: [Job] = []
+        if lib.analyzed < lib.photos.count {
+            out.append(Job(icon: "photo.stack", title: tr("Индексация \(lib.analyzed)/\(lib.photos.count)"),
+                           done: lib.analyzed, total: lib.photos.count, stop: nil))
+        } else if lib.aiRunning {
+            out.append(Job(icon: "sparkles", title: tr("AI-анализ \(lib.aiDone)/\(lib.aiTotal)"),
+                           done: lib.aiDone, total: lib.aiTotal, stop: { lib.stopAI() },
+                           stopText: tr("Посчитанное останется, остальное досчитается потом.")))
+        }
+        if lib.denoiseRunning {
+            out.append(Job(icon: "wand.and.stars", title: tr("Шумоподавление \(lib.denoiseDone + 1)/\(lib.denoiseTotal)"),
+                           done: lib.denoiseDone, total: lib.denoiseTotal, stop: { lib.stopDenoise() },
+                           stopText: tr("Готовые кадры останутся обработанными.")))
+        }
+        return out
+    }
+
+    var body: some View {
+        let jobs = jobs
+        let first = jobs.first
+        Button { open.toggle() } label: {
+            ZStack {
+                if let first {
+                    ProgressView(value: Double(first.done), total: Double(max(first.total, 1)))
+                        .progressViewStyle(.circular).controlSize(.small)
+                    Image(systemName: first.icon).font(.system(size: 7, weight: .bold)).foregroundStyle(Color.accentColor)
+                }
+            }
+            .frame(width: 24, height: 24)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(first == nil ? 0 : 1)
+        .allowsHitTesting(first != nil)
+        .accessibilityHidden(first == nil)
+        // Idle, the ring is hidden but keeps its place: no card over the empty spot.
+        .tip(tr("Фоновые задачи"), icon: first?.icon ?? "clock",
+             jobs.map(\.title).joined(separator: "\n") + "\n" + tr("Нажмите — подробности и остановка."),
+             active: first != nil)
+        .popover(isPresented: $open, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(jobs, id: \.icon) { j in
+                    HStack(spacing: 8) {
+                        Image(systemName: j.icon).foregroundStyle(Color.accentColor).frame(width: 16)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(j.title).font(.callout).monospacedDigit()
+                            ProgressView(value: Double(j.done), total: Double(max(j.total, 1))).frame(width: 180)
+                        }
+                        if let stop = j.stop {
+                            Button(tr("Стоп")) { stop() }.controlSize(.small).help(j.stopText)
+                        }
+                    }
+                }
+            }
+            .padding(14)
+        }
+        .onChange(of: first == nil) { _, idle in if idle { open = false } }
     }
 }
 

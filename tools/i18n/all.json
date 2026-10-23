@@ -5898,5 +5898,20 @@
   "Copy the new photos off the card to a disk, verified, as with ⌘I",
   "Copiar las fotos nuevas de la tarjeta al disco con verificación, como con ⌘I",
   "Copia le foto nuove dalla scheda al disco con verifica, come con ⌘I"
+ ],
+ "Фоновые задачи": [
+  "Background tasks",
+  "Tareas en segundo plano",
+  "Attività in background"
+ ],
+ "Нажмите — подробности и остановка.": [
+  "Click for details and to stop.",
+  "Haz clic para ver detalles y detener.",
+  "Fai clic per dettagli e per fermare."
+ ],
+ "Масштаб: вписать, 50%, 100%, 200%": [
+  "Zoom: fit, 50%, 100%, 200%",
+  "Zoom: ajustar, 50%, 100%, 200%",
+  "Zoom: adatta, 50%, 100%, 200%"
  ]
 }

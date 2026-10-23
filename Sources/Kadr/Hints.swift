@@ -72,7 +72,7 @@ enum Hints {
     }
 }
 
-/// The hint card for one tool. Put it at the top of the tool's view.
+/// The hint card for one tool. Put it in an overlay at the top of the tool's view, below its badges.
 struct ToolHint: View {
     let id: String
     @AppStorage(Hints.enabledKey) private var enabled = true
@@ -90,10 +90,10 @@ struct ToolHint: View {
                     ForEach(c.lines, id: \.self) { l in
                         Text("•  " + l).font(.caption).fixedSize(horizontal: false, vertical: true)
                     }
-                    HStack(spacing: 14) {
-                        Button(tr("Понятно")) { close() }.buttonStyle(.borderedProminent).controlSize(.small)
-                        Button(tr("Больше не показывать подсказки")) { enabled = false; close() }
-                            .buttonStyle(.link).font(.caption)
+                    // Side by side when there is room, stacked in a narrow column.
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 14) { actions }
+                        VStack(alignment: .leading, spacing: 6) { actions }
                     }
                     .padding(.top, 3)
                 }
@@ -102,12 +102,21 @@ struct ToolHint: View {
                     .buttonStyle(.plain).foregroundStyle(.secondary).help(tr("Закрыть подсказку"))
             }
             .padding(12)
-            .frame(minWidth: 380, maxWidth: 560)   // a min width keeps wrapped lines from blowing up the window's min height
+            // No min width: the card always sits in an overlay, so its wrapped height can't set the window's
+            // min size, and a rigid width there would overflow a narrow column.
+            .frame(maxWidth: 560)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.star.opacity(0.5)))
             .padding(10)
             .transition(.opacity)
         }
+    }
+
+    @ViewBuilder private var actions: some View {
+        Button(tr("Понятно")) { close() }.buttonStyle(.borderedProminent).controlSize(.small)
+        Button(tr("Больше не показывать подсказки")) { enabled = false; close() }
+            .buttonStyle(.link).font(.caption)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func close() {

@@ -409,7 +409,7 @@ struct RemoveView: View {
     var body: some View {
         GeometryReader { geo in
             let s = lib.pixelSize(photo)
-            let k = min((geo.size.width - 40) / s.width, (geo.size.height - 40) / s.height)
+            let k = max(0.0001, min((geo.size.width - 40) / s.width, (geo.size.height - 40) / s.height))   // a tiny pane would go negative
             let shown = CGSize(width: s.width * k, height: s.height * k)
             let origin = CGPoint(x: (geo.size.width - shown.width) / 2, y: (geo.size.height - shown.height) / 2)
             ZStack(alignment: .topLeading) {
@@ -465,15 +465,27 @@ struct RemoveBar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 12) {
-                Label(tr("Режим «Убрать объект»"), systemImage: "eraser").font(.callout.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
-                Spacer(minLength: 8)
-                Button(tr("Сбросить выделение")) { lib.clearRemoveSelection() }.disabled(lib.removePoints.isEmpty || lib.removeBusy)
-                Button(tr("Убрать (Enter)")) { lib.applyRemove() }.buttonStyle(.borderedProminent)
-                    .disabled(lib.removeMask == nil || lib.removeBusy || lib.removeStatus?.blocksApply == true)
-                Button(tr("Выйти из режима")) { lib.finishRemove() }
-                HintButton(id: "remove")
+            // Narrow column: icon buttons and a title that truncates, instead of labels wrapping letter by letter.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    title.fixedSize()
+                    Spacer(minLength: 8)
+                    Button(tr("Сбросить выделение")) { lib.clearRemoveSelection() }.disabled(clearDisabled).fixedSize()
+                    Button(tr("Убрать (Enter)")) { lib.applyRemove() }.buttonStyle(.borderedProminent)
+                        .disabled(applyDisabled).fixedSize()
+                    Button(tr("Выйти из режима")) { lib.finishRemove() }.fixedSize()
+                    HintButton(id: "remove")
+                }
+                HStack(spacing: 8) {
+                    title.lineLimit(1)
+                    Spacer(minLength: 4)
+                    Button { lib.clearRemoveSelection() } label: { Image(systemName: "arrow.uturn.backward") }
+                        .disabled(clearDisabled).help(tr("Сбросить выделение"))
+                    Button { lib.applyRemove() } label: { Image(systemName: "checkmark") }.buttonStyle(.borderedProminent)
+                        .disabled(applyDisabled).help(tr("Убрать (Enter)"))
+                    Button { lib.finishRemove() } label: { Image(systemName: "xmark") }.help(tr("Выйти из режима"))
+                    HintButton(id: "remove")
+                }
             }
             status
         }
@@ -484,6 +496,14 @@ struct RemoveBar: View {
         .background(Color.accentColor.opacity(0.15), in: RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.accentColor.opacity(0.7), lineWidth: 1.5))
     }
+
+    private var title: some View {
+        Label(tr("Режим «Убрать объект»"), systemImage: "eraser").font(.callout.weight(.semibold))
+            .foregroundStyle(Color.accentColor)
+    }
+
+    private var clearDisabled: Bool { lib.removePoints.isEmpty || lib.removeBusy }
+    private var applyDisabled: Bool { lib.removeMask == nil || lib.removeBusy || lib.removeStatus?.blocksApply == true }
 
     /// What is happening and why: busy, the verdict on the selection, or how to start.
     @ViewBuilder private var status: some View {

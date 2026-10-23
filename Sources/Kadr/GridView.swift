@@ -15,7 +15,6 @@ struct GridView: View {
         let sections = lib.sections
         let list = sections.flatMap(\.photos)
         VStack(spacing: 0) {
-        if lib.culling { ToolHint(id: "cull") }
         GeometryReader { geo in
             ScrollViewReader { proxy in
                 ScrollView {
@@ -63,6 +62,8 @@ struct GridView: View {
             .onChange(of: geo.size.width, initial: true) { _, w in updateColumns(w) }
             .onChange(of: lib.thumbSize) { _, _ in updateColumns(geo.size.width) }
         }
+        // Over the grid, not above it: a card in the column's flow would set the column's min height and width.
+        .overlay(alignment: .top) { if lib.culling { ToolHint(id: "cull") } }
         }
         .overlay {
             if list.isEmpty && !lib.photos.isEmpty {
