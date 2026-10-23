@@ -10,11 +10,12 @@ if [ -z "$SDKROOT" ] && [[ $DEV == */CommandLineTools ]] && [ ! -e "$DEV/usr/lib
   SDKS=("$DEV"/SDKs/MacOSX26.*.sdk(N))
   if [ ${#SDKS} -gt 0 ]; then export SDKROOT=${SDKS[-1]}; echo "Сборка с SDK $(basename $SDKROOT): в Command Line Tools нет плагина SwiftUIMacros"; fi
 fi
-# With SDKROOT set, the linker stamps the binary as built with SDK 14.0, and macOS then runs it in
-# the old-SDK compatibility mode (older look, layout loops tolerated): stamp the real SDK version.
-LINK=()
-if [ -n "$SDKROOT" ]; then
-  LINK=(-Xlinker -platform_version -Xlinker macos -Xlinker 15.0 -Xlinker "$(xcrun --sdk "$SDKROOT" --show-sdk-version)")
+# SwiftPM stamps the binary as built with the deployment target's SDK (15.0), and macOS then runs it in the
+# old-SDK compatibility mode (older look, layout loops tolerated): always stamp the real SDK version.
+LINK=(-Xlinker -platform_version -Xlinker macos -Xlinker 15.0 -Xlinker "$(xcrun ${SDKROOT:+--sdk "$SDKROOT"} --show-sdk-version)")
+# Metal kernels: rebuilt when their source changed and a Metal compiler is there (Xcode); else the committed ones.
+if [ Shaders/Kernels.ci.metal -nt Sources/Kadr/KernelLibrary.swift ] && xcrun -f metal >/dev/null 2>&1; then
+  tools/build-kernels.sh
 fi
 # The import, XMP and export tests run first: a build that could lose photos or ratings is never installed.
 # `./build.sh test` runs only them; KADR_SKIP_TESTS=1 skips them.

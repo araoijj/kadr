@@ -136,7 +136,7 @@ The Russian keyboard layout works too: З / Ч / Г instead of P / X / U.
 
 ## Build from source
 
-You need macOS 15+ and the Command Line Tools — Xcode is not required (with the Command Line Tools 27, `build.sh` builds against the macOS 26 SDK that comes with them):
+You need macOS 15+ and Xcode 27 — or just the Command Line Tools: with Command Line Tools 27 alone, `build.sh` builds against the macOS 26 SDK that comes with them (their SwiftUI lacks a macro plugin the macOS 27 SDK needs):
 
 ```sh
 xcode-select --install   # if not installed yet
@@ -144,7 +144,9 @@ xcode-select --install   # if not installed yet
 ./build.sh test          # only the tests
 ```
 
-`build.sh` first runs the tests for memory card import, XMP sidecars and export (`Tests/KadrTests`, Swift Testing — part of the Command Line Tools); if one fails, nothing is built or installed.
+`build.sh` first runs the tests for memory card import, XMP sidecars, export and the image kernels (`Tests/KadrTests`, Swift Testing); if one fails, nothing is built or installed.
+
+The Core Image kernels of the editor are Metal (`Shaders/Kernels.ci.metal`). They are compiled into `Sources/Kadr/KernelLibrary.swift`, which is committed, so a build needs no Metal compiler; after editing the kernels run `tools/build-kernels.sh` (Xcode with the Metal Toolchain: `xcodebuild -downloadComponent MetalToolchain`) — `build.sh` does it by itself when the source is newer.
 
 The icon is drawn in code: `swift tools/make-icon.swift Resources/AppIcon-1024.png`.
 

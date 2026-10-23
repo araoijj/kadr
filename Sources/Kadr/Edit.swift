@@ -587,27 +587,11 @@ final class LUTStore: @unchecked Sendable {
 enum EditPipeline {
     static let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
 
-    // The kernels here (and in Denoiser) are Core Image Kernel Language, deprecated since 10.14 but still working.
-    // They stay for now: the Command Line Tools have no Metal compiler (`xcrun metal` is missing), so a .ci.metal
-    // kernel can't be built without Xcode, and no chain of built-in filters reproduces them exactly — the vignette's
-    // double smoothstep has no counterpart, and built-in matrix/compositing filters work on premultiplied colour,
-    // so the alpha-blind linear mixes here (with values above 1 and the 100–200% LUT amount) come out different
-    // (measured on a test frame: up to 0.4 of 16-bit range). With Xcode: port each one to a `[[stitchable]]`
-    // function in a .ci.metal file built with `-fcikernel` / linked with `-cikernel` into a metallib in the bundle,
-    // load it with CIColorKernel/CIKernel(functionName:fromMetalLibraryData:), and check the output against these.
-    private static let vignetteKernel = CIKernel(source: """
-        kernel vec4 vignette(sampler s, vec2 c, float radius, float amount) {
-            vec4 p = sample(s, samplerCoord(s));
-            float d = distance(destCoord(), c) / radius;
-            float k = smoothstep(0.3, 1.0, d);
-            k = k * k * (3.0 - 2.0 * k);
-            vec3 rgb = amount < 0.0 ? p.rgb * (1.0 + amount * 0.95 * k) : p.rgb + (vec3(1.0) - p.rgb) * amount * 0.9 * k;
-            return vec4(rgb, p.a);
-        }
-        """)!
+    // The kernels here (and in Denoiser) are Metal: Shaders/Kernels.ci.metal, compiled by tools/build-kernels.sh
+    // into KernelLibrary. Each is the exact port of the former Core Image Kernel Language version (same pixels).
+    private static let vignetteKernel = try! CIKernel(functionName: "vignette", fromMetalLibraryData: KernelLibrary.data)
 
-    private static let mixKernel = CIColorKernel(source:
-        "kernel vec4 mixk(__sample a, __sample b, float k) { return vec4(max(a.rgb + (b.rgb - a.rgb) * k, vec3(0.0)), a.a); }")!
+    private static let mixKernel = try! CIColorKernel(functionName: "mixk", fromMetalLibraryData: KernelLibrary.data)
 
     /// How much straightening by `angle` degrees zooms a `size` frame in so there are no empty corners.
     static func straightenZoom(_ size: CGSize, angle: Double) -> CGFloat {
@@ -656,8 +640,7 @@ enum EditPipeline {
         return CGRect(x: (f.minX - a.cropX) / a.cropW, y: (f.minY - a.cropY) / a.cropH, width: f.width / a.cropW, height: f.height / a.cropH)
     }
 
-    private static let grainKernel = CIColorKernel(source:
-        "kernel vec4 grain(__sample s, __sample n, float a) { return vec4(s.rgb * (1.0 + (n.r - 0.5) * a), s.a); }")!
+    private static let grainKernel = try! CIColorKernel(functionName: "grain", fromMetalLibraryData: KernelLibrary.data)
 
     /// The develop chain the loupe, thumbnails, estimate and export share: the settings over a developed `source`,
     /// with this photo's camera profile, as-shot white balance and AI noise reduction result.

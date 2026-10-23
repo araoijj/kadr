@@ -244,9 +244,8 @@ final class Denoiser: @unchecked Sendable {
         return kernel.apply(extent: e, arguments: [base, d, Float(k)]) ?? base
     }
 
-    // Core Image Kernel Language, deprecated: see the note on EditPipeline's kernels for why it isn't Metal yet.
-    private static let kernel = CIColorKernel(source:
-        "kernel vec4 dn(__sample b, __sample d, float k) { vec3 c = clamp(b.rgb, 0.0, 1.0); return vec4(b.rgb + (d.rgb - c) * k, b.a); }")!
+    // Metal, like EditPipeline's kernels (Shaders/Kernels.ci.metal).
+    private static let kernel = try! CIColorKernel(functionName: "dn", fromMetalLibraryData: KernelLibrary.data)
 }
 
 extension RawDevelop {

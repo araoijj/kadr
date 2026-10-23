@@ -130,7 +130,7 @@
 
 ## Сборка
 
-Нужны macOS 15+ и Command Line Tools (Xcode не требуется; с Command Line Tools 27 `build.sh` собирает против SDK macOS 26, который идёт в комплекте):
+Нужны macOS 15+ и Xcode 27 — или только Command Line Tools: с одними Command Line Tools 27 `build.sh` собирает против SDK macOS 26 из комплекта (в их SwiftUI нет плагина макросов, нужного SDK macOS 27):
 
 ```sh
 xcode-select --install   # если ещё не установлены
@@ -138,7 +138,9 @@ xcode-select --install   # если ещё не установлены
 ./build.sh test          # только тесты
 ```
 
-`build.sh` сначала запускает тесты импорта с карты, XMP и экспорта (`Tests/KadrTests`, Swift Testing — входит в Command Line Tools); если хоть один не прошёл, ничего не собирается и не ставится.
+`build.sh` сначала запускает тесты импорта с карты, XMP, экспорта и ядер обработки (`Tests/KadrTests`, Swift Testing); если хоть один не прошёл, ничего не собирается и не ставится.
+
+Ядра Core Image в обработке написаны на Metal (`Shaders/Kernels.ci.metal`). Они скомпилированы в `Sources/Kadr/KernelLibrary.swift`, который лежит в репозитории, поэтому для сборки компилятор Metal не нужен; после правки ядер запустите `tools/build-kernels.sh` (Xcode с Metal Toolchain: `xcodebuild -downloadComponent MetalToolchain`) — `build.sh` делает это сам, если исходник новее.
 
 Иконка рисуется кодом: `swift tools/make-icon.swift Resources/AppIcon-1024.png`.
 
