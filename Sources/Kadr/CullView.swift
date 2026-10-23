@@ -109,6 +109,12 @@ struct FaceCrop: View {
         .task(id: ThumbKey(url: photo.url, adj: photo.adj)) {
             // Face in the edited image's coordinates (straightened and cropped); a square around the face at ~100% (380 px on Retina).
             let a = photo.adj
+            // The face rect is in the camera-cropped frame: read the preview's shape first (off the main thread),
+            // or pixelSize falls back to EXIF and a 4:3 RAW gets the square off the face.
+            let url = photo.url
+            if ImageStore.shared.previewAspect(url) == nil {
+                _ = await Task.detached(priority: .userInitiated) { ImageStore.shared.preview(url) }.value
+            }
             // Square in pixels (a 3:2 frame makes it a rectangle in fractions), within the image bounds.
             let ps = lib.pixelSize(photo)
             let W = ps.width * a.cropW, H = ps.height * a.cropH
@@ -133,7 +139,7 @@ struct CullSummary: View {
 
     var body: some View {
         let d = lib.decided
-        let reasons = CullReason.allCases.map { r in (r, lib.photos.filter { lib.verdict($0).reasons.contains(r) }.count) }.filter { $0.1 > 0 }
+        let reasons = CullReason.allCases.map { r in (r, lib.count(.reason(r))) }.filter { $0.1 > 0 }
         VStack(alignment: .leading, spacing: 16) {
             Text(tr("Итог отбора")).font(.title2.weight(.semibold))
             HStack(spacing: 24) {

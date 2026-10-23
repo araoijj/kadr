@@ -119,9 +119,23 @@ final class Renderer: @unchecked Sendable {
         guard ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) else { return makeThumbnail(url, adj, size: size) }
         // A few RAW developments at a time (the base and the camera profile's own 900 px one): a scrolled grid
         // starts dozens, each holding the sensor data. Their own threads, so the queue never ties up Swift's pool.
-        return await withCheckedContinuation { cont in
-            rawThumbs.addOperation { cont.resume(returning: self.makeThumbnail(url, adj, size: size)) }
+        // Cancelling the caller (a cell scrolled away) drops the job if it hasn't started: a cancelled operation
+        // skips its block, and the completion block answers nil then.
+        let op = BlockOperation(), box = ThumbResult()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { cont in
+                op.addExecutionBlock { [unowned op] in
+                    if !op.isCancelled { box.image = self.makeThumbnail(url, adj, size: size) }
+                }
+                op.completionBlock = { cont.resume(returning: box.image) }
+                rawThumbs.addOperation(op)
+            }
+        } onCancel: {
+            op.cancel()
         }
+    }
+    private final class ThumbResult: @unchecked Sendable {
+        var image: CGImage?    // written by the operation, read by its completion block after it
     }
     private let rawThumbs: OperationQueue = {
         let q = OperationQueue()
@@ -168,7 +182,9 @@ final class Renderer: @unchecked Sendable {
             return await Task.detached(priority: .userInitiated) { ImageStore.shared.preview(url) }.value
         }
         if let c = shared.cachedThumbnail(url, adj) { return c }
-        return await Task.detached(priority: .userInitiated) { await shared.thumbnail(url, adj) }.value
+        // Detached (off the main actor), but the cell's cancellation is passed on, so its queued RAW job is dropped.
+        let t = Task.detached(priority: .userInitiated) { await shared.thumbnail(url, adj) }
+        return await withTaskCancellationHandler { await t.value } onCancel: { t.cancel() }
     }
 
     func cachedThumbnail(_ url: URL, _ adj: Adjustments, size: CGFloat = 640) -> CGImage? {

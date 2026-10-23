@@ -75,8 +75,19 @@ extension Library {
 
     // MARK: - Verdict
 
-    /// Thresholds depend on strictness: 0 is lenient (catch only obvious defects), 1 is strict.
+    /// A photo's verdict, computed once per change of its analysis or of the folder statistics
+    /// (grid cells, filters and counts ask for it many times per render).
     func verdict(_ p: Photo) -> CullVerdict {
+        let key = verdictKey(), sig = VerdictSig(p)
+        if verdictCache?.key != key { verdictCache = (key, [:]) }
+        if let c = verdictCache?.byID[p.id], c.sig == sig { return c.v }
+        let v = computeVerdict(p)
+        verdictCache?.byID[p.id] = (sig, v)
+        return v
+    }
+
+    /// Thresholds depend on strictness: 0 is lenient (catch only obvious defects), 1 is strict.
+    private func computeVerdict(_ p: Photo) -> CullVerdict {
         var v = CullVerdict()
         let st = cullStrictness
         let enabled = aiEnabled
@@ -203,6 +214,7 @@ extension Library {
         var bestPrints: [Int: Data] = [:]
         for p in photos where p.isBestInSeries { if let sid = p.seriesID, let pr = p.cull?.print { bestPrints[sid] = pr } }
         seriesBestPrint = bestPrints
+        cullStatsRev &+= 1   // the cached verdicts are now stale
     }
 
     /// Brighten a dark frame: set exposure so the mean luminance reaches ~0.35 (up to +3 EV).

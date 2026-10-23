@@ -12,6 +12,12 @@ struct LoupeView: View {
                 if let p = lib.current {
                     if lib.cropMode { CropEditor(photo: p) } else if lib.removeMode { RemoveView(photo: p) } else { ZoomableLoupe(photo: p) }
                     overlay(p)
+                } else if lib.loading {
+                    // Space or Enter while the folder is read in the background (Library.open).
+                    VStack(spacing: 10) {
+                        ProgressView().controlSize(.small)
+                        Text(tr("Читаю папку…")).foregroundStyle(.secondary)
+                    }
                 }
             }
             .overlay(alignment: .topLeading) {
@@ -136,10 +142,12 @@ struct LoupeView: View {
 struct PreviewImage: View {
     let photo: Photo
     @State private var image: CGImage?
+    @State private var imageFor: URL?     // the view is reused while browsing: never show the last frame under the new name
 
     var body: some View {
         Group {
-            if let image {
+            // The new frame's preview if it is already cached (an NSCache lookup), else a neutral spinner.
+            if let image = imageFor == photo.url ? image : ImageStore.shared.cachedPreview(photo.url) {
                 Image(decorative: image, scale: 1)
                     .resizable()
                     .interpolation(.high)
@@ -150,9 +158,17 @@ struct PreviewImage: View {
             }
         }
         .task(id: photo.id) {
-            if let c = ImageStore.shared.cachedPreview(photo.url) { image = c } else {
-                let url = photo.url
-                image = await Task.detached(priority: .userInitiated) { ImageStore.shared.preview(url) }.value
+            let url = photo.url
+            if let c = ImageStore.shared.cachedPreview(url) { image = c; imageFor = url } else {
+                let shapeKnown = ImageStore.shared.previewAspect(url) != nil
+                let ex = photo.exif
+                let img = await Task.detached(priority: .userInitiated) {
+                    if ex.width == nil { _ = ImageStore.shared.headerExif(url) }   // not indexed yet: views size from it
+                    return ImageStore.shared.preview(url)
+                }.value
+                if !shapeKnown && img != nil { PreviewShapes.shared.learn(url, ex) }   // views sized from EXIF redraw
+                guard !Task.isCancelled else { return }
+                image = img; imageFor = url
             }
         }
     }
@@ -222,11 +238,12 @@ struct EditedImage: View {
     @State private var image: CGImage?
     @State private var shownFor: URL?
     @State private var exact = false      // the exact RAW is shown, not the fast preview-based version
-    @State private var rendering = false
+    @State private var rendering: UUID?   // the render owning the badge: a cancelled one clears it only if no successor took it
 
     var body: some View {
         Group {
-            if let image {
+            // Until the task below resets it, `image` may still be the previous frame's.
+            if let image, shownFor == photo.url {
                 Image(decorative: image, scale: 1)
                     .resizable()
                     .interpolation(.high)
@@ -237,7 +254,7 @@ struct EditedImage: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if rendering && !exact {
+            if rendering != nil && !exact {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.small)
                     Text(tr("Проявляю RAW…")).font(.caption)
@@ -250,19 +267,35 @@ struct EditedImage: View {
         .task(id: ThumbKey(url: photo.url, adj: adj)) {
             if shownFor != photo.url { image = nil; exact = false; shownFor = photo.url }
             let url = photo.url, a = adj
+            let shapeKnown = ImageStore.shared.previewAspect(url) != nil
             // Until the exact RAW is ready, show the grid's thumbnail (same colors) or the edits over the camera preview (tens of ms).
+            // A render already running on the serial queue isn't dropped when the frame changes: a cancelled task
+            // must not put the previous frame under the new one's name.
             if !exact, let quick = await Task.detached(priority: .userInitiated, operation: {
                 Renderer.shared.cachedThumbnail(url, a) ?? Renderer.shared.quick(url, a)
             }).value {
+                guard !Task.isCancelled, shownFor == url else { return }
                 image = quick
             }
-            rendering = true
+            // Crop and retouch size the frame from EXIF until a preview is decoded: learn its camera crop now,
+            // alongside the exact render rather than before it (and even if this frame is left meanwhile).
+            if !shapeKnown {
+                let ex = photo.exif
+                Task.detached(priority: .utility) {
+                    if ex.width == nil { _ = ImageStore.shared.headerExif(url) }
+                    if ImageStore.shared.preview(url) != nil { await MainActor.run { PreviewShapes.shared.learn(url, ex) } }
+                }
+            }
+            guard !Task.isCancelled else { return }
+            let token = UUID()
+            rendering = token
+            defer { if rendering == token { rendering = nil } }
             let screen = NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560
-            if let img = await Renderer.shared.render(url, a, maxSide: min(screen, 3200), channel: channel) {
+            if let img = await Renderer.shared.render(url, a, maxSide: min(screen, 3200), channel: channel),
+               !Task.isCancelled, shownFor == url {
                 image = img
                 exact = true
             }
-            rendering = false
         }
     }
 }

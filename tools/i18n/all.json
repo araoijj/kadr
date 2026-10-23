@@ -1439,6 +1439,11 @@
   "Leyendo la tarjeta…",
   "Lettura della scheda…"
  ],
+ "Читаю папку…": [
+  "Reading folder…",
+  "Leyendo la carpeta…",
+  "Lettura della cartella…"
+ ],
  "Снимков не найдено": [
   "No photos found",
   "No se encontraron fotos",

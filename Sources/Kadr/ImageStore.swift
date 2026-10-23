@@ -8,12 +8,10 @@ final class ImageStore: @unchecked Sendable {
     static let shared = ImageStore()
 
     private let thumbs = NSCache<NSURL, CGImage>()
-    private let full = NSCache<NSURL, CGImage>()
     private let ciContext = CIContext(options: [.cacheIntermediates: false])
 
     init() {
         applyMemoryLimit()
-        full.countLimit = 3
     }
 
     /// Previews are limited by bytes, not by count: a decoded 1616×1080 preview is ~7 MB,
@@ -94,23 +92,9 @@ final class ImageStore: @unchecked Sendable {
 
     func cachedPreview(_ url: URL) -> CGImage? { thumbs.object(forKey: url as NSURL) }
 
-    /// Full RAW development (for 100% zoom). A 50 MP file takes ~1–2 s, so the last 3 are cached.
-    func fullImage(_ url: URL) -> CGImage? {
-        if let c = full.object(forKey: url as NSURL) { return c }
-        var ci: CIImage?
-        if ImageStore.rawExtensions.contains(url.pathExtension.lowercased()), let raw = CIRAWFilter(imageURL: url) {
-            ci = raw.outputImage
-        } else {
-            ci = CIImage(contentsOf: url, options: [.applyOrientationProperty: true])
-        }
-        guard let ci, let cg = ciContext.createCGImage(ci, from: ci.extent, format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.displayP3)) else { return nil }
-        full.setObject(cg, forKey: url as NSURL)
-        return cg
-    }
-
     private let wbLock = NSLock()
     private var wbCache: [String: Double] = [:]
-    private var rawDefaultsCache: [String: RawDevelop.Defaults] = [:]
+    private var rawDefaultsCache: [String: RawDevelop.Defaults?] = [:]   // nil = the RAW engine can't open it
 
     /// As-shot white balance in Kelvin (5500 K daylight for non-RAW).
     func asShotK(_ url: URL) -> Double {
@@ -129,11 +113,37 @@ final class ImageStore: @unchecked Sendable {
         wbLock.lock()
         if let d = rawDefaultsCache[url.path] { wbLock.unlock(); return d }
         wbLock.unlock()
-        guard let f = CIRAWFilter(imageURL: url) else { return nil }
-        let d = RawDevelop.defaults(f)
-        wbLock.lock(); rawDefaultsCache[url.path] = d; wbLock.unlock()
+        // A failure is remembered too: otherwise every return to the frame opens the RAW again.
+        let d = CIRAWFilter(imageURL: url).map(RawDevelop.defaults)
+        wbLock.lock(); rawDefaultsCache[url.path] = .some(d); wbLock.unlock()
         return d
     }
+
+    /// The values above if already read, without opening the RAW (for views: their body runs on the main thread).
+    /// asShotK: nil while unknown; rawDefaults: .some(nil) for a non-RAW or one it can't open, nil while unknown.
+    func cachedAsShotK(_ url: URL) -> Double? {
+        guard ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) else { return 5500 }
+        return wbLock.withLock { wbCache[url.path] }
+    }
+
+    func cachedRawDefaults(_ url: URL) -> RawDevelop.Defaults?? {
+        guard ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) else { return .some(nil) }
+        return wbLock.withLock { rawDefaultsCache[url.path] }
+    }
+
+    /// `exif` read once per file, for a frame not indexed yet: by crop actions and by the loupe off the main thread.
+    /// Views take only `cachedHeaderExif`: their body runs on the main thread, for every frame in the export summary.
+    func headerExif(_ url: URL) -> ExifInfo {
+        if let e = cachedHeaderExif(url) { return e }
+        let e = exif(url)
+        wbLock.withLock {
+            if exifMemo.count >= 2000 { exifMemo.removeAll() }   // only until the index has them; a cap, not an LRU
+            exifMemo[url.path] = e
+        }
+        return e
+    }
+    func cachedHeaderExif(_ url: URL) -> ExifInfo? { wbLock.withLock { exifMemo[url.path] } }
+    private var exifMemo: [String: ExifInfo] = [:]
 
     func exif(_ url: URL) -> ExifInfo {
         var info = ExifInfo()

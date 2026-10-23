@@ -449,9 +449,11 @@ enum Exporter {
     static func sourceMaxSide(_ url: URL, _ adj: Adjustments, _ s: ExportSettings) -> CGFloat? {
         guard s.preset != .custom || s.longSide > 0 else { return nil }
         let ex = ImageStore.shared.exif(url)
-        // Only a RAW has a camera crop to take from the preview (it is decoded for cropToCamera anyway).
-        let prev = ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) ? ImageStore.shared.preview(url) : nil
-        let frame = ImageStore.frameSize(ex, previewAspect: prev.map { CGFloat($0.width) / CGFloat($0.height) })
+        // Only a RAW has a camera crop to take from the preview: its shape if this session has seen it, else
+        // decoded once (it is needed for cropToCamera anyway).
+        let pa = ImageStore.rawExtensions.contains(url.pathExtension.lowercased())
+            ? ImageStore.shared.previewAspect(url) ?? ImageStore.shared.preview(url).map { CGFloat($0.width) / CGFloat($0.height) } : nil
+        let frame = ImageStore.frameSize(ex, previewAspect: pa)
         let px = CGSize(width: frame.width * adj.cropW, height: frame.height * adj.cropH)
         guard px.width > 0, px.height > 0, let native = ex.width.flatMap({ w in ex.height.map { max(w, $0) } }) else { return nil }
         let out = outputSize(px, userCropped: adj.hasCrop, s)

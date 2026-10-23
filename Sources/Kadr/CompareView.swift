@@ -371,7 +371,7 @@ struct ComparePane: View {
                 Stars(rating: photo.rating, size: 13)
                 if let l = photo.label { Circle().fill(l.color).frame(width: 10, height: 10) }
                 Spacer()
-                if let s = photo.sharpness, let m = lib.photos.compactMap(\.sharpness).max(), m > 0, tile >= 240 {
+                if let s = photo.sharpness, let m = lib.maxSharpness, m > 0, tile >= 240 {
                     Text(compact ? "\(Int(s / m * 100))%" : tr("резкость \(Int(s / m * 100))%")).font(.caption.monospacedDigit())
                         .padding(.horizontal, 6).padding(.vertical, 3)
                         .background(.black.opacity(0.55), in: Capsule())

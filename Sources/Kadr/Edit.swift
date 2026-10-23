@@ -389,12 +389,18 @@ enum StyleStore {
     var value = 0
 }
 
-/// LUTs: .cube (3D) or HaldCLUT .png of any level. Parsed once and kept in memory.
+/// LUTs: .cube (3D) or HaldCLUT .png of any level. Parsed once and kept in memory while it fits.
 /// Stored in the app's LUT folder, including collection subfolders.
 final class LUTStore: @unchecked Sendable {
     static let shared = LUTStore()
     private let lock = NSLock()
-    private var cache: [String: (size: Int, data: Data)] = [:]
+    /// Parsed cubes by bytes: a 64³ cube is ~4 MB, and browsing a collection touches hundreds of them.
+    /// An evicted one is parsed again from its file.
+    private let cache: NSCache<NSString, Cube> = { let c = NSCache<NSString, Cube>(); c.totalCostLimit = 256 << 20; return c }()
+    private final class Cube {
+        let value: (size: Int, data: Data)
+        init(_ v: (size: Int, data: Data)) { value = v }
+    }
     private var gen = 0
 
     /// Bumped (under the lock) when a LUT is replaced; thumbnail cache keys carry it, so a thumbnail rendered
@@ -454,10 +460,8 @@ final class LUTStore: @unchecked Sendable {
                 try? FileManager.default.removeItem(at: tmp)
                 continue
             }
-            lock.withLock {
-                cache[u.lastPathComponent] = parsed
-                if replacing { gen += 1 }
-            }
+            cache.setObject(Cube(parsed), forKey: u.lastPathComponent as NSString, cost: parsed.data.count)
+            if replacing { lock.withLock { gen += 1 } }
             if replacing {
                 Renderer.shared.clearThumbnails()
                 LUTRevision.shared.value += 1
@@ -468,13 +472,11 @@ final class LUTStore: @unchecked Sendable {
     }
 
     func cube(_ name: String) -> (size: Int, data: Data)? {
-        lock.lock()
-        if let c = cache[name] { lock.unlock(); return c }
-        lock.unlock()
+        if let c = cache.object(forKey: name as NSString) { return c.value }
         let url = AppFolders.luts.appendingPathComponent(name)
         let parsed = url.pathExtension.lowercased() == "png" ? Self.parseHald(url) : Self.parseCube(url)
         guard let parsed else { return nil }
-        lock.lock(); cache[name] = parsed; lock.unlock()
+        cache.setObject(Cube(parsed), forKey: name as NSString, cost: parsed.data.count)
         return parsed
     }
 

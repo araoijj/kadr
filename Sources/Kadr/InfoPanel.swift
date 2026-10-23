@@ -64,9 +64,7 @@ struct InfoPanel: View {
         }
     }
 
-    private var maxSharpness: Double {
-        lib.photos.compactMap(\.sharpness).max() ?? 1
-    }
+    private var maxSharpness: Double { lib.maxSharpness ?? 1 }
 
     private func ratingControl(_ p: Photo) -> some View {
         HStack(spacing: 6) {

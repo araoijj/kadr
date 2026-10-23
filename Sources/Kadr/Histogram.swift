@@ -47,8 +47,12 @@ struct HistogramData: Equatable {
 struct HistogramView: View {
     let photo: Photo?
     @State private var data = HistogramData()
+    @State private var dataFor: URL?      // the photo `data` was measured on; anything else shows an empty histogram
 
     var body: some View {
+        // Another frame (or none, or its render failed): never show the previous frame's histogram and clipping.
+        let known = photo != nil && dataFor == photo?.url
+        let data = known ? data : HistogramData()
         VStack(spacing: 4) {
             ZStack(alignment: .top) {
                 RoundedRectangle(cornerRadius: 6).fill(.black.opacity(0.45))
@@ -81,17 +85,23 @@ struct HistogramView: View {
                 Spacer()
                 Text(data.clippedHighlights > 0.005 ? tr("света: \(pct(data.clippedHighlights)) пересвет") : tr("света в норме"))
             }
+            .opacity(known ? 1 : 0)       // hidden, not removed: the panel keeps its height
             .font(.caption2)
             .foregroundStyle(.secondary)
         }
         .task(id: photo.map { ThumbKey(url: $0.url, adj: $0.adj) }) {
-            guard let p = photo else { return }
+            guard let p = photo else { self.data = HistogramData(); dataFor = nil; return }
             let url = p.url, adj = p.adj
             // A small render through the same develop chain as the loupe, so it matches what's on screen.
             let d = await Task.detached(priority: .utility) { () -> HistogramData? in
                 await Renderer.shared.thumbnail(url, adj, size: 480).map(HistogramData.compute)
             }.value
-            if let d { withAnimation(.easeOut(duration: 0.15)) { data = d } }
+            guard !Task.isCancelled else { return }
+            if let d {
+                withAnimation(.easeOut(duration: 0.15)) { self.data = d; dataFor = url }
+            } else {
+                self.data = HistogramData(); dataFor = nil
+            }
         }
     }
 

@@ -177,9 +177,9 @@ extension Library {
             photos[i].label = s.label
             if otherStep { photos[i].otherLabel = s.otherLabel }
             if !fields.isEmpty && !writeSidecar(i, fields) { failed += 1 }
-            touched.append(id)
+            touched.append(photos[i].id)
         }
-        saveEditsSoon()
+        saveEditsSoon(touched)
         // Show what changed: if the current photo isn't affected, move to an affected one.
         if let cur = currentID, !touched.contains(where: { $0.path == cur.path }), let first = touched.first {
             select(photo(first) ?? photos.first { $0.id.path == first.path } ?? photos[0])

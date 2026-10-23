@@ -19,10 +19,12 @@ final class FaceID: @unchecked Sendable {
     private var model: MLModel?
     private var tried = false
     private var installedCache: Bool?
+    private let installedLock = NSLock()
     var folder: URL { FaceMesh.shared.folder }
 
+    /// Its own lock: `lock` is held through loading and inference, and this is asked from view bodies.
     var installed: Bool {
-        lock.withLock {
+        installedLock.withLock {
             if let installedCache { return installedCache }
             let v = FileManager.default.fileExists(atPath: folder.appendingPathComponent(Self.modelName + ".mlmodelc").path)
             installedCache = v
@@ -34,19 +36,16 @@ final class FaceID: @unchecked Sendable {
 
     /// Compiles an .mlpackage (or copies an .mlmodelc) into the models folder.
     func install(from src: URL) throws {
-        let fm = FileManager.default
-        try fm.createDirectory(at: folder, withIntermediateDirectories: true)
-        let compiled = src.pathExtension == "mlmodelc" ? src : try MLModel.compileModel(at: src)
-        let dst = folder.appendingPathComponent(Self.modelName + ".mlmodelc")
-        try? fm.removeItem(at: dst)
-        try fm.copyItem(at: compiled, to: dst)
-        if compiled != src { try? fm.removeItem(at: compiled) }
-        lock.withLock { tried = false; model = nil; installedCache = nil }
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try ModelInstall.place(src, at: folder.appendingPathComponent(Self.modelName + ".mlmodelc"))
+        lock.withLock { tried = false; model = nil }
+        installedLock.withLock { installedCache = nil }
     }
 
     func uninstall() {
-        lock.withLock { tried = false; model = nil; installedCache = nil }
+        lock.withLock { tried = false; model = nil }
         try? FileManager.default.removeItem(at: folder.appendingPathComponent(Self.modelName + ".mlmodelc"))
+        installedLock.withLock { installedCache = nil }
     }
 
     private func load() {

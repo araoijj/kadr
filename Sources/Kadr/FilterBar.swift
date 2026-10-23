@@ -65,7 +65,7 @@ struct FilterBar: View {
     /// buttons to the left.
     private func cullStatus(full: Bool) -> some View {
         let total = lib.photos.count
-        let seen = lib.photos.filter { lib.viewed.contains($0.id) }.count
+        let seen = min(lib.viewed.count, total)   // reindex keeps `viewed` within the folder
         return HStack(spacing: 10) {
             HStack(spacing: 6) {
                 ProgressView(value: Double(seen), total: Double(max(total, 1))).frame(width: full ? 80 : 44)

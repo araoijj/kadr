@@ -119,7 +119,7 @@ extension Library {
     /// Suggestion as edit settings: the photo's adjustments with the suggested geometry.
     func autoCropSuggestion(_ p: Photo, ratio: Double?) async -> Adjustments? {
         guard let c = await autoCropData(p),
-              let r = AutoCrop.suggest(c, aspect: imageAspect(p), ratio: ratio) else { return nil }
+              let r = AutoCrop.suggest(c, aspect: imageAspect(p, exact: true), ratio: ratio) else { return nil }
         var a = p.adj
         a.angle = r.angle
         a.cropRect = r.rect

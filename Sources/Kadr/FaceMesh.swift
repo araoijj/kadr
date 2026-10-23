@@ -45,8 +45,9 @@ final class FaceMesh: @unchecked Sendable {
     var available: Bool { lock.withLock { load(); return landmarks != nil && blend != nil } }
 
     /// Models are on disk (without loading). Cached: it's queried for every frame and on every redraw.
+    /// Its own lock: `lock` is held through loading and analysis, and this is asked from view bodies.
     var installed: Bool {
-        lock.withLock {
+        installedLock.withLock {
             if let installedCache { return installedCache }
             let v = Self.modelNames.allSatisfy { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0 + ".mlmodelc").path) }
             installedCache = v
@@ -54,6 +55,7 @@ final class FaceMesh: @unchecked Sendable {
         }
     }
     private var installedCache: Bool?
+    private let installedLock = NSLock()
 
     /// Install models from a folder, a .zip archive or a single .mlpackage: compile to .mlmodelc and put into Models.
     func install(from src: URL) throws {
@@ -61,13 +63,7 @@ final class FaceMesh: @unchecked Sendable {
         var dir = src
         var temp: URL?
         if src.pathExtension.lowercased() == "zip" {
-            let t = fm.temporaryDirectory.appendingPathComponent("kadr-models-\(UUID().uuidString)", isDirectory: true)
-            try fm.createDirectory(at: t, withIntermediateDirectories: true)
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-            p.arguments = ["-x", "-k", src.path, t.path]
-            try p.run(); p.waitUntilExit()
-            guard p.terminationStatus == 0 else { throw CocoaError(.fileReadCorruptFile) }
+            let t = try ModelInstall.unzip(src)
             dir = t; temp = t
         } else if src.pathExtension == "mlpackage" {
             dir = src.deletingLastPathComponent()
@@ -80,15 +76,12 @@ final class FaceMesh: @unchecked Sendable {
             let name = u.deletingPathExtension().lastPathComponent
             guard Self.modelNames.contains(name), ["mlpackage", "mlmodelc"].contains(u.pathExtension) else { continue }
             en?.skipDescendants()
-            let compiled = u.pathExtension == "mlmodelc" ? u : try MLModel.compileModel(at: u)
-            let dst = folder.appendingPathComponent(name + ".mlmodelc")
-            try? fm.removeItem(at: dst)
-            try fm.copyItem(at: compiled, to: dst)
-            if compiled != u { try? fm.removeItem(at: compiled) }
+            try ModelInstall.place(u, at: folder.appendingPathComponent(name + ".mlmodelc"))
             found += 1
         }
         guard found > 0 else { throw CocoaError(.fileNoSuchFile) }
-        lock.withLock { tried = false; landmarks = nil; blend = nil; installedCache = nil }
+        lock.withLock { tried = false; landmarks = nil; blend = nil }
+        installedLock.withLock { installedCache = nil }
     }
 
     /// Models bundled with the app (Contents/Resources/FaceMesh); installed automatically on first launch.
@@ -105,8 +98,9 @@ final class FaceMesh: @unchecked Sendable {
     }
 
     func uninstall() {
-        lock.withLock { tried = false; landmarks = nil; blend = nil; installedCache = nil }
+        lock.withLock { tried = false; landmarks = nil; blend = nil }
         for n in Self.modelNames { try? FileManager.default.removeItem(at: folder.appendingPathComponent(n + ".mlmodelc")) }
+        installedLock.withLock { installedCache = nil }
     }
 
     private func load() {

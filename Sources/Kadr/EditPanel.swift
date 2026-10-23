@@ -36,8 +36,12 @@ struct EditPanel: View {
     @State private var renameText = ""
     @AppStorage("ep.open") private var openGroupsRaw = "Мои стили|Базовые"
     @AppStorage("ep.tab") private var tab = 0
+    // As-shot white balance and RAW engine defaults of the current frame: reading them opens the RAW
+    // (tens of ms), so it happens in the task below, off the main thread; this only triggers the redraw.
+    @State private var rawInfoFor: URL?
 
     var body: some View {
+        let _ = rawInfoFor   // read here, so filling the cache redraws the panel
         VStack(spacing: 0) {
             Picker("", selection: $tab) {
                 Text(tr("Настройки")).tag(0)
@@ -70,6 +74,16 @@ struct EditPanel: View {
             }
             Divider()
             if let p = lib.current { actions(p).padding(12) }
+        }
+        .task(id: lib.current?.url) {
+            guard let url = lib.current?.url else { return }
+            if ImageStore.shared.cachedRawDefaults(url) == nil || ImageStore.shared.cachedAsShotK(url) == nil {
+                await Task.detached(priority: .userInitiated) {
+                    _ = ImageStore.shared.asShotK(url)
+                    _ = ImageStore.shared.rawDefaults(url)
+                }.value
+            }
+            rawInfoFor = url   // also when another path filled the cache after this body ran
         }
         .sheet(isPresented: $newStyle) { NewStyleSheet().environment(lib) }
         .alert(tr("Переименовать стиль"), isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
@@ -214,7 +228,7 @@ struct EditPanel: View {
             }
             section(tr("Проявка и детали"), .detail, p) {
                 DetailPreview(photo: p)
-                if let d = ImageStore.shared.rawDefaults(p.url) {
+                if let d = rawDefaults(p) {
                     rawControls(p, d)
                 }
                 slider(tr("Резкость"), "righttriangle", \.sharpen, p, range: 0...100)
@@ -547,26 +561,35 @@ struct EditPanel: View {
             .font(.caption).foregroundStyle(.secondary)
     }
 
+    /// Only from the cache, filled by the panel's task.
+    private func rawDefaults(_ p: Photo) -> RawDevelop.Defaults? {
+        return ImageStore.shared.cachedRawDefaults(p.url) ?? nil
+    }
+
     /// White balance in kelvins, as in Lightroom and Capture One. The starting point is "as shot" from the RAW.
+    /// Until the RAW has been read the slider waits, disabled: a drag from a guessed start would set a wrong shift.
     private func kelvinSlider(_ p: Photo) -> some View {
-        let asShot = ImageStore.shared.asShotK(p.url)
+        let known = ImageStore.shared.cachedAsShotK(p.url)
+        let asShot = known ?? 5500
         let k = asShot + p.adj.wbShift
         let changed = p.adj.wbShift != 0
         let isRaw = ImageStore.rawExtensions.contains(p.url.pathExtension.lowercased())
         let range = min(2000, k)...max(12000, k)
         let binding = Binding<Double>(get: { k }, set: { v in
+            guard known != nil else { return }
             var a = p.adj
             a.wbShift = ((v - asShot) / 50).rounded() * 50   // 50 K step
             lib.setAdjustments(a)
         })
         func fmt(_ v: Double) -> String { "\(Int(v.rounded()).formatted(.number.grouping(.never))) K" }
+        let shot = known.map(fmt) ?? "…"
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Image(systemName: "thermometer.medium").frame(width: 18).foregroundStyle(changed ? Color.accentColor : .secondary)
                 Text(tr("Температура")).foregroundStyle(changed ? .primary : .secondary)
                     .onTapGesture(count: 2) { binding.wrappedValue = asShot }
                 Spacer()
-                Text(fmt(k)).font(.callout.monospacedDigit().weight(changed ? .semibold : .regular))
+                Text(known == nil ? "…" : fmt(k)).font(.callout.monospacedDigit().weight(changed ? .semibold : .regular))
                     .foregroundStyle(changed ? .primary : .secondary)
                 Button { binding.wrappedValue = asShot } label: { Image(systemName: "arrow.uturn.backward.circle.fill") }
                     .buttonStyle(.plain).foregroundStyle(.secondary).opacity(changed ? 1 : 0).disabled(!changed)
@@ -577,8 +600,9 @@ struct EditPanel: View {
                     .frame(height: 4).clipShape(Capsule()).opacity(0.7).padding(.horizontal, 2)
                 Slider(value: binding, in: range).tint(.clear)
             }
+            .disabled(known == nil)
             HStack {
-                Text(isRaw ? tr("Как снято: \(fmt(asShot))") : tr("Не RAW: сдвиг от 5500 K")).font(.caption2).foregroundStyle(.secondary)
+                Text(isRaw ? tr("Как снято: \(shot)") : tr("Не RAW: сдвиг от 5500 K")).font(.caption2).foregroundStyle(.secondary)
                 Spacer()
                 if changed {
                     Text(String(format: "%+.0f K", p.adj.wbShift)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)

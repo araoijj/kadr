@@ -484,7 +484,13 @@ struct FaceMeshSection: View {
             if FaceMesh.bundled != nil {
                 if !installed {
                     Button(tr("Установить встроенные модели")) {
-                        busy = true; FaceMesh.shared.installBundledIfNeeded(); installed = FaceMesh.shared.installed; busy = false
+                        busy = true
+                        Task {
+                            installed = await Task.detached(priority: .userInitiated) {
+                                FaceMesh.shared.installBundledIfNeeded(); return FaceMesh.shared.installed
+                            }.value
+                            busy = false
+                        }
                     }
                 }
             } else {
@@ -505,12 +511,15 @@ struct FaceMeshSection: View {
         }
     }
 
-    private func finish(_ url: URL?, _ err: Error?) {
-        if let url {
-            do { try FaceMesh.shared.install(from: url); installed = true; error = nil; lib.reload() }
-            catch { self.error = tr("Не удалось установить: \(error.localizedDescription)") }
-        } else if let err {
-            error = tr("Не удалось скачать: \(err.localizedDescription)")
+    /// Unpacks and compiles in the background, then reports here; `tmp` is removed afterwards.
+    private func install(_ url: URL, removing tmp: URL? = nil) async {
+        let res = await Task.detached(priority: .userInitiated) {
+            defer { if let tmp { try? FileManager.default.removeItem(at: tmp) } }
+            return Result { try FaceMesh.shared.install(from: url) }
+        }.value
+        switch res {
+        case .success: installed = true; error = nil; lib.reload()
+        case .failure(let e): error = tr("Не удалось установить: \(e.localizedDescription)")
         }
         busy = false
     }
@@ -520,18 +529,22 @@ struct FaceMeshSection: View {
         Task {
             do {
                 let (tmp, resp) = try await URLSession.shared.download(from: FaceMesh.downloadURL)
-                guard (resp as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+                guard (resp as? HTTPURLResponse)?.statusCode == 200 else {
+                    try? FileManager.default.removeItem(at: tmp)
+                    throw URLError(.badServerResponse)
+                }
                 guard await ModelChecksum.matches(tmp, ModelChecksum.facemesh) else {
                     try? FileManager.default.removeItem(at: tmp)
                     error = tr("Скачанный архив не совпал по контрольной сумме — не установлен. Попробуйте ещё раз позже.")
                     busy = false; return
                 }
-                let zip = tmp.deletingLastPathComponent().appendingPathComponent("kadr-facemesh.zip")
-                try? FileManager.default.removeItem(at: zip)
-                try FileManager.default.moveItem(at: tmp, to: zip)
-                finish(zip, nil)
-                try? FileManager.default.removeItem(at: zip)
-            } catch { finish(nil, error) }
+                let zip = tmp.deletingLastPathComponent().appendingPathComponent("kadr-facemesh-\(UUID().uuidString).zip")
+                do { try FileManager.default.moveItem(at: tmp, to: zip) } catch { try? FileManager.default.removeItem(at: tmp); throw error }
+                await install(zip, removing: zip)
+            } catch {
+                self.error = tr("Не удалось скачать: \(error.localizedDescription)")
+                busy = false
+            }
         }
     }
 
@@ -545,7 +558,7 @@ struct FaceMeshSection: View {
         Task {
             let ok = u.pathExtension.lowercased() == "zip" ? await ModelChecksum.matches(u, ModelChecksum.facemesh) : false
             guard ok || ModelChecksum.confirmUnverified(tr("Сетка лица MediaPipe")) else { busy = false; return }
-            finish(u, nil)
+            await install(u)
         }
     }
 }

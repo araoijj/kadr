@@ -31,8 +31,13 @@ final class Retouch: @unchecked Sendable {
     static let files = ["SAM2_1SmallImageEncoderFLOAT16", "SAM2_1SmallPromptEncoderFLOAT16", "SAM2_1SmallMaskDecoderFLOAT16", "LaMa"]
 
     private let lock = NSLock()
+    /// Serializes loading (up to ~10 s for SAM + LaMa): one load in flight, others wait for it here,
+    /// while `lock` and `installedLock` stay free for the UI.
+    private let loadLock = NSLock()
+    private let installedLock = NSLock()
     private var models: [String: MLModel] = [:]
     private var tried = false
+    private var generation = 0   // bumped by install: a load that started before it is thrown away
     private var installedCache: Bool?
     private var embedding: (url: URL, out: MLFeatureProvider)?
     private let context = CIContext(options: [.workingFormat: CIFormat.RGBAh, .cacheIntermediates: false])
@@ -40,8 +45,9 @@ final class Retouch: @unchecked Sendable {
     private static let maskContext = CIContext(options: [.cacheIntermediates: false])
     var folder: URL { FaceMesh.shared.folder }
 
+    /// Asked from view bodies: never waits for a model load.
     var installed: Bool {
-        lock.withLock {
+        installedLock.withLock {
             if let installedCache { return installedCache }
             let v = Self.files.allSatisfy { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0 + ".mlmodelc").path) }
             installedCache = v
@@ -53,29 +59,39 @@ final class Retouch: @unchecked Sendable {
     func install(from src: URL) throws {
         let fm = FileManager.default
         try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        var found: [(src: URL, name: String)] = []
         let en = fm.enumerator(at: src, includingPropertiesForKeys: nil)
         while let u = en?.nextObject() as? URL {
             let name = u.deletingPathExtension().lastPathComponent
             guard Self.files.contains(name), u.pathExtension == "mlpackage" else { continue }
             en?.skipDescendants()
-            let compiled = try MLModel.compileModel(at: u)
-            let dst = folder.appendingPathComponent(name + ".mlmodelc")
-            try? fm.removeItem(at: dst)
-            try fm.copyItem(at: compiled, to: dst)
-            try? fm.removeItem(at: compiled)
+            found.append((u, name))
         }
-        lock.withLock { tried = false; models = [:]; installedCache = nil }
+        guard !found.isEmpty else { throw CocoaError(.fileNoSuchFile) }
+        // Everything is compiled before anything is replaced: a broken package leaves the old set whole
+        // instead of new SAM parts next to old ones.
+        var compiled: [(url: URL, name: String)] = []
+        defer { for c in compiled { try? fm.removeItem(at: c.url) } }
+        for f in found { compiled.append((try MLModel.compileModel(at: f.src), f.name)) }
+        // Whatever got placed, the loaded models are stale from here on, even if a later copy fails.
+        defer {
+            lock.withLock { tried = false; models = [:]; generation += 1 }
+            installedLock.withLock { installedCache = nil }
+        }
+        for c in compiled { try ModelInstall.place(c.url, at: folder.appendingPathComponent(c.name + ".mlmodelc")) }
     }
 
     private func model(_ name: String) -> MLModel? {
-        lock.withLock {
-            if !tried {
-                tried = true
+        loadLock.withLock {
+            let (done, gen) = lock.withLock { (tried, generation) }
+            if !done {
                 let cfg = MLModelConfiguration()
                 cfg.computeUnits = .all
-                for n in Self.files { models[n] = try? MLModel(contentsOf: folder.appendingPathComponent(n + ".mlmodelc"), configuration: cfg) }
+                var loaded: [String: MLModel] = [:]
+                for n in Self.files { loaded[n] = try? MLModel(contentsOf: folder.appendingPathComponent(n + ".mlmodelc"), configuration: cfg) }
+                lock.withLock { if generation == gen { models = loaded; tried = true } }
             }
-            return models[name]
+            return lock.withLock { models[name] }
         }
     }
 

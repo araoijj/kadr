@@ -6,8 +6,9 @@ struct GridView: View {
     private let spacing: CGFloat = 10
     private let pad: CGFloat = 16
 
-    // Marquee selection: preview frames and the rectangle in grid coordinates.
-    @State private var frames: [URL: CGRect] = [:]
+    // Marquee selection: preview frames and the rectangle in grid coordinates. The frames live in a plain
+    // (not observed) class: every cell reports its frame while scrolling, and a @State dictionary would redraw the whole grid.
+    @State private var frames = CellFrames()
     @State private var marquee: CGRect?
     @State private var marqueeBase: Set<URL> = []
 
@@ -28,8 +29,8 @@ struct GridView: View {
                                 .onTapGesture(count: 2) { lib.select(p); lib.loupe = true }
                                 .onTapGesture { lib.click(p) }
                                 .photoContextMenu(p)
-                                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("grid")) } action: { frames[p.id] = $0 }
-                                .onDisappear { frames[p.id] = nil }
+                                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("grid")) } action: { frames.rects[p.id] = $0 }
+                                .onDisappear { frames.rects[p.id] = nil }
                         }
                         } header: {
                             if !section.title.isEmpty { SectionHeader(title: section.title, count: section.photos.count) }
@@ -53,11 +54,16 @@ struct GridView: View {
                     }
                     .coordinateSpace(.named("grid"))
                 }
-                .onChange(of: lib.currentID) { _, id in
+                .onChange(of: lib.currentID) { old, id in
                     guard let id, marquee == nil else { return }
+                    // From no frame (a folder just read, with its restored frame): a jump, not a step.
+                    if old == nil { jump(to: id, proxy); return }
                     withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id) }
                 }
-                .onAppear { if let id = lib.currentID { proxy.scrollTo(id, anchor: .center) } }
+                .onAppear { if let id = lib.currentID { jump(to: id, proxy) } }
+                .onChange(of: lib.loading) { _, loading in
+                    if !loading, let id = lib.currentID { jump(to: id, proxy) }
+                }
                 .background(ClickAnchor())
             }
             .onChange(of: geo.size.width, initial: true) { _, w in updateColumns(w) }
@@ -67,7 +73,13 @@ struct GridView: View {
         .overlay(alignment: .top) { if lib.culling { ToolHint(id: "cull") } }
         }
         .overlay {
-            if list.isEmpty && !lib.photos.isEmpty {
+            if lib.loading {
+                // The folder is being read in the background (Library.open).
+                VStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text(tr("Читаю папку…")).foregroundStyle(.secondary)
+                }
+            } else if list.isEmpty && !lib.photos.isEmpty {
                 // Empty on purpose (everything in a burst rejected, rejects moved away): the way out is in sight.
                 ContentUnavailableView {
                     Label(lib.inSeries ? tr("В этой серии не осталось кадров") : tr("Ничего нет"), systemImage: "line.3.horizontal.decrease.circle")
@@ -96,7 +108,7 @@ struct GridView: View {
                 let r = CGRect(x: min(v.startLocation.x, v.location.x), y: min(v.startLocation.y, v.location.y),
                                width: abs(v.location.x - v.startLocation.x), height: abs(v.location.y - v.startLocation.y))
                 marquee = r
-                let hit = list.map(\.id).filter { frames[$0]?.intersects(r) ?? false }
+                let hit = list.map(\.id).filter { frames.rects[$0]?.intersects(r) ?? false }
                 lib.setMarquee(hit, adding: marqueeBase)
             }
             .onEnded { _ in
@@ -108,6 +120,26 @@ struct GridView: View {
     private func updateColumns(_ width: CGFloat) {
         lib.columns = max(1, Int((width - pad * 2 + spacing) / (lib.thumbSize + spacing)))
     }
+}
+
+extension GridView {
+    /// Centers a frame far from the visible part, e.g. after a folder is read: the lazy grid lays out its
+    /// 1000 cells over the next frames, so a single scroll in the same update lands at an estimate (the start
+    /// or the end of the folder). Repeated until the layout has settled.
+    func jump(to id: URL, _ proxy: ScrollViewProxy) {
+        Task { @MainActor in
+            for delay in [0, 60, 250] {
+                try? await Task.sleep(for: .milliseconds(delay))
+                guard lib.currentID == id else { return }   // the user moved on meanwhile
+                proxy.scrollTo(id, anchor: .center)
+            }
+        }
+    }
+}
+
+/// Cell frames for the marquee hit test; read only while dragging, so nothing needs to observe them.
+final class CellFrames {
+    var rects: [URL: CGRect] = [:]
 }
 
 struct Thumbnail: View {

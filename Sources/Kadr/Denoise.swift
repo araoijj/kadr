@@ -15,14 +15,19 @@ final class Denoiser: @unchecked Sendable {
     private let tile = 512, overlap = 32
 
     private let lock = NSLock()
+    /// Serializes loading: one load in flight, others wait here, while `lock` and `installedLock` stay free for the UI.
+    private let loadLock = NSLock()
+    private let installedLock = NSLock()
     private var model: MLModel?
     private var tried = false
+    private var generation = 0   // bumped by install: a load that started before it is thrown away
     private var installedCache: Bool?
     var folder: URL { FaceMesh.shared.folder }
     private let context = CIContext(options: [.workingFormat: CIFormat.RGBAh, .cacheIntermediates: false])
 
+    /// Asked from view bodies: never waits for a model load.
     var installed: Bool {
-        lock.withLock {
+        installedLock.withLock {
             if let installedCache { return installedCache }
             let v = FileManager.default.fileExists(atPath: folder.appendingPathComponent(Self.modelName + ".mlmodelc").path)
             installedCache = v
@@ -31,25 +36,22 @@ final class Denoiser: @unchecked Sendable {
     }
 
     func install(from src: URL) throws {
-        let fm = FileManager.default
-        try fm.createDirectory(at: folder, withIntermediateDirectories: true)
-        let compiled = src.pathExtension == "mlmodelc" ? src : try MLModel.compileModel(at: src)
-        let dst = folder.appendingPathComponent(Self.modelName + ".mlmodelc")
-        try? fm.removeItem(at: dst)
-        try fm.copyItem(at: compiled, to: dst)
-        if compiled != src { try? fm.removeItem(at: compiled) }
-        lock.withLock { tried = false; model = nil; installedCache = nil }
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try ModelInstall.place(src, at: folder.appendingPathComponent(Self.modelName + ".mlmodelc"))
+        lock.withLock { tried = false; model = nil; generation += 1 }
+        installedLock.withLock { installedCache = nil }
     }
 
     private func load() -> MLModel? {
-        lock.withLock {
-            if !tried {
-                tried = true
+        loadLock.withLock {
+            let (done, gen) = lock.withLock { (tried, generation) }
+            if !done {
                 let cfg = MLModelConfiguration()
                 cfg.computeUnits = .cpuAndGPU   // the Neural Engine can't run it (window attention); the GPU is fastest
-                model = try? MLModel(contentsOf: folder.appendingPathComponent(Self.modelName + ".mlmodelc"), configuration: cfg)
+                let m = try? MLModel(contentsOf: folder.appendingPathComponent(Self.modelName + ".mlmodelc"), configuration: cfg)
+                lock.withLock { if generation == gen { model = m; tried = true } }
             }
-            return model
+            return lock.withLock { model }
         }
     }
 
@@ -58,8 +60,23 @@ final class Denoiser: @unchecked Sendable {
     private static var cacheDir: URL {
         let u = AppFolders.support.appendingPathComponent("Cache/Denoise", isDirectory: true)
         try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
+        _ = sweptPartials
         return u
     }
+
+    /// Writes cut short by a quit or a crash (`.part.heic`, 10–20 MB each) are never read: removed once per launch.
+    /// Finished results are left alone: they are the base of a photo's edits and take minutes to compute again.
+    private static let sweptPartials: Void = {
+        let dir = AppFolders.support.appendingPathComponent("Cache/Denoise", isDirectory: true)
+        DispatchQueue.global(qos: .utility).async {
+            let fm = FileManager.default, old = Date().addingTimeInterval(-3600)   // not one being written now
+            for f in (try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+            where f.lastPathComponent.hasSuffix(".part.heic") {
+                let m = (try? f.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+                if m < old { try? fm.removeItem(at: f) }
+            }
+        }
+    }()
 
     /// One file per photo version (path, size, modification time) and per RAW development that moves or retones
     /// the base: a result computed without lens correction would leave double edges once it is turned on.
@@ -88,12 +105,13 @@ final class Denoiser: @unchecked Sendable {
     /// The denoised photo (0…1, sRGB), if computed for this RAW development.
     func result(_ url: URL, _ raw: RawDevelop) -> CIImage? {
         let f = Self.cacheURL(url, raw)
-        if let c = lock.withLock({ images[f.path] }) { return c }
+        if let c = images.object(forKey: f.path as NSString) { return c }
         guard FileManager.default.fileExists(atPath: f.path), let img = CIImage(contentsOf: f) else { return nil }
-        lock.withLock { images[f.path] = img }
+        images.setObject(img, forKey: f.path as NSString)
         return img
     }
-    private var images: [String: CIImage] = [:]
+    /// A few recent photos: a full-size result held by Core Image is tens of MB, and a shoot can have hundreds.
+    private let images: NSCache<NSString, CIImage> = { let c = NSCache<NSString, CIImage>(); c.countLimit = 8; return c }()
 
     /// The result downscaled to 1600 px, for thumbnails: each would otherwise decode the whole file (24–60 MP).
     func smallResult(_ url: URL, _ raw: RawDevelop) -> CIImage? {
@@ -200,7 +218,8 @@ final class Denoiser: @unchecked Sendable {
         dst = []
         try? FileManager.default.removeItem(at: file)
         try FileManager.default.moveItem(at: tmp, to: file)
-        lock.withLock { images[file.path] = nil; known[Self.knownKey(url, raw)] = (true, Date()) }
+        images.removeObject(forKey: file.path as NSString)
+        lock.withLock { known[Self.knownKey(url, raw)] = (true, Date()) }
         smalls.removeObject(forKey: file.path as NSString)
     }
 

@@ -1,4 +1,5 @@
 import AppKit
+import CoreML
 import CryptoKit
 import SwiftUI
 
@@ -43,6 +44,39 @@ enum ModelChecksum {
     }
 
     static func short(_ sha: String) -> String { String(sha.prefix(16)) + "…" }
+}
+
+/// Steps every model install shares. Slow (unpacking and compiling take seconds to tens of seconds),
+/// so installs run off the main thread.
+enum ModelInstall {
+    /// Unpacks a .zip into a new temporary folder (the caller removes it). Throws if ditto fails:
+    /// a broken archive or a full disk would otherwise install half a model.
+    static func unzip(_ zip: URL) throws -> URL {
+        let fm = FileManager.default
+        let t = fm.temporaryDirectory.appendingPathComponent("kadr-models-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: t, withIntermediateDirectories: true)
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+        p.arguments = ["-x", "-k", zip.path, t.path]
+        do { try p.run() } catch { try? fm.removeItem(at: t); throw error }
+        p.waitUntilExit()
+        guard p.terminationStatus == 0 else { try? fm.removeItem(at: t); throw CocoaError(.fileReadCorruptFile) }
+        return t
+    }
+
+    /// Compiles `src` (an .mlmodelc is taken as is) and puts it at `dst`. The new model is copied next to the old
+    /// one first and swapped in, so a failed copy leaves the installed model working.
+    static func place(_ src: URL, at dst: URL) throws {
+        let fm = FileManager.default
+        let compiled = src.pathExtension == "mlmodelc" ? src : try MLModel.compileModel(at: src)
+        defer { if compiled != src { try? fm.removeItem(at: compiled) } }
+        let tmp = dst.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString)-\(dst.lastPathComponent)")
+        do {
+            try fm.copyItem(at: compiled, to: tmp)
+            if fm.fileExists(atPath: dst.path) { _ = try fm.replaceItemAt(dst, withItemAt: tmp) }
+            else { try fm.moveItem(at: tmp, to: dst) }
+        } catch { try? fm.removeItem(at: tmp); throw error }
+    }
 }
 
 extension FaceMesh {
@@ -126,6 +160,15 @@ enum ModelPackage: String, CaseIterable, Identifiable {
     /// Archive in the Kadr repository releases (models with their licenses).
     var url: URL { URL(string: "https://github.com/araoijj/kadr/releases/download/models-2/kadr-\(rawValue)-1.zip")! }
 
+    /// Installs from a .zip, a folder or a single .mlpackage; the unpacked copy is removed either way.
+    /// Slow: call off the main thread.
+    func install(fromArchive u: URL) throws {
+        guard u.pathExtension.lowercased() == "zip" else { return try install(from: u) }
+        let dir = try ModelInstall.unzip(u)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try install(from: dir)
+    }
+
     /// Installs from an unpacked folder (or a single .mlpackage).
     func install(from dir: URL) throws {
         switch self {
@@ -185,11 +228,16 @@ struct ModelPackagesSection: View {
         }
     }
 
-    private func finish(_ m: ModelPackage, _ dir: URL?, _ err: Error?) {
-        if let dir {
-            do { try m.install(from: dir); error = nil; if m == .faceID { lib.aiModulesChanged() } }
-            catch { self.error = tr("Не удалось установить: \(error.localizedDescription)") }
-        } else if let err { error = tr("Не удалось скачать: \(err.localizedDescription)") }
+    /// Unpacks and compiles in the background (tens of seconds for the big packages), then reports here.
+    private func install(_ m: ModelPackage, from u: URL, removing tmp: URL? = nil) async {
+        let res = await Task.detached(priority: .userInitiated) {
+            defer { if let tmp { try? FileManager.default.removeItem(at: tmp) } }
+            return Result { try m.install(fromArchive: u) }
+        }.value
+        switch res {
+        case .success: error = nil; if m == .faceID { lib.aiModulesChanged() }
+        case .failure(let e): error = tr("Не удалось установить: \(e.localizedDescription)")
+        }
         busy = nil; refresh += 1
     }
 
@@ -198,19 +246,23 @@ struct ModelPackagesSection: View {
         Task {
             do {
                 let (tmp, resp) = try await URLSession.shared.download(from: m.url)
-                guard (resp as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+                guard (resp as? HTTPURLResponse)?.statusCode == 200 else {
+                    try? FileManager.default.removeItem(at: tmp)
+                    throw URLError(.badServerResponse)
+                }
                 guard await ModelChecksum.matches(tmp, m.sha256) else {
                     try? FileManager.default.removeItem(at: tmp)
                     error = tr("Скачанный архив не совпал по контрольной сумме — не установлен. Попробуйте ещё раз позже.")
                     busy = nil; return
                 }
-                let dir = FileManager.default.temporaryDirectory.appendingPathComponent("kadr-\(m.rawValue)-\(UUID().uuidString)")
-                try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-                let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/ditto"); p.arguments = ["-x", "-k", tmp.path, dir.path]
-                try p.run(); p.waitUntilExit()
-                finish(m, dir, nil)
-                try? FileManager.default.removeItem(at: dir)
-            } catch { finish(m, nil, error) }
+                // The download has no extension: give it one, so it is unpacked as an archive (and removed after).
+                let zip = tmp.deletingLastPathComponent().appendingPathComponent("kadr-\(m.rawValue)-\(UUID().uuidString).zip")
+                do { try FileManager.default.moveItem(at: tmp, to: zip) } catch { try? FileManager.default.removeItem(at: tmp); throw error }
+                await install(m, from: zip, removing: zip)
+            } catch {
+                self.error = tr("Не удалось скачать: \(error.localizedDescription)")
+                busy = nil; refresh += 1
+            }
         }
     }
 
@@ -225,19 +277,8 @@ struct ModelPackagesSection: View {
             let isZip = u.pathExtension.lowercased() == "zip"
             let ok = isZip ? await ModelChecksum.matches(u, m.sha256) : false
             guard ok || ModelChecksum.confirmUnverified(m.title) else { busy = nil; return }
-            install(m, from: u)
+            await install(m, from: u)
         }
-    }
-
-    private func install(_ m: ModelPackage, from u: URL) {
-        if u.pathExtension.lowercased() == "zip" {
-            let dir = FileManager.default.temporaryDirectory.appendingPathComponent("kadr-\(m.rawValue)-\(UUID().uuidString)")
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            let pr = Process(); pr.executableURL = URL(fileURLWithPath: "/usr/bin/ditto"); pr.arguments = ["-x", "-k", u.path, dir.path]
-            try? pr.run(); pr.waitUntilExit()
-            finish(m, dir, nil)
-            try? FileManager.default.removeItem(at: dir)
-        } else { finish(m, u, nil) }
     }
 }
 

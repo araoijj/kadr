@@ -25,7 +25,7 @@ extension Library {
             photos[i].adj = a
             n += 1
         }
-        saveEditsSoon()
+        saveEditsSoon(others.map(\.id))
         record(tr("Выравнивание по эталону: \(n)"), before: before)
         flash(tr("Экспозиция и баланс выровнены по текущему кадру: \(n)"))
     }

@@ -60,7 +60,20 @@ enum PhotoFilter: Hashable {
 @Observable
 final class Library {
     var folder: URL?
-    var photos: [Photo] = []
+    /// Hand-written accessors (what the macro generates, plus one counter): every change — a new list or one
+    /// field of one photo — bumps `photosRev`, which the cached derived lists (visible, counts…) compare against.
+    @ObservationIgnored private var photoStore: [Photo] = []
+    @ObservationIgnored private var photosRev = 0
+    var photos: [Photo] {
+        get { access(keyPath: \.photos); return photoStore }
+        set { withMutation(keyPath: \.photos) { photoStore = newValue; photosRev &+= 1 } }
+        _modify {
+            access(keyPath: \.photos)
+            _$observationRegistrar.willSet(self, keyPath: \.photos)
+            defer { photosRev &+= 1; _$observationRegistrar.didSet(self, keyPath: \.photos) }
+            yield &photoStore
+        }
+    }
     var filter: PhotoFilter = .all
     var currentID: URL? {
         // "Remove Object" belongs to one photo: moving on closes it, so clicks on the next photo don't select.
@@ -225,7 +238,7 @@ final class Library {
         StoreWriter.shared.save("history:" + p.folder.path) { HistoryStore.save(p.entries, p.pos, for: p.folder) }
     }
 
-    func saveEditsSoon() { scheduleEditsSave() }
+    func saveEditsSoon(_ ids: [URL]) { scheduleEditsSave(ids) }
 
     // MARK: - Edit
 
@@ -275,7 +288,7 @@ final class Library {
                 photos[j].adj = photos[j].adj.syncing(from: old, to: a, asShotK: srcK, target: o)
             }
         }
-        scheduleEditsSave()
+        scheduleEditsSave([id] + others)
         // Don't record steps while cropping; one step is recorded on "Done".
         if !cropMode {
             let d = describeChange(old, a, url: id)
@@ -363,7 +376,7 @@ final class Library {
     /// For bulk edits from other files (cropping a series).
     func setAdjustmentsRaw(_ i: Int, _ a: Adjustments) {
         photos[i].adj = a
-        scheduleEditsSave()
+        scheduleEditsSave([photos[i].id])
     }
 
     /// Style, paste and reset apply to all selected photos.
@@ -373,7 +386,7 @@ final class Library {
             guard let i = index[t.id] else { continue }
             change(&photos[i].adj)
         }
-        scheduleEditsSave()
+        scheduleEditsSave(targets.map(\.id))
         record(title + countSuffix, before: before)
     }
 
@@ -462,7 +475,7 @@ final class Library {
             b.aiDenoise = photos[i].adj.aiDenoise
             photos[i].adj = b
         }
-        scheduleEditsSave()
+        scheduleEditsSave(targets.map(\.id))
         record(tr("Вставка обработки") + countSuffix, before: before)
         flash(tr("Обработка вставлена") + countSuffix)
     }
@@ -515,25 +528,33 @@ final class Library {
 
     func revealLUTFolder() { NSWorkspace.shared.open(AppFolders.luts) }
 
-    private func scheduleEditsSave() {
+    /// `ids`: the photos whose settings changed — only their folders are written. A slider tick only marks
+    /// them; the folders' snapshots are taken once, when the debounce ends (or a flush asks for them).
+    private func scheduleEditsSave(_ ids: [URL]) {
         saveEditsTask?.cancel()
         guard folder != nil else { return }
-        var byFolder: [URL: [String: Adjustments]] = [:]
-        for p in photos { byFolder[p.url.deletingLastPathComponent(), default: [:]][p.name] = p.adj }
-        pendingEdits = byFolder
+        for id in ids { editsDirty.insert(id.deletingLastPathComponent()) }
         saveEditsTask = Task {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
             self.submitEdits()
         }
     }
-    private var pendingEdits: [URL: [String: Adjustments]]?
+    @ObservationIgnored private var editsDirty: Set<URL> = []
 
+    /// Every photo of each dirty folder goes into its snapshot: the store drops our fields of a frame missing
+    /// from it. Runs before anything replaces or removes photos (folder switch, moves), so they're still here.
     private func submitEdits() {
-        guard let p = pendingEdits else { return }
         saveEditsTask?.cancel()
-        pendingEdits = nil
-        for (dir, e) in p { StoreWriter.shared.save("edits:" + dir.path) { EditStore.save(e, in: dir) } }
+        guard !editsDirty.isEmpty else { return }
+        let dirty = editsDirty
+        editsDirty = []
+        var byFolder: [URL: [String: Adjustments]] = [:]
+        for p in photos {
+            let dir = p.url.deletingLastPathComponent()
+            if dirty.contains(dir) { byFolder[dir, default: [:]][p.name] = p.adj }
+        }
+        for (dir, e) in byFolder { StoreWriter.shared.save("edits:" + dir.path) { EditStore.save(e, in: dir) } }
     }
 
     /// Writes edits that are still waiting for the debounce — before opening another folder and on quit,
@@ -573,8 +594,53 @@ final class Library {
         didSet { UserDefaults.standard.set(hideRejected, forKey: "hideRejected") }
     }
 
-    var visible: [Photo] {
-        photos.filter { p in
+    var visible: [Photo] { visible(listKey()) }
+
+    // MARK: - Cached derived lists
+    // visible, sections, the filter counts, verdicts and the top sharpness used to be recomputed (filter, sort,
+    // a verdict per photo) by every call — dozens per render, on every arrow press. Each is kept until one of
+    // its inputs changes. Building a key reads every input, so a view reading a cached value still observes
+    // all of them and updates on any change, as before.
+
+    /// Verdict inputs besides the photo itself. The folder statistics change only in updateCullStats.
+    struct VerdictKey: Equatable { var strictness: Double; var ai: Set<AIModule>; var stats: Int }
+    @ObservationIgnored var cullStatsRev = 0
+    @ObservationIgnored var verdictCache: (key: VerdictKey, byID: [URL: (sig: VerdictSig, v: CullVerdict)])?
+
+    /// The fields of a photo its verdict reads.
+    struct VerdictSig: Equatable {
+        var duplicate: Bool, scene: Int?, series: Int?, best: Bool, cull: CullData?
+        init(_ p: Photo) { duplicate = p.duplicateOf != nil; scene = p.sceneID; series = p.seriesID; best = p.isBestInSeries; cull = p.cull }
+    }
+
+    func verdictKey() -> VerdictKey {
+        access(keyPath: \.sceneMedians); access(keyPath: \.cullMedianSharpness); access(keyPath: \.cullMedianFaceSharpness)
+        access(keyPath: \.seriesBestSharpness); access(keyPath: \.seriesOpenEyes); access(keyPath: \.seriesOpenPoses)
+        access(keyPath: \.seriesBestPrint)
+        return VerdictKey(strictness: cullStrictness, ai: aiEnabled, stats: cullStatsRev)
+    }
+
+    private struct ListKey: Equatable {
+        var photos: Int, filter: PhotoFilter, hideRejected: Bool, lens: String?, day: Date?, tags: Set<String>
+        var persons: Set<Int>, people: [Person], aiReady: Bool, verdicts: VerdictKey
+        var sort: SortKey, descending: Bool, group: GroupKey, folder: URL?
+    }
+    @ObservationIgnored private var visibleCache: (key: ListKey, pos: [URL: Int], list: [Photo])?
+    @ObservationIgnored private var sectionsCache: (key: ListKey, scenes: [SceneInfo], value: [(title: String, photos: [Photo])])?
+    private struct CountKey: Equatable { var photos: Int, verdicts: VerdictKey, aiReady: Bool }
+    @ObservationIgnored private var countCache: (key: CountKey, counts: [PhotoFilter: Int])?
+    @ObservationIgnored private var maxSharpnessCache: (rev: Int, value: Double?)?
+
+    private func listKey() -> ListKey {
+        access(keyPath: \.photos)
+        return ListKey(photos: photosRev, filter: filter, hideRejected: hideRejected, lens: lensFilter, day: dayFilter, tags: tagFilters,
+                       persons: personFilters, people: personFilters.isEmpty ? [] : people, aiReady: aiReady, verdicts: verdictKey(),
+                       sort: sortKey, descending: sortDescending, group: groupKey, folder: folder)
+    }
+
+    private func visible(_ key: ListKey) -> [Photo] {
+        if let c = visibleCache, c.key == key { return c.list }
+        let found = photos.filter { p in
             matches(p, filter)
                 && (!hideRejected || !p.rejected || filter == .rejected)
                 && (lensFilter == nil || p.lensName == lensFilter)
@@ -582,7 +648,27 @@ final class Library {
                 && (tagFilters.isEmpty || !aiEnabled.contains(.tags) || (p.cull?.tags?.contains(where: tagFilters.contains) ?? false))
                 && (personFilters.isEmpty || personFilters.contains { person($0)?.photos.contains(p.id) ?? false })
         }
-        .sorted(by: inOrder)
+        // A slider tick or a mark rarely moves a photo: if the same photos pass, put them in the last order
+        // and check it still holds — n comparisons instead of a sort.
+        var list: [Photo] = []
+        if let c = visibleCache, c.pos.count == found.count {
+            var placed = [Photo?](repeating: nil, count: found.count)
+            for p in found { guard let i = c.pos[p.id] else { break }; placed[i] = p }
+            let reused = placed.compactMap { $0 }
+            if reused.count == found.count, zip(reused, reused.dropFirst()).allSatisfy({ !inOrder($1, $0) }) { list = reused }
+        }
+        if list.count != found.count { list = found.sorted(by: inOrder) }
+        visibleCache = (key, Dictionary(uniqueKeysWithValues: list.enumerated().map { ($1.id, $0) }), list)
+        return list
+    }
+
+    /// The folder's top sharpness, for the sharpness bars: once per change of the photos, not per pane and frame.
+    var maxSharpness: Double? {
+        access(keyPath: \.photos)
+        if let c = maxSharpnessCache, c.rev == photosRev { return c.value }
+        let m = photos.compactMap(\.sharpness).max()
+        maxSharpnessCache = (photosRev, m)
+        return m
     }
 
     // MARK: - Sorting, grouping, extra filters
@@ -748,7 +834,8 @@ final class Library {
         set {
             guard newValue != recursiveStorage else { return }
             recursiveStorage = newValue
-            reload()
+            // Passed on: while the folder is still being read there's no state saved to take it from.
+            if let folder { saveFolderState(); open(folder, recursive: newValue) }
         }
     }
     var lensFilter: String?
@@ -797,13 +884,24 @@ final class Library {
 
     /// Grid sections: consecutive photos sharing the same group key.
     var sections: [(title: String, photos: [Photo])] {
-        let list = visible
-        guard groupKey != .none else { return [("", list)] }
-        var out: [(String, [Photo])] = []
-        for p in list {
-            let t = groupTitle(p)
-            if out.last?.0 == t { out[out.count - 1].1.append(p) } else { out.append((t, [p])) }
+        let key = listKey()
+        let list = visible(key)
+        let sc = groupKey == .scene ? scenes : []
+        if let c = sectionsCache, c.key == key, c.scenes == sc { return c.value }
+        var out: [(title: String, photos: [Photo])] = []
+        if groupKey == .none {
+            out = [("", list)]
+        } else {
+            // Day and scene titles are formatted or looked up once per group, not per photo.
+            var memo: [AnyHashable: String] = [:]
+            for p in list {
+                let k: AnyHashable? = groupKey == .day ? AnyHashable(p.day) : groupKey == .scene ? AnyHashable(p.sceneID) : nil
+                let t = k.flatMap { memo[$0] } ?? groupTitle(p)
+                if let k { memo[k] = t }
+                if out.last?.title == t { out[out.count - 1].photos.append(p) } else { out.append((t, [p])) }
+            }
         }
+        sectionsCache = (key, sc, out)
         return out
     }
 
@@ -873,7 +971,16 @@ final class Library {
     private func cmp<T: Comparable>(_ a: T, _ b: T) -> ComparisonResult { a < b ? .orderedAscending : a > b ? .orderedDescending : .orderedSame }
     private func flip(_ r: ComparisonResult) -> ComparisonResult { r == .orderedAscending ? .orderedDescending : r == .orderedDescending ? .orderedAscending : r }
 
-    func count(_ f: PhotoFilter) -> Int { photos.reduce(0) { $0 + (matches($1, f) ? 1 : 0) } }
+    /// Photos of the folder matching a filter; the counts are kept until the photos or the verdicts change.
+    func count(_ f: PhotoFilter) -> Int {
+        access(keyPath: \.photos)
+        let key = CountKey(photos: photosRev, verdicts: verdictKey(), aiReady: aiReady)
+        if countCache?.key != key { countCache = (key, [:]) }
+        if let n = countCache?.counts[f] { return n }
+        let n = photos.reduce(0) { $0 + (matches($1, f) ? 1 : 0) }
+        countCache?.counts[f] = n
+        return n
+    }
 
     func matches(_ p: Photo, _ f: PhotoFilter) -> Bool {
         switch f {
@@ -928,19 +1035,22 @@ final class Library {
     }
 
     /// Reads the folder and shows it. Doesn't touch the shoots list: that's `scan`.
+    /// The reading (tree walk, every XMP, indexes, edits, history) runs off the main thread: on a few thousand
+    /// RAW on a HDD, NAS or card it takes seconds. A quicker second switch wins: an older read is dropped (folderGen).
     func open(_ url: URL, recursive: Bool? = nil) {
         analysisTask?.cancel()
+        openTask?.cancel()
         aiTask?.cancel(); aiRunning = false; aiCount = 0
         // The old folder's latest index (the analysis saves only every 50 photos), history and edits are
         // queued for the disk; the cancelled tasks finish later and must not touch the new folder (folderGen).
         submitStores()
         folderGen += 1
+        let gen = folderGen
         saveFolderState()
         folder = url
-        var state = FolderState.load(url) ?? FolderState()
-        let mode = recursive ?? state.recursive ?? FolderBrowser.suggestRecursive(url)
-        if state.recursive != mode { state.recursive = mode; FolderState.save(state, for: url) }
-        recursiveStorage = mode
+        let state = FolderState.load(url) ?? FolderState()
+        // Known already unless the folder is new: the toggle shows it while the folder is read.
+        if let m = recursive ?? state.recursive { recursiveStorage = m }
         filter = .all
         lensFilter = nil
         tagFilters = []
@@ -953,8 +1063,32 @@ final class Library {
         culling = Prefs.cullByDefault
         loading = true
         analyzed = 0
+        // Nothing of the old folder stays reachable while the new one is read.
         photos = []
-        let files = Self.imageFiles(in: url, recursive: includeSubfolders)
+        reindex()
+        focus(nil)
+        (history, historyPos) = ([], 0)
+        openTask = Task.detached(priority: .userInitiated) { [weak self] in
+            guard let r = Self.read(url, recursive: recursive ?? state.recursive) else { return }
+            await self?.finishOpen(r, gen: gen)
+        }
+    }
+    private var openTask: Task<Void, Never>?
+
+    /// What `read` found in a folder.
+    private struct FolderRead: Sendable {
+        var recursive: Bool
+        var photos: [Photo]
+        var indexDirty: Bool
+        var history: ([HistoryEntry], Int)
+    }
+
+    /// Off the main thread. `recursive` nil = a freshly scanned folder: guessed from what's inside.
+    /// Nil when cancelled by a newer open.
+    nonisolated private static func read(_ url: URL, recursive: Bool?) -> FolderRead? {
+        let mode = recursive ?? FolderBrowser.suggestRecursive(url)
+        let files = imageFiles(in: url, recursive: mode)
+        guard !Task.isCancelled else { return nil }
 
         // If a RAW and a JPEG with the same name sit side by side, show only the RAW.
         let rawBases = Set(files.filter { ImageStore.rawExtensions.contains($0.pathExtension.lowercased()) }
@@ -968,12 +1102,16 @@ final class Library {
         var indexes: [URL: [String: IndexEntry]] = [:]
         let dirs = Set(chosen.map { $0.deletingLastPathComponent() })
         // Only a write still pending for these very folders (the same folder again, a subfolder) is waited for.
+        // Waited for here, not on the main thread; the writer stays the only one writing the stores.
         StoreWriter.shared.flush(touching: Set(dirs.map(\.path)).union([url.path]))
         for dir in dirs {
             edits[dir] = EditStore.load(dir)
             indexes[dir] = AnalysisIndex.load(dir)
         }
-        photos = chosen.map { f in
+        var photos: [Photo] = []
+        photos.reserveCapacity(chosen.count)
+        for f in chosen {
+            if Task.isCancelled { return nil }
             let v = try? f.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
             let size = Int64(v?.fileSize ?? 0)
             let s = Sidecar.read(for: f)
@@ -984,15 +1122,26 @@ final class Library {
             if let c = indexes[f.deletingLastPathComponent()]?[f.lastPathComponent], c.size == size, c.mtime == p.mtime {
                 p.exif = c.exif; p.hash = c.hash; p.sharpness = c.sharpness; p.cull = c.cull; p.indexed = true
             }
-            return p
+            photos.append(p)
         }
         photos.sort { $0.url.path.localizedStandardCompare($1.url.path) == .orderedAscending }
         // Rewritten only when something changed: entries of files that are gone count too.
-        indexDirty = indexes.values.reduce(0) { $0 + $1.count } != photos.filter(\.indexed).count
+        let dirty = indexes.values.reduce(0) { $0 + $1.count } != photos.filter(\.indexed).count
+        return FolderRead(recursive: mode, photos: photos, indexDirty: dirty, history: HistoryStore.load(url))
+    }
+
+    /// Back on the main thread: shows what was read, unless another folder was opened meanwhile.
+    private func finishOpen(_ r: FolderRead, gen: Int) {
+        guard gen == folderGen, let url = folder else { return }
+        var state = FolderState.load(url) ?? FolderState()
+        if state.recursive != r.recursive { state.recursive = r.recursive; FolderState.save(state, for: url) }
+        recursiveStorage = r.recursive
+        photos = r.photos
+        indexDirty = r.indexDirty
         reindex()
         focus(visible.first?.id)
         restoreFolderState(url)
-        (history, historyPos) = HistoryStore.load(url)
+        (history, historyPos) = r.history
         loading = false
         startAnalysis()
     }
@@ -1008,6 +1157,7 @@ final class Library {
         // writer's queue, after any save already running, and open waits for it. The photos are dropped
         // so the folder switch has no index to save.
         analysisTask?.cancel(); aiTask?.cancel()
+        submitEdits()   // its snapshot is built from photos: an edit still in the debounce would be lost below
         folderGen += 1
         photos = []
         reindex()
@@ -1039,6 +1189,13 @@ final class Library {
 
     private func reindex() {
         index = Dictionary(uniqueKeysWithValues: photos.enumerated().map { ($1.id, $0) })
+        // Frames that left (moved, deleted, another folder) leave the pass and the verdict cache too:
+        // the culling bar then counts `viewed` as is, without filtering every photo per render.
+        let gone = viewed.filter { index[$0] == nil }
+        if !gone.isEmpty { viewed.subtract(gone) }
+        if let byID = verdictCache?.byID, byID.keys.contains(where: { index[$0] == nil }) {
+            verdictCache?.byID = byID.filter { index[$0.key] != nil }
+        }
     }
 
     /// In the background: EXIF, preview, hash and sharpness, then series and duplicates.

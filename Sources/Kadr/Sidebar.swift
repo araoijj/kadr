@@ -199,12 +199,19 @@ struct ShootRow: View {
         let available = isOpen || self.available
         return Button {
             if isOpen { return }
-            // The last check may be old: ask the disk now, on the click.
-            if available || FolderBrowser.reachable(url) {
-                if !available { lib.browser.refreshAvailability() }
-                lib.open(url)
-            } else {
-                lib.flash(Self.unavailableHint, seconds: 2)
+            if available { lib.open(url); return }
+            // The last check may be old: ask the disk now, on the click — off the main thread, a sleeping
+            // or dropped volume can take long to answer.
+            let u = url, was = lib.folder
+            Task {
+                if await Task.detached(priority: .userInitiated, operation: { FolderBrowser.reachable(u) }).value {
+                    lib.browser.refreshAvailability()
+                    // Another shoot opened while the disk was answering: the late answer doesn't switch back.
+                    guard lib.folder == was else { return }
+                    lib.open(u)
+                } else {
+                    lib.flash(Self.unavailableHint, seconds: 2)
+                }
             }
         } label: {
             VStack(alignment: .leading, spacing: 3) {

@@ -24,21 +24,45 @@ struct CropFormat: Identifiable, Hashable {
     static func byID(_ id: String?) -> CropFormat? { all.first { $0.id == id } }
 }
 
+/// Bumped when the loupe decodes a preview whose shape wasn't known yet: views that sized a frame from EXIF
+/// alone (pixelSize without `exact`) redraw with the camera crop.
+@MainActor @Observable
+final class PreviewShapes {
+    static let shared = PreviewShapes()
+    var learned = 0
+
+    /// After a preview's first decode: bump only if it changes the shape EXIF alone gave (a RAW's camera crop,
+    /// an orientation the index lacks). A plain JPEG then redraws nothing while browsing new frames.
+    /// Not indexed yet: views had neither the size nor the shape, so they always redraw (the caller has read the header).
+    func learn(_ url: URL, _ indexed: ExifInfo) {
+        guard let pa = ImageStore.shared.previewAspect(url) else { return }
+        guard indexed.width != nil else { learned += 1; return }
+        let ex = indexed
+        let a = ImageStore.frameSize(ex, previewAspect: nil), b = ImageStore.frameSize(ex, previewAspect: pa)
+        if abs(a.width / a.height - b.width / b.height) / (b.width / b.height) > 0.01 { learned += 1 }
+    }
+}
+
 extension Library {
     /// Frame aspect in pixels (after the camera crop, before our own crop).
-    func imageAspect(_ p: Photo) -> Double {
-        let s = pixelSize(p)
+    func imageAspect(_ p: Photo, exact: Bool = false) -> Double {
+        let s = pixelSize(p, exact: exact)
         return Double(s.width / s.height)
     }
 
     /// RAW frame size in pixels: orientation and camera crop come from the preview, dimensions from EXIF.
-    /// The preview is decoded once if this session hasn't seen it: only it knows a RAW's camera crop
-    /// (4:3 in a 3:2 sensor); other formats need it only for an index from before the orientation was stored.
-    func pixelSize(_ p: Photo) -> CGSize {
-        let ex = p.exif.width != nil ? p.exif : ImageStore.shared.exif(p.url)
+    /// Only the preview knows a RAW's camera crop (4:3 in a 3:2 sensor); other formats need it only for an index
+    /// from before the orientation was stored. Views never decode it or open the file here (main thread, and the
+    /// export summary asks for every frame): until the loupe has read it, the shape comes from EXIF, which misses
+    /// only a camera crop, and a frame not indexed yet is 3:2 until the index or the loupe reads its header;
+    /// PreviewShapes redraws them. Actions that compute a crop pass `exact` and read both once.
+    func pixelSize(_ p: Photo, exact: Bool = false) -> CGSize {
+        _ = PreviewShapes.shared.learned
+        let ex = p.exif.width != nil ? p.exif
+            : exact ? ImageStore.shared.headerExif(p.url) : ImageStore.shared.cachedHeaderExif(p.url) ?? ExifInfo()
         let needs = ex.orientation == nil || ImageStore.rawExtensions.contains(p.url.pathExtension.lowercased())
         let pa = ImageStore.shared.previewAspect(p.url)
-            ?? (needs ? ImageStore.shared.preview(p.url).map { CGFloat($0.width) / CGFloat($0.height) } : nil)
+            ?? (needs && exact ? ImageStore.shared.preview(p.url).map { CGFloat($0.width) / CGFloat($0.height) } : nil)
         return ImageStore.frameSize(ex, previewAspect: pa)
     }
 
@@ -55,8 +79,8 @@ extension Library {
         var a = p.adj
         a.cropAspect = f.id
         if let r = f.ratio {
-            let ratio = r == 0 ? imageAspect(p) : r
-            a.cropRect = centeredCrop(ratio: ratio, imageAspect: imageAspect(p))
+            let ratio = r == 0 ? imageAspect(p, exact: true) : r
+            a.cropRect = centeredCrop(ratio: ratio, imageAspect: imageAspect(p, exact: true))
         }
         setAdjustments(a)
     }
@@ -64,7 +88,7 @@ extension Library {
     /// Flip the format orientation (4:5 ↔ 5:4).
     func flipCropOrientation() {
         guard let p = current else { return }
-        let a0 = imageAspect(p)
+        let a0 = imageAspect(p, exact: true)
         let current = (p.adj.cropW * a0) / p.adj.cropH
         var a = p.adj
         a.cropRect = centeredCrop(ratio: 1 / current, imageAspect: a0)
@@ -82,7 +106,7 @@ extension Library {
             a.angle = src.angle
             a.cropAspect = src.cropAspect
             if let f = CropFormat.byID(src.cropAspect), let r = f.ratio {
-                let ia = imageAspect(photos[i])
+                let ia = imageAspect(photos[i], exact: true)
                 a.cropRect = centeredCrop(ratio: r == 0 ? ia : r, imageAspect: ia)
             } else {
                 a.cropRect = src.cropRect
