@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Builds Kadr.app: swift build → .app bundle → ~/Applications
+# Builds Kadr.app: tests → swift build → .app bundle → ~/Applications
 set -e
 cd "$(dirname "$0")"
 # Command Line Tools 27 bring the macOS 27 SDK, where @State is a macro, but not its SwiftUIMacros plugin
@@ -16,6 +16,10 @@ LINK=()
 if [ -n "$SDKROOT" ]; then
   LINK=(-Xlinker -platform_version -Xlinker macos -Xlinker 15.0 -Xlinker "$(xcrun --sdk "$SDKROOT" --show-sdk-version)")
 fi
+# The import, XMP and export tests run first: a build that could lose photos or ratings is never installed.
+# `./build.sh test` runs only them; KADR_SKIP_TESTS=1 skips them.
+if [ -z "$KADR_SKIP_TESTS" ]; then swift test "${LINK[@]}"; fi
+[ "$1" = "test" ] && exit 0
 swift build -c release "${LINK[@]}"
 APP=build/Kadr.app
 rm -rf "$APP"

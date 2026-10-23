@@ -140,8 +140,11 @@ You need macOS 15+ and the Command Line Tools — Xcode is not required (with th
 
 ```sh
 xcode-select --install   # if not installed yet
-./build.sh               # → build/Kadr.app and ~/Applications/Kadr.app
+./build.sh               # tests, then → build/Kadr.app and ~/Applications/Kadr.app
+./build.sh test          # only the tests
 ```
+
+`build.sh` first runs the tests for memory card import, XMP sidecars and export (`Tests/KadrTests`, Swift Testing — part of the Command Line Tools); if one fails, nothing is built or installed.
 
 The icon is drawn in code: `swift tools/make-icon.swift Resources/AppIcon-1024.png`.
 

@@ -134,8 +134,11 @@
 
 ```sh
 xcode-select --install   # если ещё не установлены
-./build.sh               # → build/Kadr.app и ~/Applications/Kadr.app
+./build.sh               # тесты, затем → build/Kadr.app и ~/Applications/Kadr.app
+./build.sh test          # только тесты
 ```
+
+`build.sh` сначала запускает тесты импорта с карты, XMP и экспорта (`Tests/KadrTests`, Swift Testing — входит в Command Line Tools); если хоть один не прошёл, ничего не собирается и не ставится.
 
 Иконка рисуется кодом: `swift tools/make-icon.swift Resources/AppIcon-1024.png`.
 
