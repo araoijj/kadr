@@ -829,10 +829,11 @@ final class Library {
     /// Whether the open shoot was gathered with its subfolders. A property of the shoot, remembered
     /// per folder (FolderState), chosen when scanning; flipping it here re-reads the open folder.
     private var recursiveStorage = false
+    private var recursiveKnown = true
     var includeSubfolders: Bool {
         get { recursiveStorage }
         set {
-            guard newValue != recursiveStorage else { return }
+            guard newValue != recursiveStorage, recursiveKnown else { return }
             recursiveStorage = newValue
             // Passed on: while the folder is still being read there's no state saved to take it from.
             if let folder { saveFolderState(); open(folder, recursive: newValue) }
@@ -1051,6 +1052,8 @@ final class Library {
         let state = FolderState.load(url) ?? FolderState()
         // Known already unless the folder is new: the toggle shows it while the folder is read.
         if let m = recursive ?? state.recursive { recursiveStorage = m }
+        // A new folder's mode is only guessed once it is read: until then the toggle can't flip it.
+        recursiveKnown = (recursive ?? state.recursive) != nil
         filter = .all
         lensFilter = nil
         tagFilters = []
@@ -1061,6 +1064,7 @@ final class Library {
         loupeZoom = nil
         viewed = []
         culling = Prefs.cullByDefault
+        restoreFolderView(state)
         loading = true
         analyzed = 0
         // Nothing of the old folder stays reachable while the new one is read.
@@ -1136,11 +1140,12 @@ final class Library {
         var state = FolderState.load(url) ?? FolderState()
         if state.recursive != r.recursive { state.recursive = r.recursive; FolderState.save(state, for: url) }
         recursiveStorage = r.recursive
+        recursiveKnown = true
         photos = r.photos
         indexDirty = r.indexDirty
         reindex()
         focus(visible.first?.id)
-        restoreFolderState(url)
+        restoreCurrent(url)
         (history, historyPos) = r.history
         loading = false
         startAnalysis()

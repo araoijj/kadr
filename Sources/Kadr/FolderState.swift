@@ -102,20 +102,25 @@ extension Library {
         FolderState.save(s, for: folder)
     }
 
-    /// Back to the photo, filter and mode you left the folder with.
-    func restoreFolderState(_ url: URL) {
-        guard let s = FolderState.load(url) else { return }
+    /// Back to the filter and mode you left the folder with. Applied as soon as the folder is opened, before
+    /// it is read, so a filter or mode chosen while it loads is not overwritten afterwards.
+    func restoreFolderView(_ s: FolderState) {
         if let c = s.filter, let f = PhotoFilter(code: c) { filter = f }
         switch s.mode {
         case "cull": culling = true
         case "loupe": loupe = true
         default: break
         }
-        if let rel = s.current, let p = photos.first(where: { Self.relativePath($0.url, in: url) == rel })
-            ?? (rel.contains("/") ? nil : visible.first(where: { $0.url.lastPathComponent == rel }) ?? photos.first(where: { $0.url.lastPathComponent == rel })) {
-            if !visible.contains(where: { $0.id == p.id }) { filter = .all }
-            select(p)
-        }
+    }
+
+    /// Back to the photo you left the folder with, once it has been read. If the current filter hides it,
+    /// the photo the filter shows first stays selected.
+    func restoreCurrent(_ url: URL) {
+        guard let s = FolderState.load(url), let rel = s.current,
+              let p = photos.first(where: { Self.relativePath($0.url, in: url) == rel })
+                ?? (rel.contains("/") ? nil : visible.first(where: { $0.url.lastPathComponent == rel }) ?? photos.first(where: { $0.url.lastPathComponent == rel })),
+              visible.contains(where: { $0.id == p.id }) else { return }
+        select(p)
     }
 
     /// `file`'s path inside `folder`, so same-named photos in different subfolders stay apart.
