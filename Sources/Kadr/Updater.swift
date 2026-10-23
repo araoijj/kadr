@@ -63,9 +63,21 @@ enum Updater {
                   let page = (o["html_url"] as? String).flatMap(URL.init(string:)) else { return nil }
             let pre = o["prerelease"] as? Bool ?? false
             if pre && !beta { return nil }
+            // A release that needs a newer macOS than this one is not offered: it wouldn't open here.
+            // The notes carry it as a hidden line, e.g. <!-- minimum-macos: 15.0 -->.
+            if let body = o["body"] as? String, let need = minimumMacOS(body),
+               !ProcessInfo.processInfo.isOperatingSystemAtLeast(need) { return nil }
             return Release(version: String(tag.dropFirst()), page: page, prerelease: pre)
         }
         return all.max { Version($0.version) < Version($1.version) }
+    }
+
+    /// "minimum-macos: 15.0" anywhere in the release notes.
+    static func minimumMacOS(_ notes: String) -> OperatingSystemVersion? {
+        guard let r = notes.range(of: #"minimum-macos:\s*(\d+)(?:\.(\d+))?"#, options: .regularExpression) else { return nil }
+        let n = notes[r].split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
+        guard let major = n.first else { return nil }
+        return OperatingSystemVersion(majorVersion: major, minorVersion: n.count > 1 ? n[1] : 0, patchVersion: 0)
     }
 
     private static func alert(_ title: String, _ text: String) {
