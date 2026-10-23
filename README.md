@@ -55,8 +55,9 @@ Supports RAW files from Sony, Canon, Nikon, Fujifilm, Olympus, Panasonic, Pentax
 
 Download the latest build from **[Releases](https://github.com/araoijj/kadr/releases/latest)**.
 
-- Requires a Mac with **Apple Silicon** and **macOS 14 Sonoma** or later; on macOS 14 reject detection works (focus, blinks, faces, people, horizon), while the frame score and utility-shot detection need **macOS 15 Sequoia** or later, and the RAW highlight recovery switch appears on **macOS 26** or later.
-- Tested on **macOS 26 Tahoe** and **macOS 27** (Apple M2). macOS 14 and 15 are supported by the build but have not been tested yet — reports are welcome.
+- Requires a Mac with **Apple Silicon** and **macOS 15 Sequoia** or later; the RAW highlight recovery switch appears on **macOS 26** or later.
+- On **macOS 14 Sonoma**, use [1.4.10](https://github.com/araoijj/kadr/releases/tag/v1.4.10), the last version for it.
+- Tested on **macOS 26 Tahoe** and **macOS 27** (Apple M2). macOS 15 is supported by the build but has not been tested yet — reports are welcome.
 - On macOS 27, use **1.4.9 / 1.5.0 beta 10** or later: earlier versions quit right after launch there.
 - Unzip and move **Kadr** to *Applications*.
 - The app is not notarized by Apple. On first launch, right-click it → **Open** → **Open**, or run `xattr -dr com.apple.quarantine /Applications/Kadr.app`.
@@ -92,7 +93,7 @@ Download the latest build from **[Releases](https://github.com/araoijj/kadr/rele
 
 ## Build from source
 
-You need macOS 14+ and the Command Line Tools — Xcode is not required (with the Command Line Tools 27, `build.sh` builds against the macOS 26 SDK that comes with them):
+You need macOS 15+ and the Command Line Tools — Xcode is not required (with the Command Line Tools 27, `build.sh` builds against the macOS 26 SDK that comes with them):
 
 ```sh
 xcode-select --install   # if not installed yet

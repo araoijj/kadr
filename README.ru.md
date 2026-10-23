@@ -87,11 +87,11 @@
 
 ## Установка
 
-Готовое приложение — в [выпусках](https://github.com/araoijj/kadr/releases/latest): нужен Mac на Apple Silicon и macOS 14+ (на macOS 14 поиск брака работает: резкость, моргание, лица, люди, горизонт; оценка кадра и поиск служебных снимков — macOS 15+, переключатель «Восстановление светов» для RAW — macOS 26+). Проверено на macOS 26 Tahoe и macOS 27 (Apple M2); на macOS 14 и 15 приложение собирается, но ещё не проверялось — будем рады отзывам. На macOS 27 нужна версия 1.4.9 / 1.5.0 бета 10 или новее: старые там закрываются сразу после запуска. Распакуйте и перенесите «Кадр» в «Программы». Приложение не нотаризовано Apple, поэтому при первом запуске: правый клик → «Открыть» → «Открыть» (или `xattr -dr com.apple.quarantine /Applications/Kadr.app`).
+Готовое приложение — в [выпусках](https://github.com/araoijj/kadr/releases/latest): нужен Mac на Apple Silicon и macOS 15 Sequoia или новее (переключатель «Восстановление светов» для RAW — macOS 26+). Для macOS 14 Sonoma — версия [1.4.10](https://github.com/araoijj/kadr/releases/tag/v1.4.10), последняя для неё. Проверено на macOS 26 Tahoe и macOS 27 (Apple M2); на macOS 15 приложение собирается, но ещё не проверялось — будем рады отзывам. На macOS 27 нужна версия 1.4.9 / 1.5.0 бета 10 или новее: старые там закрываются сразу после запуска. Распакуйте и перенесите «Кадр» в «Программы». Приложение не нотаризовано Apple, поэтому при первом запуске: правый клик → «Открыть» → «Открыть» (или `xattr -dr com.apple.quarantine /Applications/Kadr.app`).
 
 ## Сборка
 
-Нужны macOS 14+ и Command Line Tools (Xcode не требуется; с Command Line Tools 27 `build.sh` собирает против SDK macOS 26, который идёт в комплекте):
+Нужны macOS 15+ и Command Line Tools (Xcode не требуется; с Command Line Tools 27 `build.sh` собирает против SDK macOS 26, который идёт в комплекте):
 
 ```sh
 xcode-select --install   # если ещё не установлены

@@ -159,10 +159,6 @@ struct CullSummary: View {
                     }
                 }
             }
-            // Said outright, so an empty «Служебный кадр» or a flat score isn't taken for "nothing found".
-            if lib.aiOn, lib.aiEnabled.contains(.aesthetics), !AIModule.supported.contains(.aesthetics) {
-                Label(AIModule.unsupportedNote, systemImage: "info.circle").font(.caption).foregroundStyle(.secondary)
-            }
             Divider()
             VStack(alignment: .leading, spacing: 8) {
                 Button(tr("Перенести брак в «_Отклонённые»…")) { dismiss(); lib.moveRejected() }.disabled(d.rejected == 0)

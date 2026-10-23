@@ -14,7 +14,7 @@ fi
 # the old-SDK compatibility mode (older look, layout loops tolerated): stamp the real SDK version.
 LINK=()
 if [ -n "$SDKROOT" ]; then
-  LINK=(-Xlinker -platform_version -Xlinker macos -Xlinker 14.0 -Xlinker "$(xcrun --sdk "$SDKROOT" --show-sdk-version)")
+  LINK=(-Xlinker -platform_version -Xlinker macos -Xlinker 15.0 -Xlinker "$(xcrun --sdk "$SDKROOT" --show-sdk-version)")
 fi
 swift build -c release "${LINK[@]}"
 APP=build/Kadr.app
@@ -60,7 +60,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleShortVersionString</key><string>1.5.0-beta11</string>
   <key>CFBundleVersion</key><string>160</string>
-  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSMinimumSystemVersion</key><string>15.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>CFBundleDevelopmentRegion</key><string>ru</string>
 </dict></plist>

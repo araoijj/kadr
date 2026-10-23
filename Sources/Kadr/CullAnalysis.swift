@@ -53,7 +53,7 @@ struct CullData: Codable, Sendable, Hashable {
     var people: [CGRectCodable]?    // full-body boxes of people (for auto crop: never cut a figure)
     var modules: [String]?          // AI modules computed for this photo (AIModule raw values)
     var mesh: Bool?                 // eyes were measured by the MediaPipe face mesh (frames with faces are reanalyzed after the models are installed)
-    var vision: String?             // Vision API that computed it: "swift" (macOS 15+), "vn" (classic, macOS 14); nil — older versions
+    var vision: String?             // set once Vision really ran ("swift"); nil — older versions, which on macOS 14 ran none
 }
 
 extension CullData {
@@ -67,7 +67,8 @@ extension CullData {
             if print != nil { s.insert(.similarity) }
             if people != nil { s.insert(.people) }
         }
-        // Older versions on macOS 14 ran no Vision at all yet marked every module done. Such an entry has no
+        // Older versions on macOS 14 ran no Vision at all yet marked every module done; that index can come along
+        // after an upgrade. Such an entry has no
         // Vision output of any kind (a real run leaves at least an empty people list or a score), whatever modules
         // were on. Only the clipping was really measured. Also applied on macOS 15+, where such an entry is opened
         // too; a genuine old entry with nothing found and aesthetics / tags / similarity / people off gets recomputed once.
@@ -83,15 +84,8 @@ enum AIModule: String, CaseIterable, Codable, Identifiable, Sendable {
     case faces, subject, exposure, horizon, aesthetics, tags, similarity, people, identity
     var id: String { rawValue }
 
-    /// What this Mac can compute: the frame aesthetics score has no Vision request before macOS 15.
-    static let supported: Set<AIModule> = CullAnalyzer.modern ? Set(allCases) : Set(allCases).subtracting([.aesthetics])
-    /// Shown where an unsupported module would otherwise just be silently empty.
-    static var unsupportedNote: String { tr("Оценка кадра и поиск служебных снимков — только на macOS 15 и новее") }
-    /// Help for the score badges: without the aesthetics score every clean frame gets the same 75.
-    static var scoreHelp: String {
-        let base = tr("Техника и эстетика кадра, 0–100. Подсказка, а не приговор.")
-        return supported.contains(.aesthetics) ? base : base + " " + tr("На этой macOS эстетика не оценивается: у кадров без недостатков одинаковая оценка 75.")
-    }
+    /// Help for the score badges.
+    static var scoreHelp: String { tr("Техника и эстетика кадра, 0–100. Подсказка, а не приговор.") }
 
     var title: String {
         switch self {
@@ -152,13 +146,6 @@ func printDistance(_ a: Data, _ b: Data) -> Double? {
 }
 
 enum CullAnalyzer {
-    /// The Swift Vision API (macOS 15+); otherwise the classic VN* requests, which give the same data on macOS 14.
-    /// `-debug.legacyVision YES` forces the classic path, so it can be checked on a newer Mac.
-    static let modern: Bool = {
-        guard #available(macOS 15.0, *) else { return false }
-        return !UserDefaults.standard.bool(forKey: "debug.legacyVision")
-    }()
-
     /// ~25 ms per frame after the first run (macOS models load once, ~1 s).
     static func analyze(_ img: CGImage) async -> CullData {
         await analyze(img, modules: Set(AIModule.allCases), into: nil)
@@ -177,20 +164,16 @@ enum CullAnalyzer {
         if m.contains(.faces), had.contains(.identity) { m.insert(.identity) }
         // Subject sharpness and clipping on the face/subject depend on the faces: recompute them along.
         if m.contains(.faces) || m.contains(.subject) { m.formUnion(had.intersection([.subject, .exposure])) }
-        // Only what this macOS can compute is run and recorded: after an upgrade the rest is computed then.
-        m.formIntersection(AIModule.supported)
         await analyzeVision(img, m, &d)
-        d.vision = modern ? "swift" : "vn"
+        d.vision = "swift"
         d.modules = had.union(m).map(\.rawValue).sorted()
         return d
     }
 
     private static func analyzeVision(_ img: CGImage, _ m: Set<AIModule>, _ d: inout CullData) async {
-        // One classic handler per frame (macOS 14): it prepares the image once for all requests. Creating it is free.
-        let vn = VNImageRequestHandler(cgImage: img)
         if m.contains(.faces) {
             d.mesh = nil
-            d.faces = await faces(img, vn).map { f in
+            d.faces = await faces(img).map { f in
                 var face = FaceInfo(x: f.rect.minX, y: f.rect.minY, w: f.rect.width, h: f.rect.height, quality: f.quality, eyes: f.eyes)
                 face.px = Double(f.rect.width) * Double(img.width)
                 face.pitch = f.pitch
@@ -218,7 +201,7 @@ enum CullAnalyzer {
 
         if m.contains(.subject) {
             d.subject = nil
-            if !d.faces.contains(where: \.reliable), let r = await salientObject(img, vn) {
+            if !d.faces.contains(where: \.reliable), let r = await salientObject(img) {
                 d.subject = CGRectCodable(x: r.minX, y: r.minY, w: r.width, h: r.height)
             }
             // Sharpness of the "main" subject: the best of the large camera-facing faces, otherwise the saliency object, otherwise the frame center.
@@ -232,13 +215,13 @@ enum CullAnalyzer {
             }
         }
 
-        if m.contains(.tags), let t = await tags(img, vn) { d.tags = t }
-        if m.contains(.similarity), let p = await featurePrint(img, vn) { d.print = p }
+        if m.contains(.tags), let t = await tags(img) { d.tags = t }
+        if m.contains(.similarity), let p = await featurePrint(img) { d.print = p }
         if m.contains(.people) {
-            d.people = await people(img, vn).map { CGRectCodable(x: $0.minX, y: $0.minY, w: $0.width, h: $0.height) }
+            d.people = await people(img).map { CGRectCodable(x: $0.minX, y: $0.minY, w: $0.width, h: $0.height) }
         }
-        if m.contains(.horizon) { d.horizon = await horizon(img, vn) }
-        if m.contains(.aesthetics), #available(macOS 15.0, *), let a = try? await CalculateImageAestheticsScoresRequest().perform(on: img) {
+        if m.contains(.horizon) { d.horizon = await horizon(img) }
+        if m.contains(.aesthetics), let a = try? await CalculateImageAestheticsScoresRequest().perform(on: img) {
             d.aesthetics = Double(a.overallScore)
             d.utility = a.isUtility
         }
@@ -250,7 +233,7 @@ enum CullAnalyzer {
         }
     }
 
-    // MARK: Vision requests: the Swift API on macOS 15+, the classic VN* one on 14. Boxes are top-down frame fractions.
+    // MARK: Vision requests. Boxes are top-down frame fractions.
 
     /// Vision measures from the bottom-left corner; convert to top-to-bottom.
     private static func topDown(_ r: CGRect) -> CGRect { CGRect(x: r.minX, y: 1 - r.maxY, width: r.width, height: r.height) }
@@ -268,98 +251,49 @@ enum CullAnalyzer {
         return r.isEmpty ? nil : r.reduce(0, +) / Double(r.count)
     }
 
-    private static func faces(_ img: CGImage, _ vn: VNImageRequestHandler) async -> [RawFace] {
-        if modern, #available(macOS 15.0, *) {
-            let marks = (try? await DetectFaceLandmarksRequest().perform(on: img)) ?? []
-            let quality = (try? await DetectFaceCaptureQualityRequest().perform(on: img)) ?? []
-            return marks.map { f in
-                let r = topDown(f.boundingBox.cgRect)
-                // Quality comes from the second request, matched by the nearest box center.
-                let q = quality.min { a, b in
-                    dist(topDown(a.boundingBox.cgRect), r) < dist(topDown(b.boundingBox.cgRect), r)
-                }.flatMap { $0.captureQuality.map { Double($0.score) } }
-                let eyes = [f.landmarks?.leftEye, f.landmarks?.rightEye].compactMap { $0?.points.map(\.cgPoint) }
-                return RawFace(rect: r, quality: q, eyes: eyeOpenness(eyes), pitch: f.pitch.converted(to: .degrees).value)
-            }
-        }
-        // Faces are found once (revision 3 also gives the head pitch) and handed to the landmarks and quality requests.
-        let rects = VNDetectFaceRectanglesRequest()
-        guard (try? vn.perform([rects])) != nil, let found = rects.results, !found.isEmpty else { return [] }
-        let marks = VNDetectFaceLandmarksRequest(), quality = VNDetectFaceCaptureQualityRequest()
-        marks.inputFaceObservations = found
-        quality.inputFaceObservations = found
-        // Landmarks failing keeps the found faces (without eyes), as the Swift path's own detection would.
-        let landmarks = (try? vn.perform([marks])) != nil ? marks.results ?? found : found
-        try? vn.perform([quality])
-        let qs = quality.results ?? []
-        return landmarks.map { f in
-            let r = topDown(f.boundingBox)
-            func nearest(_ o: [VNFaceObservation]) -> VNFaceObservation? {
-                o.min { a, b in dist(topDown(a.boundingBox), r) < dist(topDown(b.boundingBox), r) }
-            }
-            let q = nearest(qs)?.faceCaptureQuality.map(Double.init)
-            let pitch = (f.pitch ?? nearest(found)?.pitch).map { $0.doubleValue * 180 / .pi }
-            let eyes = [f.landmarks?.leftEye, f.landmarks?.rightEye].compactMap { $0?.normalizedPoints }
-            return RawFace(rect: r, quality: q, eyes: eyeOpenness(eyes), pitch: pitch)
+    private static func faces(_ img: CGImage) async -> [RawFace] {
+        let marks = (try? await DetectFaceLandmarksRequest().perform(on: img)) ?? []
+        let quality = (try? await DetectFaceCaptureQualityRequest().perform(on: img)) ?? []
+        return marks.map { f in
+            let r = topDown(f.boundingBox.cgRect)
+            // Quality comes from the second request, matched by the nearest box center.
+            let q = quality.min { a, b in
+                dist(topDown(a.boundingBox.cgRect), r) < dist(topDown(b.boundingBox.cgRect), r)
+            }.flatMap { $0.captureQuality.map { Double($0.score) } }
+            let eyes = [f.landmarks?.leftEye, f.landmarks?.rightEye].compactMap { $0?.points.map(\.cgPoint) }
+            return RawFace(rect: r, quality: q, eyes: eyeOpenness(eyes), pitch: f.pitch.converted(to: .degrees).value)
         }
     }
 
-    private static func salientObject(_ img: CGImage, _ vn: VNImageRequestHandler) async -> CGRect? {
-        if modern, #available(macOS 15.0, *) {
-            guard let sal = try? await GenerateAttentionBasedSaliencyImageRequest().perform(on: img),
-                  let o = sal.salientObjects.first else { return nil }
-            let xs = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.x)
-            let ys = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.y)
-            return topDown(CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!))
-        }
-        let r = VNGenerateAttentionBasedSaliencyImageRequest()
-        try? vn.perform([r])
-        return r.results?.first?.salientObjects?.first.map { topDown($0.boundingBox) }
+    private static func salientObject(_ img: CGImage) async -> CGRect? {
+        guard let sal = try? await GenerateAttentionBasedSaliencyImageRequest().perform(on: img),
+              let o = sal.salientObjects.first else { return nil }
+        let xs = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.x)
+        let ys = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.y)
+        return topDown(CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!))
     }
 
     /// Only labels the classifier is confident in (90% precision).
-    private static func tags(_ img: CGImage, _ vn: VNImageRequestHandler) async -> [String]? {
-        if modern, #available(macOS 15.0, *) {
-            guard let cls = try? await ClassifyImageRequest().perform(on: img) else { return nil }
-            return Array(cls.filter { $0.hasMinimumRecall(0.01, forPrecision: 0.9) }
-                .sorted { $0.confidence > $1.confidence }.prefix(10).map(\.identifier))
-        }
-        let r = VNClassifyImageRequest()
-        guard (try? vn.perform([r])) != nil, let cls = r.results else { return nil }
+    private static func tags(_ img: CGImage) async -> [String]? {
+        guard let cls = try? await ClassifyImageRequest().perform(on: img) else { return nil }
         return Array(cls.filter { $0.hasMinimumRecall(0.01, forPrecision: 0.9) }
             .sorted { $0.confidence > $1.confidence }.prefix(10).map(\.identifier))
     }
 
-    private static func featurePrint(_ img: CGImage, _ vn: VNImageRequestHandler) async -> Data? {
-        if modern, #available(macOS 15.0, *) {
-            return try? await GenerateImageFeaturePrintRequest().perform(on: img).data
-        }
-        let r = VNGenerateImageFeaturePrintRequest()
-        try? vn.perform([r])
-        return r.results?.first?.data
+    private static func featurePrint(_ img: CGImage) async -> Data? {
+        return try? await GenerateImageFeaturePrintRequest().perform(on: img).data
     }
 
     /// Full-body boxes of people found with confidence.
-    private static func people(_ img: CGImage, _ vn: VNImageRequestHandler) async -> [CGRect] {
-        if modern, #available(macOS 15.0, *) {
-            var humans = DetectHumanRectanglesRequest()
-            humans.upperBodyOnly = false
-            return ((try? await humans.perform(on: img)) ?? []).filter { $0.confidence >= 0.5 }.map { topDown($0.boundingBox.cgRect) }
-        }
-        let r = VNDetectHumanRectanglesRequest()
-        r.upperBodyOnly = false
-        try? vn.perform([r])
-        return (r.results ?? []).filter { $0.confidence >= 0.5 }.map { topDown($0.boundingBox) }
+    private static func people(_ img: CGImage) async -> [CGRect] {
+        var humans = DetectHumanRectanglesRequest()
+        humans.upperBodyOnly = false
+        return ((try? await humans.perform(on: img)) ?? []).filter { $0.confidence >= 0.5 }.map { topDown($0.boundingBox.cgRect) }
     }
 
     /// Horizon tilt, degrees.
-    private static func horizon(_ img: CGImage, _ vn: VNImageRequestHandler) async -> Double? {
-        if modern, #available(macOS 15.0, *) {
-            return (try? await DetectHorizonRequest().perform(on: img)).map { $0.angle.converted(to: .degrees).value }
-        }
-        let r = VNDetectHorizonRequest()
-        try? vn.perform([r])
-        return r.results?.first.map { Double($0.angle) * 180 / .pi }
+    private static func horizon(_ img: CGImage) async -> Double? {
+        return (try? await DetectHorizonRequest().perform(on: img)).map { $0.angle.converted(to: .degrees).value }
     }
 
     /// Fraction of overexposed pixels within a frame region.

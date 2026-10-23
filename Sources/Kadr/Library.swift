@@ -1279,8 +1279,7 @@ final class Library {
     /// The photo needs AI analysis: it hasn't had one yet, or its face eyes were measured the old way before the MediaPipe face mesh was installed.
     /// Modules this photo still lacks: never computed, or (faces) measured before the face mesh or smiles existed.
     func missingAI(_ p: Photo, enabled: Set<AIModule>? = nil, mesh: Bool = FaceMesh.shared.installed) -> Set<AIModule> {
-        // What this macOS can't compute never counts as missing, or the analysis would rerun forever.
-        let enabled = (enabled ?? aiEnabled).intersection(AIModule.supported)
+        let enabled = enabled ?? aiEnabled
         guard let c = p.cull else { return enabled }
         var miss = enabled.subtracting(c.computed)
         if enabled.contains(.faces), mesh, !c.faces.isEmpty,
