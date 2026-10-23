@@ -5519,9 +5519,9 @@
   "Valoración y etiqueta para todas las seleccionadas",
   "Valutazione ed etichetta per tutte le selezionate"
  ],
- "Сначала завершите кадрирование: Enter или Esc": [
-  "Finish cropping first: Enter or Esc",
-  "Termina primero el recorte: Intro o Esc",
-  "Prima termina il ritaglio: Invio o Esc"
+ "Чтобы вернуть шаг, отмените кадрирование: Esc": [
+  "To redo, cancel the crop first: Esc",
+  "Para rehacer, cancela primero el recorte: Esc",
+  "Per ripristinare, annulla prima il ritaglio: Esc"
  ]
 }

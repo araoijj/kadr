@@ -140,8 +140,8 @@ extension Library {
 
     func redo() {
         // An edited crop isn't in the history yet: closing it here would record it and drop the steps ⇧⌘Z was
-        // meant to bring back. The editor stays; the crop has to be finished (Enter) or cancelled (Esc) first.
-        if cropPending { flash(canRedo ? tr("Сначала завершите кадрирование: Enter или Esc") : tr("Нечего возвращать")); return }
+        // meant to bring back (finishing it with Enter records it too). The editor stays; Esc drops the change.
+        if cropPending { flash(canRedo ? tr("Чтобы вернуть шаг, отмените кадрирование: Esc") : tr("Нечего возвращать")); return }
         closeCrop()
         guard canRedo else { flash(tr("Нечего возвращать")); return }
         let e = history[historyPos]
@@ -154,7 +154,7 @@ extension Library {
     /// Go to the state "after step n" (0 = original, before all history steps).
     func jumpHistory(to n: Int) {
         // Same as redo: recording the edited crop would cut off the later steps this click is going to.
-        if cropPending && n > historyPos { flash(tr("Сначала завершите кадрирование: Enter или Esc")); return }
+        if cropPending && n > historyPos { flash(tr("Чтобы вернуть шаг, отмените кадрирование: Esc")); return }
         closeCrop()
         let target = min(max(n, 0), history.count)
         var failed = 0

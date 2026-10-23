@@ -54,13 +54,12 @@ final class Denoiser: @unchecked Sendable {
         }
     }()
 
-    /// Results are 10–20 MB each and nothing else ever removes them. Kept: everything used in the last
-    /// 180 days, up to 20 GB in all; past either limit the least recently used go first. A result is only
-    /// a cache — a photo that loses it shows "not applied" and is denoised again (about a minute) — but the
-    /// ones the open folder's edits use are never removed. Retouch patches (Cache/Retouch) are the edits
+    /// Results are 10–20 MB each and nothing else ever removes them. Kept up to 20 GB in all; past it the
+    /// least recently used go first. No age limit: a result costs about a minute per photo, and a photo that
+    /// loses it is exported without the denoise until it is run again, so only size forces it. The ones the
+    /// open folder's edits use are never removed. Retouch patches (Cache/Retouch) are the edits
     /// themselves, not a cache, so they are not trimmed; Camera Match cubes live in memory only.
     static let cacheMaxBytes: Int64 = 20 << 30
-    static let cacheMaxAge: TimeInterval = 180 * 86400
 
     /// Run once per launch in the background. `keep`: the photos (and RAW settings) whose edits ask for denoise.
     static func trimCache(keeping keep: [(URL, RawDevelop)]) {
@@ -74,9 +73,8 @@ final class Denoiser: @unchecked Sendable {
             files.append((f, v?.contentModificationDate ?? .distantPast, Int64(v?.totalFileAllocatedSize ?? v?.fileSize ?? 0)))
         }
         var total = files.reduce(Int64(0)) { $0 + $1.size }
-        let old = Date().addingTimeInterval(-cacheMaxAge)
         for f in files.sorted(by: { $0.used < $1.used }) where !protected.contains(f.url.lastPathComponent) {
-            guard total > cacheMaxBytes || f.used < old else { break }
+            guard total > cacheMaxBytes else { break }
             if (try? fm.removeItem(at: f.url)) != nil { total -= f.size }
         }
     }
