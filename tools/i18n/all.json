@@ -1419,10 +1419,10 @@
   "{} de {}",
   "{} di {}"
  ],
- "Файлы копируются, карта не меняется. Размер каждой копии сверяется.": [
-  "Files are copied, the card is not changed. Every copy’s size is verified.",
-  "Los archivos se copian, la tarjeta no cambia. Se verifica el tamaño de cada copia.",
-  "I file vengono copiati, la scheda non cambia. Si verifica la dimensione di ogni copia."
+ "Снимки копируются вместе с XMP. Карта и файлы в папке не меняются, каждая копия сверяется с оригиналом.": [
+  "Photos are copied together with their XMP. The card and files in the folder are not changed; every copy is checked against the original.",
+  "Las fotos se copian junto con su XMP. La tarjeta y los archivos de la carpeta no cambian; cada copia se compara con el original.",
+  "Le foto vengono copiate insieme ai loro XMP. La scheda e i file nella cartella non cambiano; ogni copia viene confrontata con l’originale."
  ],
  "Закрыть": [
   "Close",
@@ -5923,5 +5923,35 @@
   "Exit Full Screen (F)",
   "Salir de pantalla completa (F)",
   "Esci dallo schermo intero (F)"
+ ],
+ "не удалось записать JPEG": [
+  "could not write the JPEG",
+  "no se pudo escribir el JPEG",
+  "impossibile scrivere il JPEG"
+ ],
+ "не удалось записать XMP": [
+  "could not write the XMP",
+  "no se pudo escribir el XMP",
+  "impossibile scrivere l’XMP"
+ ],
+ "Не все файлы удалось перенести или скопировать ({})": [
+  "Some files could not be moved or copied ({})",
+  "No se pudieron mover o copiar algunos archivos ({})",
+  "Non è stato possibile spostare o copiare alcuni file ({})"
+ ],
+ "уже были: {}": [
+  "already there: {}",
+  "ya estaban: {}",
+  "già presenti: {}"
+ ],
+ "Capture One не найден": [
+  "Capture One not found",
+  "No se encontró Capture One",
+  "Capture One non trovato"
+ ],
+ "Папка недоступна: диск не подключён или папка перемещена": [
+  "Folder unavailable: the drive isn't connected or the folder was moved",
+  "Carpeta no disponible: el disco no está conectado o la carpeta se ha movido",
+  "Cartella non disponibile: il disco non è collegato o la cartella è stata spostata"
  ]
 }

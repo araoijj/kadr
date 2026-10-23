@@ -181,18 +181,32 @@ struct ShootRow: View {
                 row
             }
         }
-        .task(id: url) {
+        // Again when its drive comes back.
+        .task(id: [url.path, available ? "on" : "off"]) {
             let u = url
             children = await Task.detached(priority: .utility) { FolderBrowser.subfolders(of: u) }.value
         }
     }
+
+    private var available: Bool { lib.browser.isAvailable(url) }
+    private static var unavailableHint: String { tr("Папка недоступна: диск не подключён или папка перемещена") }
 
     private var row: some View {
         let isOpen = lib.folder?.standardizedFileURL == url.standardizedFileURL
         let p = progress(isOpen)
         let fav = lib.browser.isFavorite(url)
         let whole = isOpen ? lib.includeSubfolders : (FolderState.load(url)?.recursive ?? false)
-        return Button { if !isOpen { lib.open(url) } } label: {
+        let available = isOpen || self.available
+        return Button {
+            if isOpen { return }
+            // The last check may be old: ask the disk now, on the click.
+            if available || FolderBrowser.reachable(url) {
+                if !available { lib.browser.refreshAvailability() }
+                lib.open(url)
+            } else {
+                lib.flash(Self.unavailableHint, seconds: 2)
+            }
+        } label: {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Image(systemName: isOpen ? "folder.fill" : "folder")
@@ -217,6 +231,9 @@ struct ShootRow: View {
                         .padding(.leading, 22)
                 }
                 HStack(spacing: 4) {
+                    if !available {
+                        Image(systemName: "externaldrive.badge.xmark").help(Self.unavailableHint)
+                    }
                     if whole {
                         Image(systemName: "square.stack.3d.down.right").help(tr("Собрана вместе с подпапками"))
                     }
@@ -227,17 +244,20 @@ struct ShootRow: View {
                 .padding(.leading, 22)
             }
             .padding(.vertical, 2)
+            // Kept with its progress until the drive is back, just greyed out.
+            .opacity(available ? 1 : 0.45)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .help(url.path + (whole ? "\n" + tr("Собрана вместе с подпапками") : ""))
+        .help(url.path + (whole ? "\n" + tr("Собрана вместе с подпапками") : "") + (available ? "" : "\n" + Self.unavailableHint))
         .contextMenu {
-            Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
-            Button(tr("Показать в проводнике")) { lib.browser.reveal(url) }
+            Button(tr("Показать в Finder")) { NSWorkspace.shared.activateFileViewerSelecting([url]) }.disabled(!available)
+            Button(tr("Показать в проводнике")) { lib.browser.reveal(url) }.disabled(!available)
             Button(fav ? tr("Убрать из избранного") : tr("Добавить в избранное")) { lib.browser.toggleFavorite(url) }
             Divider()
             Button(whole ? tr("Пересканировать только эту папку") : tr("Пересканировать с подпапками")) { lib.scan(url, recursive: !whole) }
+                .disabled(!available)
             Divider()
             Button(tr("Убрать из съёмок")) { lib.browser.removeShoot(url) }
         }

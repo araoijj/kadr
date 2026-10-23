@@ -47,7 +47,8 @@ final class FolderBrowser {
             UserDefaults.standard.set(favorites.map(\.path), forKey: favKey)
             UserDefaults.standard.set(shoots.map(\.path), forKey: shootsKey)
         }
-        shoots = shoots.filter { FileManager.default.fileExists(atPath: $0.path) }
+        // Shoots on a drive that isn't connected stay in the list (greyed out, see `isAvailable`):
+        // dropping them here would lose them for good with the next save of the list.
         refreshVolumes()
         // A memory card or drive was inserted; the list updates by itself.
         let nc = NSWorkspace.shared.notificationCenter
@@ -55,6 +56,10 @@ final class FolderBrowser {
             nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.refreshVolumes() }
             }
+        }
+        // A folder moved or deleted in Finder meanwhile.
+        NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshAvailability() }
         }
     }
 
@@ -78,6 +83,32 @@ final class FolderBrowser {
             for v in volumes where !before.contains(v) && CardImporter.isCameraCard(v) { onCardMounted?(v) }
         }
         scannedOnce = true
+        refreshAvailability()
+    }
+
+    /// Shoots found unreachable by the last check. Checked in the background: a stat on a dropped network
+    /// volume can hang for a long time, and the sidebar asks for every row on every redraw.
+    private var unavailable: Set<String> = []
+    private var availabilityGen = 0
+
+    /// The folder was reachable at the last check (an unchecked one counts as reachable).
+    func isAvailable(_ u: URL) -> Bool { !unavailable.contains(u.standardizedFileURL.path) }
+
+    /// Re-checks every shoot off the main thread: at launch, when a drive comes or goes, when the app is back in front.
+    func refreshAvailability() {
+        availabilityGen += 1
+        let gen = availabilityGen, paths = shoots.map(\.standardizedFileURL.path)
+        Task {
+            let off = await Task.detached(priority: .utility) {
+                Set(paths.filter { !Self.reachable(URL(fileURLWithPath: $0)) })
+            }.value
+            if gen == availabilityGen, off != unavailable { unavailable = off }
+        }
+    }
+
+    nonisolated static func reachable(_ u: URL) -> Bool {
+        var isDir: ObjCBool = false
+        return FileManager.default.fileExists(atPath: u.path, isDirectory: &isDir) && isDir.boolValue
     }
 
     func isShoot(_ u: URL) -> Bool { shoots.contains { $0.standardizedFileURL == u.standardizedFileURL } }

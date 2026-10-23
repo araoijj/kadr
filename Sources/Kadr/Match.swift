@@ -14,7 +14,7 @@ extension Library {
         let before = snapshot(others.map(\.id))
         var n = 0
         for o in others {
-            guard let i = photos.firstIndex(where: { $0.id == o.id }) else { continue }
+            guard let i = index[o.id] else { continue }
             var a = photos[i].adj
             a.wbShift = ((refK - ImageStore.shared.asShotK(o.url)) / 10).rounded() * 10
             a.tint = ref.adj.tint

@@ -255,9 +255,10 @@ extension Library {
         guard confirm(tr("Отклонить \(list.count) кадров с признаками брака?"),
                       tr("Оставленные вами (с оценкой) не трогаются. Отменить — ⌘Z.")) else { return }
         let before = snapshot(list.map(\.id))
-        for p in list { if let i = photos.firstIndex(where: { $0.id == p.id }) { photos[i].rejected = true; writeSidecar(i) } }
+        var failed = 0
+        for p in list { if let i = index[p.id] { photos[i].rejected = true; if !writeSidecar(i) { failed += 1 } } }
         record(tr("Брак отклонён: \(list.count)"), before: before)
-        flash(tr("Отклонено: \(list.count)"))
+        flashWritten(tr("Отклонено: \(list.count)"), failed: failed)
     }
 
     /// In each series keep the best (★) and reject the rest. Frames you have already rated are left alone.
@@ -270,15 +271,16 @@ extension Library {
         guard confirm(tr("Оставить лучший кадр в каждой из \(series.count) серий и отклонить остальные (\(rejectCount))?"),
                       tr("Кадры, которым вы уже поставили оценку, не трогаются. Отменить — ⌘Z.")) else { return }
         let before = snapshot(ids)
+        var failed = 0
         for (_, s) in series {
             for p in s {
-                guard let i = photos.firstIndex(where: { $0.id == p.id }), photos[i].rating == 0 else { continue }
+                guard let i = index[p.id], photos[i].rating == 0 else { continue }
                 if p.isBestInSeries { photos[i].rating = 1; photos[i].rejected = false } else { photos[i].rejected = true }
-                writeSidecar(i)
+                if !writeSidecar(i) { failed += 1 }
             }
         }
         record(tr("Лучшие в сериях: \(series.count), отклонено \(rejectCount)"), before: before)
-        flash(tr("Готово: \(series.count) серий"))
+        flashWritten(tr("Готово: \(series.count) серий"), failed: failed)
     }
 
     private func confirm(_ title: String, _ text: String) -> Bool {
@@ -290,9 +292,18 @@ extension Library {
         return a.runModal() == .alertFirstButtonReturn
     }
 
-    func writeSidecar(_ i: Int) {
+    /// Rating and rejection by default: the decisions here never change the label, so it is left as it is in the file.
+    @discardableResult
+    func writeSidecar(_ i: Int, _ fields: Sidecar.Fields = .rating) -> Bool {
         let p = photos[i]
-        try? Sidecar.write(.init(rating: p.rating, rejected: p.rejected, label: p.label), for: p.url)
+        let v = Sidecar.Values(rating: p.rating, rejected: p.rejected, label: p.label, otherLabel: p.otherLabel)
+        return (try? Sidecar.write(v, fields, for: p.url)) != nil
+    }
+
+    /// A bulk decision's toast. If some XMP files could not be written (read-only disk), it says so:
+    /// otherwise the decisions look saved and are gone after reopening the folder.
+    func flashWritten(_ text: String, failed: Int) {
+        if failed == 0 { flash(text) } else { flash(text + " · " + tr("Не удалось записать XMP: \(failed) шт."), seconds: 4) }
     }
 }
 

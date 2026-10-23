@@ -59,8 +59,13 @@ struct ContentView: View {
                 let u = URL(fileURLWithPath: CommandLine.arguments[1])
                 if FileManager.default.fileExists(atPath: u.path) { lib.scan(u) }
             }
-            if lib.folder == nil, Prefs.reopenLastFolder, let last = lib.browser.shoots.first {
-                lib.open(last)
+            if lib.folder == nil, Prefs.reopenLastFolder, !lib.browser.shoots.isEmpty {
+                // Looked for off the main thread: a stat on a dropped network volume can hang for long.
+                let shoots = lib.browser.shoots
+                Task {
+                    let last = await Task.detached(priority: .userInitiated) { shoots.first(where: FolderBrowser.reachable) }.value
+                    if lib.folder == nil, let last { lib.open(last) }
+                }
             }
             // onAppear can come again (window restored); one monitor is enough.
             guard monitor == nil else { return }

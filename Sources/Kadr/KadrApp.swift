@@ -11,10 +11,10 @@ struct KadrApp: App {
         // stays on and looks like an empty search field under the toolbar).
         NSWindow.allowsAutomaticWindowTabbing = false
         NSApplication.shared.activate(ignoringOtherApps: true)
-        // On quit: unsaved (debounced) edits and where you stopped in the folder.
+        // On quit: the index, history and edits still waiting to be written, and where you stopped in the folder.
         let lib = library
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { lib.flushEdits(); lib.saveFolderState() }
+            MainActor.assumeIsolated { lib.flushStores(); lib.saveFolderState() }
         }
         // Bundled face mesh: loaded in the background right at launch.
         Task.detached(priority: .utility) { FaceMesh.shared.installBundledIfNeeded() }

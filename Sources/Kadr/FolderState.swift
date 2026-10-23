@@ -3,6 +3,7 @@ import Foundation
 /// Per-folder view state: the photo you stopped at, the filter and the mode (grid / loupe / Culling),
 /// restored when the folder is opened again. Kept in UserDefaults, at most 200 folders.
 struct FolderState: Codable {
+    /// The photo's path relative to the folder ("day2/IMG_1.CR3" in a recursive shoot); just the name in older states.
     var current: String?
     var filter: String?
     var mode: String?          // "grid", "loupe", "cull"
@@ -64,7 +65,8 @@ extension PhotoFilter {
 
     init?(code: String) {
         let p = code.split(separator: ":", maxSplits: 1).map(String.init)
-        switch p[0] {
+        guard let kind = p.first else { return nil }   // "" splits into nothing
+        switch kind {
         case "all": self = .all
         case "unrated": self = .unrated
         case "picked": self = .picked
@@ -87,7 +89,7 @@ extension Library {
         guard let folder else { return }
         let mode = culling ? "cull" : loupe ? "loupe" : "grid"
         guard !photos.isEmpty else { return }
-        var s = FolderState(current: current?.url.lastPathComponent, filter: filter.code, mode: mode)
+        var s = FolderState(current: current.map { Self.relativePath($0.url, in: folder) }, filter: filter.code, mode: mode)
         s.recursive = includeSubfolders
         if loading {
             // Still reading the folder: keep the counts from last time instead of partial ones.
@@ -109,9 +111,17 @@ extension Library {
         case "loupe": loupe = true
         default: break
         }
-        if let name = s.current, let p = visible.first(where: { $0.url.lastPathComponent == name }) ?? photos.first(where: { $0.url.lastPathComponent == name }) {
+        if let rel = s.current, let p = photos.first(where: { Self.relativePath($0.url, in: url) == rel })
+            ?? (rel.contains("/") ? nil : visible.first(where: { $0.url.lastPathComponent == rel }) ?? photos.first(where: { $0.url.lastPathComponent == rel })) {
             if !visible.contains(where: { $0.id == p.id }) { filter = .all }
             select(p)
         }
+    }
+
+    /// `file`'s path inside `folder`, so same-named photos in different subfolders stay apart.
+    nonisolated static func relativePath(_ file: URL, in folder: URL) -> String {
+        let f = file.standardizedFileURL.path, d = folder.standardizedFileURL.path
+        let prefix = d.hasSuffix("/") ? d : d + "/"
+        return f.hasPrefix(prefix) ? String(f.dropFirst(prefix.count)) : file.lastPathComponent
     }
 }

@@ -82,7 +82,7 @@ struct ImportSheet: View {
 
             Divider()
             HStack {
-                Text(tr("Файлы копируются, карта не меняется. Размер каждой копии сверяется."))
+                Text(tr("Снимки копируются вместе с XMP. Карта и файлы в папке не меняются, каждая копия сверяется с оригиналом."))
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 if imp.copying {

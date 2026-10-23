@@ -70,6 +70,7 @@ struct Photo: Identifiable, Equatable {
     var rating: Int = 0          // 0…5
     var rejected: Bool = false   // stored in XMP as Rating = -1
     var label: ColorLabel?
+    var otherLabel: String?      // an XMP label with no colour here (Orange…), kept so writes don't drop it
     var adj = Adjustments()      // edits (stored in .kadr/edits.json)
 
     var exif = ExifInfo()

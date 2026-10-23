@@ -317,6 +317,33 @@ enum EditStore {
         }
     }
 
+    /// Files moved to another folder (the rejects folder, a save with "move"): their entries go along, whole
+    /// and under the new name, so a photo brought back still has its edits.
+    static func move(_ pairs: [(from: URL, to: URL)]) {
+        let byDirs = Dictionary(grouping: pairs) { [$0.from.deletingLastPathComponent(), $0.to.deletingLastPathComponent()] }
+        for (dirs, list) in byDirs where dirs[0] != dirs[1] {
+            let src = file(in: dirs[0]), dst = file(in: dirs[1])
+            func raw(_ f: URL) -> [String: Any] {
+                (try? Data(contentsOf: f)).flatMap { (try? JSONSerialization.jsonObject(with: $0)) as? [String: Any] } ?? [:]
+            }
+            var from = raw(src), to = raw(dst)
+            var changed = false
+            for p in list {
+                guard let e = from.removeValue(forKey: p.from.lastPathComponent) else { continue }
+                to[p.to.lastPathComponent] = e
+                changed = true
+            }
+            guard changed else { continue }
+            try? FileManager.default.createDirectory(at: dst.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if let d = try? JSONSerialization.data(withJSONObject: to, options: [.prettyPrinted, .sortedKeys]) {
+                try? d.write(to: dst, options: .atomic)
+            }
+            if let d = try? JSONSerialization.data(withJSONObject: from, options: [.prettyPrinted, .sortedKeys]) {
+                try? d.write(to: src, options: .atomic)
+            }
+        }
+    }
+
     /// Fields this version writes. Anything else in edits.json belongs to another version of Kadr
     /// (for example AI noise reduction or removed objects from the beta) and is kept as is.
     static let knownKeys: Set<String> = {

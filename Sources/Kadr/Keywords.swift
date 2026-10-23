@@ -23,11 +23,13 @@ extension Library {
         }
         let jobs = list.map { p in (p.url, Array(NSOrderedSet(array: (p.cull?.tags ?? []).map(TagNames.title))) as! [String]) }
         Task.detached(priority: .utility) {
-            var files = 0
-            for (url, words) in jobs where ((try? Sidecar.addKeywords(words, for: url)) ?? 0) > 0 { files += 1 }
-            let done = files
+            var files = 0, failed = 0
+            for (url, words) in jobs {
+                do { if try Sidecar.addKeywords(words, for: url) > 0 { files += 1 } } catch { failed += 1 }
+            }
+            let done = files, lost = failed
             await MainActor.run { [weak self] in
-                self?.flash(done == 0 ? tr("Ключевые слова уже записаны") : tr("Ключевые слова добавлены, кадров: \(done)"))
+                self?.flashWritten(done == 0 ? tr("Ключевые слова уже записаны") : tr("Ключевые слова добавлены, кадров: \(done)"), failed: lost)
             }
         }
     }

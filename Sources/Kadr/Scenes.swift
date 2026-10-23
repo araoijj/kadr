@@ -96,14 +96,15 @@ extension Library {
         let r = a.runModal()
         guard r != .alertThirdButtonReturn else { if let p = photo(winner) { select(p) }; return }
         let before = snapshot(all)
+        var failed = 0
         for id in all {
-            guard let i = photos.firstIndex(where: { $0.id == id }) else { continue }
+            guard let i = index[id] else { continue }
             if id == winner { if photos[i].rating == 0 { photos[i].rating = 1 }; photos[i].rejected = false }
             else if r == .alertFirstButtonReturn && photos[i].rating == 0 { photos[i].rejected = true }
-            writeSidecar(i)
+            if !writeSidecar(i) { failed += 1 }
         }
         record(tr("Турнир: победил \(winner.lastPathComponent)"), before: before)
         if let p = photo(winner) { select(p) }
-        flash(tr("Победитель: \(winner.lastPathComponent)"))
+        flashWritten(tr("Победитель: \(winner.lastPathComponent)"), failed: failed)
     }
 }

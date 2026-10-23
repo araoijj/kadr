@@ -133,7 +133,7 @@ final class Library {
     var analyzed = 0
     var toast: String?
 
-    private var index: [URL: Int] = [:]
+    private(set) var index: [URL: Int] = [:]
 
     // The "Culling" layer (Cull.swift, CullView.swift): AI verdicts on the frames, faces at 100%, progress of
     // the pass. A layer over the grid and the loupe, not a view of its own: the view stays as it is.
@@ -182,6 +182,8 @@ final class Library {
     /// and recomputing the queues on every photo slows down the UI).
     var aiOn: Bool { aiReady && cullHints && !aiRunning }
     private var aiTask: Task<Void, Never>?
+    /// Bumped on every folder open: a background task finishing for an older folder leaves the current one alone.
+    private var folderGen = 0
     var scenes: [SceneInfo] = []
     var tournamentAll: [URL] = []
     var tournamentQueue: [URL] = []
@@ -200,18 +202,27 @@ final class Library {
     var historyPos = 0                  // number of steps applied; the rest are undone and can be redone
     var historyPaused = false
     private var historySaveTask: Task<Void, Never>?
+    private var pendingHistory: (folder: URL, entries: [HistoryEntry], pos: Int)?
 
     func photo(_ id: URL) -> Photo? { index[id].map { photos[$0] } }
 
     func scheduleHistorySave() {
         historySaveTask?.cancel()
         guard let folder else { return }
-        let h = history, pos = historyPos
+        pendingHistory = (folder, history, historyPos)
         historySaveTask = Task {
             try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled else { return }
-            await Task.detached(priority: .utility) { HistoryStore.save(h, pos, for: folder) }.value
+            self.submitHistory()
         }
+    }
+
+    /// Hands the debounced history snapshot to the writer.
+    private func submitHistory() {
+        guard let p = pendingHistory else { return }
+        historySaveTask?.cancel()
+        pendingHistory = nil
+        StoreWriter.shared.save("history:" + p.folder.path) { HistoryStore.save(p.entries, p.pos, for: p.folder) }
     }
 
     func saveEditsSoon() { scheduleEditsSave() }
@@ -513,19 +524,45 @@ final class Library {
         saveEditsTask = Task {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
-            pendingEdits = nil
-            await Task.detached { for (dir, e) in byFolder { EditStore.save(e, in: dir) } }.value
+            self.submitEdits()
         }
     }
     private var pendingEdits: [URL: [String: Adjustments]]?
 
-    /// Writes edits that are still waiting for the debounce — before opening another folder and on quit,
-    /// otherwise a paste right before switching folders or quitting would be lost.
-    func flushEdits() {
+    private func submitEdits() {
         guard let p = pendingEdits else { return }
         saveEditsTask?.cancel()
         pendingEdits = nil
-        for (dir, e) in p { EditStore.save(e, in: dir) }
+        for (dir, e) in p { StoreWriter.shared.save("edits:" + dir.path) { EditStore.save(e, in: dir) } }
+    }
+
+    /// Writes edits that are still waiting for the debounce — before opening another folder and on quit,
+    /// otherwise a paste right before switching folders or quitting would be lost. Returns once they're on disk.
+    func flushEdits() {
+        submitEdits()
+        StoreWriter.shared.flush()
+    }
+
+    /// Moved files' edits follow them — through the store writer, after the snapshots already waiting, so a
+    /// save of the old folder's edits can't race the move and put the moved entries back.
+    private func moveEdits(_ pairs: [(from: URL, to: URL)]) {
+        guard !pairs.isEmpty else { return }
+        submitEdits()
+        StoreWriter.shared.save("edits-move:", barrier: true) { EditStore.move(pairs) }
+    }
+
+    /// Everything the open folder still has waiting — index, history, edits — handed to the writer now:
+    /// on a folder switch, where a debounced or every-50-photos save would otherwise be lost.
+    private func submitStores() {
+        if folder != nil, !photos.isEmpty { saveIndex() }
+        submitHistory()
+        submitEdits()
+    }
+
+    /// The same, waited for: on quit.
+    func flushStores() {
+        submitStores()
+        StoreWriter.shared.flush()
     }
     private var analysisTask: Task<Void, Never>?
 
@@ -673,6 +710,7 @@ final class Library {
         let drop = Set(explicit ? compareIDs.filter { compareReject.contains($0) } : compareIDs.filter { !keep.contains($0) })
         guard !keep.isEmpty || !drop.isEmpty else { return }
         let before = snapshot(compareIDs)
+        var failed = 0
         for id in compareIDs {
             guard let i = index[id] else { continue }
             if keep.contains(id) {
@@ -683,14 +721,14 @@ final class Library {
             } else {
                 continue
             }
-            writeSidecar(i)
+            if !writeSidecar(i) { failed += 1 }
         }
         let what = keep.count == 1 ? keep.first!.lastPathComponent : tr("\(keep.count) кадра")
         record(keep.isEmpty ? tr("Отклонено в сравнении: \(drop.count)") : tr("Оставлено: \(what)"), before: before)
         compareKeep = []
         compareReject = []
         stopCompare()
-        flash(keep.isEmpty ? tr("Отклонено: \(drop.count)") : tr("Оставлено: \(what), отклонено: \(drop.count)"))
+        flashWritten(keep.isEmpty ? tr("Отклонено: \(drop.count)") : tr("Оставлено: \(what), отклонено: \(drop.count)"), failed: failed)
     }
 
     var sortKey: SortKey = SortKey(rawValue: UserDefaults.standard.string(forKey: "sortKey") ?? "") ?? .date {
@@ -891,9 +929,12 @@ final class Library {
 
     /// Reads the folder and shows it. Doesn't touch the shoots list: that's `scan`.
     func open(_ url: URL, recursive: Bool? = nil) {
-        flushEdits()
         analysisTask?.cancel()
         aiTask?.cancel(); aiRunning = false; aiCount = 0
+        // The old folder's latest index (the analysis saves only every 50 photos), history and edits are
+        // queued for the disk; the cancelled tasks finish later and must not touch the new folder (folderGen).
+        submitStores()
+        folderGen += 1
         saveFolderState()
         folder = url
         var state = FolderState.load(url) ?? FolderState()
@@ -925,7 +966,10 @@ final class Library {
         // Each folder keeps its own edits.
         var edits: [URL: [String: Adjustments]] = [:]
         var indexes: [URL: [String: IndexEntry]] = [:]
-        for dir in Set(chosen.map { $0.deletingLastPathComponent() }) {
+        let dirs = Set(chosen.map { $0.deletingLastPathComponent() })
+        // Only a write still pending for these very folders (the same folder again, a subfolder) is waited for.
+        StoreWriter.shared.flush(touching: Set(dirs.map(\.path)).union([url.path]))
+        for dir in dirs {
             edits[dir] = EditStore.load(dir)
             indexes[dir] = AnalysisIndex.load(dir)
         }
@@ -933,7 +977,7 @@ final class Library {
             let v = try? f.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
             let size = Int64(v?.fileSize ?? 0)
             let s = Sidecar.read(for: f)
-            var p = Photo(id: f, fileSize: size, rating: s.rating, rejected: s.rejected, label: s.label)
+            var p = Photo(id: f, fileSize: size, rating: s.rating, rejected: s.rejected, label: s.label, otherLabel: s.otherLabel)
             p.mtime = v?.contentModificationDate?.timeIntervalSince1970 ?? 0
             p.adj = edits[f.deletingLastPathComponent()]?[f.lastPathComponent] ?? .none
             // Already analyzed and the file hasn't changed: take it from the index instead of recomputing.
@@ -943,6 +987,8 @@ final class Library {
             return p
         }
         photos.sort { $0.url.path.localizedStandardCompare($1.url.path) == .orderedAscending }
+        // Rewritten only when something changed: entries of files that are gone count too.
+        indexDirty = indexes.values.reduce(0) { $0 + $1.count } != photos.filter(\.indexed).count
         reindex()
         focus(visible.first?.id)
         restoreFolderState(url)
@@ -955,10 +1001,20 @@ final class Library {
 
     /// Forget the index of the open folder (and its subfolders) and recompute it.
     func reanalyze() {
-        for dir in Set(photos.map { $0.url.deletingLastPathComponent() }) {
-            try? FileManager.default.removeItem(at: AnalysisIndex.file(for: dir))
+        guard let folder else { return }
+        saveFolderState()
+        let dirs = Set(photos.map { $0.url.deletingLastPathComponent() })
+        // Nothing of the old index may be written back over the deletion: it takes the index's place in the
+        // writer's queue, after any save already running, and open waits for it. The photos are dropped
+        // so the folder switch has no index to save.
+        analysisTask?.cancel(); aiTask?.cancel()
+        folderGen += 1
+        photos = []
+        reindex()
+        for dir in dirs {
+            StoreWriter.shared.save("index:" + dir.path) { try? FileManager.default.removeItem(at: AnalysisIndex.file(for: dir)) }
         }
-        reload()
+        open(folder)
     }
 
     /// Photos in the folder; with recursive, also in all subfolders except hidden ones and `_Отклонённые`.
@@ -991,7 +1047,13 @@ final class Library {
     private func startAnalysis() {
         analyzed = photos.filter(\.indexed).count
         let urls = photos.filter { !$0.indexed }.map(\.id)
-        guard !urls.isEmpty else { finishAnalysis(); return }
+        guard !urls.isEmpty else {
+            finishAnalysis()
+            // Indexed on an earlier visit: the "after indexing" auto start still applies.
+            if Prefs.aiAuto { startAI() }
+            return
+        }
+        let gen = folderGen
         analysisTask = Task { [weak self] in
             let store = ImageStore.shared
             let workers = min(max(1, Prefs.analysisThreads), 4)
@@ -1019,7 +1081,7 @@ final class Library {
                     let save = sinceSave >= 50
                     if save { sinceSave = 0 }
                     await MainActor.run {
-                        guard let self else { return }
+                        guard let self, self.folderGen == gen else { return }
                         for (u, exif, h, s) in b {
                             guard let i = self.index[u] else { continue }
                             self.photos[i].exif = exif
@@ -1027,6 +1089,7 @@ final class Library {
                             self.photos[i].sharpness = s
                             self.photos[i].indexed = true
                         }
+                        self.indexDirty = true
                         self.analyzed += b.count
                         if save { self.saveIndex() }
                     }
@@ -1040,10 +1103,12 @@ final class Library {
                 if !batch.isEmpty, !Task.isCancelled { await flush() }
             }
             await MainActor.run {
-                self?.saveIndex()
+                // Another folder (or a reload) since: open() already saved this one's index.
+                guard let self, self.folderGen == gen else { return }
+                self.saveIndex()
                 if !Task.isCancelled {
-                    self?.finishAnalysis()
-                    if Prefs.aiAuto { self?.startAI() }
+                    self.finishAnalysis()
+                    if Prefs.aiAuto { self.startAI() }
                 }
             }
         }
@@ -1081,6 +1146,7 @@ final class Library {
         let urls = jobs.map(\.0)
         guard !urls.isEmpty else { return }
         aiRunning = true; aiDone = 0; aiTotal = urls.count
+        let gen = folderGen
         aiTask = Task { [weak self] in
             let store = ImageStore.shared
             let workers = min(max(1, Prefs.analysisThreads), 4)
@@ -1103,12 +1169,13 @@ final class Library {
                     let save = sinceSave >= 50
                     if save { sinceSave = 0 }
                     await MainActor.run {
-                        guard let self else { return }
+                        guard let self, self.folderGen == gen else { return }
                         for (u, cull) in b {
                             guard let i = self.index[u], let cull else { continue }
                             if self.photos[i].cull == nil { self.aiCount += 1 }
                             self.photos[i].cull = cull
                         }
+                        self.indexDirty = true
                         self.aiDone += b.count
                         if save { self.saveIndex() }
                     }
@@ -1122,7 +1189,8 @@ final class Library {
                 if !batch.isEmpty, !Task.isCancelled { await flush() }
             }
             await MainActor.run {
-                guard let self else { return }
+                // After a folder switch aiRunning belongs to the new folder's analysis, if any.
+                guard let self, self.folderGen == gen else { return }
                 self.saveIndex()
                 self.aiRunning = false
                 self.finishAnalysis()   // best in series and medians, now taking faces and eyes into account
@@ -1137,13 +1205,17 @@ final class Library {
     func aiModulesChanged() { if !photos.isEmpty, !aiRunning, analyzed >= photos.count { finishAnalysis() } }
 
     /// Per-folder index: only analyzed files; deleted ones drop out on their own.
+    /// Written only when it changed since the last save: a folder switch alone costs no SSD write.
+    private var indexDirty = false
     private func saveIndex() {
+        guard indexDirty else { return }
+        indexDirty = false
         var byDir: [URL: [String: IndexEntry]] = [:]
         for p in photos where p.indexed {
             byDir[p.url.deletingLastPathComponent(), default: [:]][p.name] =
                 IndexEntry(size: p.fileSize, mtime: p.mtime, exif: p.exif, hash: p.hash, sharpness: p.sharpness, cull: p.cull)
         }
-        Task.detached(priority: .utility) { for (dir, e) in byDir { AnalysisIndex.save(e, for: dir) } }
+        for (dir, e) in byDir { StoreWriter.shared.save("index:" + dir.path) { AnalysisIndex.save(e, for: dir) } }
     }
 
     private func finishAnalysis() {
@@ -1385,7 +1457,7 @@ final class Library {
     func toggleLabel(_ l: ColorLabel) {
         let clear = targets.allSatisfy { $0.label == l }
         let order = shownOrder
-        update(clear ? tr("Метка снята") : tr("Метка: \(l.title)")) { $0.label = clear ? nil : l }
+        update(clear ? tr("Метка снята") : tr("Метка: \(l.title)")) { $0.label = clear ? nil : l; $0.otherLabel = nil }
         flash((clear ? tr("Метка снята") : l.title) + countSuffix)
         if multiSelected { settleSelection(after: order) }
     }
@@ -1411,9 +1483,13 @@ final class Library {
         var failed = 0
         for t in targets {
             guard let i = index[t.id] else { continue }
+            let old = photos[i]
             change(&photos[i])
+            // Only the fields that changed: a rating write leaves the label (maybe one Kadr can't show) alone.
             let p = photos[i]
-            if (try? Sidecar.write(.init(rating: p.rating, rejected: p.rejected, label: p.label), for: p.url)) == nil { failed += 1 }
+            var fields: Sidecar.Fields = p.label != old.label || p.otherLabel != old.otherLabel ? .label : []
+            if p.rating != old.rating || p.rejected != old.rejected || fields.isEmpty { fields.insert(.rating) }
+            if !writeSidecar(i, fields) { failed += 1 }
         }
         if failed > 0 { flash(tr("Не удалось записать XMP: \(failed) шт.")) }
     }
@@ -1488,19 +1564,36 @@ final class Library {
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         }
 
+        var errors: [String] = []
         for p in list where !p.rejected {
-            if let i = index[p.id] { photos[i].rejected = true; writeSidecar(i) }
+            if let i = index[p.id] {
+                photos[i].rejected = true
+                if !writeSidecar(i) { errors.append("\(Sidecar.url(for: p.url).lastPathComponent): " + tr("не удалось записать XMP")) }
+            }
         }
+        flushEdits()
         let fm = FileManager.default
         var moved = 0
+        var movedPairs: [(from: URL, to: URL)] = []
+        var reserved: [URL: Set<String>] = [:]
         for p in list {
             let dest = p.url.deletingLastPathComponent().appendingPathComponent(Self.rejectedFolderName, isDirectory: true)
-            try? fm.createDirectory(at: dest, withIntermediateDirectories: true)
-            for f in Exporter.companions(of: p.url) where fm.fileExists(atPath: f.path) {
-                try? fm.moveItem(at: f, to: dest.appendingPathComponent(f.lastPathComponent))
+            do {
+                try fm.createDirectory(at: dest, withIntermediateDirectories: true)
+            } catch {
+                errors.append("\(p.name): \(error.localizedDescription)")
+                continue
             }
-            if !fm.fileExists(atPath: p.url.path) { moved += 1 }
+            // The photo and its companions are one set: one free name for all of them (a frame with the same
+            // name may already be there), so the XMP never ends up next to someone else's RAW.
+            let files = Exporter.existingCompanions(of: p.url)
+            let base = Exporter.freeBase(p.url.deletingPathExtension().lastPathComponent, exts: Exporter.setExtensions(files),
+                                         in: dest, reserved: &reserved[dest, default: []])
+            let (target, errs) = Exporter.transfer(files, of: p.url, base: base, to: dest, move: true)
+            errors += errs
+            if let target { moved += 1; movedPairs.append((p.url, target)) }
         }
+        moveEdits(movedPairs)
         photos.removeAll { !fm.fileExists(atPath: $0.url.path) }
         reindex()
         selection = selection.filter { index[$0] != nil }
@@ -1508,6 +1601,19 @@ final class Library {
         if filter == .rejected && visible.isEmpty { filter = .all }
         if currentID.map({ index[$0] == nil }) ?? true { focus(visible.first?.id) }
         flash(tr("Перенесено в «_Отклонённые»: \(moved)"))
+        showFileErrors(errors)
+    }
+
+    /// File errors of a move or save, so "Moved: 0" on a locked card comes with the reason.
+    func showFileErrors(_ errors: [String]) {
+        guard !errors.isEmpty else { return }
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = tr("Не все файлы удалось перенести или скопировать (\(errors.count))")
+        let shown = 8
+        alert.informativeText = errors.prefix(shown).joined(separator: "\n")
+            + (errors.count > shown ? "\n" + tr("…и ещё \(errors.count - shown)") : "")
+        alert.runModal()
     }
 
     // MARK: - Save to Folder
@@ -1546,27 +1652,37 @@ final class Library {
         let settings = export
         let items = exportItems(list)
         let shoot = folder?.lastPathComponent
+        // Moved originals take their edits along, so the ones still waiting for the debounce go to disk first.
+        if settings.format == .original && settings.move { flushEdits() }
         exportDone = 0
         exportTotal = items.count
         exportTask = Task { [weak self] in
-            var ok = 0
+            var ok = 0, skipped = 0
+            var errors: [String] = [], moved: [(from: URL, to: URL)] = []
+            let jobs = await Task.detached { Exporter.plan(items, to: target, settings, shootName: shoot) }.value
             // RAW → JPEG is heavy (~1–2 s per 50 MP photo), so run 3 in parallel.
             let workers = settings.format == .jpeg ? 3 : 1
-            await withTaskGroup(of: Bool.self) { group in
-                var it = items.makeIterator()
+            await withTaskGroup(of: Exporter.Outcome.self) { group in
+                var it = jobs.makeIterator()
                 func add() {
-                    guard let item = it.next() else { return }
-                    group.addTask { Exporter.export(item, to: target, settings, shootName: shoot) }
+                    guard let job = it.next() else { return }
+                    group.addTask { Exporter.export(job, to: target, settings) }
                 }
                 for _ in 0..<workers { add() }
                 while let r = await group.next() {
+                    if r.ok { ok += 1 }
+                    if r.skipped { skipped += 1 }
+                    errors += r.errors
+                    if let m = r.moved { moved.append(m) }
                     if Task.isCancelled { group.cancelAll(); break }
-                    if r { ok += 1 }
                     await MainActor.run { self?.exportDone += 1 }
                     add()
                 }
             }
-            await MainActor.run { self?.finishExport(ok: ok, target: target, moved: settings.format == .original && settings.move) }
+            await MainActor.run {
+                self?.finishExport(ok: ok, skipped: skipped, errors: errors, target: target, moved: moved,
+                                   removed: settings.format == .original && settings.move)
+            }
         }
     }
 
@@ -1576,16 +1692,18 @@ final class Library {
         list.enumerated().map { ExportItem(url: $1.url, adj: $1.adj, date: $1.exif.date, index: $0 + 1) }
     }
 
-    private func finishExport(ok: Int, target: URL, moved: Bool) {
+    private func finishExport(ok: Int, skipped: Int, errors: [String], target: URL, moved: [(from: URL, to: URL)], removed: Bool) {
         exportTotal = 0
         showExport = false
-        if moved {
+        moveEdits(moved)
+        if removed {
             let fm = FileManager.default
             photos.removeAll { !fm.fileExists(atPath: $0.url.path) }
             reindex()
             if currentID.map({ index[$0] == nil }) ?? true { focus(visible.first?.id) }
         }
-        flash(tr("Сохранено: \(ok) → \(target.lastPathComponent)"))
+        flash(tr("Сохранено: \(ok) → \(target.lastPathComponent)") + (skipped > 0 ? " · " + tr("уже были: \(skipped)") : ""))
+        showFileErrors(errors)
     }
 
     /// S key: save the current photo straight to the save folder (copy of the original + XMP).
@@ -1600,17 +1718,38 @@ final class Library {
         let items = exportItems(list)
         let shoot = folder?.lastPathComponent
         Task {
-            let ok = await Task.detached { items.filter { Exporter.export($0, to: target, s, shootName: shoot) }.count }.value
-            flash(ok > 0 ? tr("→ \(target.lastPathComponent): \(ok) шт.") : tr("Уже есть в \(target.lastPathComponent)"))
+            let out = await Task.detached {
+                Exporter.plan(items, to: target, s, shootName: shoot).map { Exporter.export($0, to: target, s) }
+            }.value
+            let ok = out.filter(\.ok).count, errors = out.flatMap(\.errors)
+            // Nothing saved because of errors is not "already there": the alert says what happened.
+            if ok > 0 || errors.isEmpty {
+                flash(ok > 0 ? tr("→ \(target.lastPathComponent): \(ok) шт.") : tr("Уже есть в \(target.lastPathComponent)"))
+            }
+            showFileErrors(errors)
         }
     }
 
     /// The selection, or, if only one is selected, everything shown in the filter.
     func openVisibleInCaptureOne() {
-        let urls = (multiSelected ? targets : visible).map(\.url)
-        guard !urls.isEmpty else { return }
-        let app = URL(fileURLWithPath: "/Applications/Capture One.app")
-        NSWorkspace.shared.open(urls, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+        openInCaptureOne((multiSelected ? targets : visible).map(\.url))
+    }
+
+    /// Capture One wherever it is installed and whatever the version is called ("Capture One 23.app",
+    /// ~/Applications, Express): found by bundle id, then among the apps that can open the photo.
+    private func openInCaptureOne(_ urls: [URL]) {
+        guard let first = urls.first else { return }
+        let ws = NSWorkspace.shared
+        let ids = ["com.captureone.captureone16", "com.captureone.captureone15", "com.captureone.captureone14",
+                   "com.captureone.captureone13", "com.phaseone.captureone12", "com.phaseone.captureone11",
+                   "com.captureone.captureoneexpress", "com.phaseone.captureoneexpress"]
+        let app = ids.lazy.compactMap { ws.urlForApplication(withBundleIdentifier: $0) }.first
+            ?? ws.urlsForApplications(toOpen: first).first { u in
+                let id = Bundle(url: u)?.bundleIdentifier?.lowercased() ?? ""
+                return id.contains("captureone") || u.lastPathComponent.hasPrefix("Capture One")
+            }
+        guard let app else { flash(tr("Capture One не найден")); return }
+        ws.open(urls, withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
     }
 
     func revealCurrent() {
@@ -1630,10 +1769,7 @@ final class Library {
     func contextCount(_ p: Photo) -> Int { isSelected(p) && multiSelected ? targets.count : 1 }
 
     func openTargetsInCaptureOne() {
-        let urls = targets.map(\.url)
-        guard !urls.isEmpty else { return }
-        NSWorkspace.shared.open(urls, withApplicationAt: URL(fileURLWithPath: "/Applications/Capture One.app"),
-                                configuration: NSWorkspace.OpenConfiguration())
+        openInCaptureOne(targets.map(\.url))
     }
 
     func openTargetsInDefaultApp() {
@@ -1652,5 +1788,60 @@ final class Library {
         export.scope = .selected
         export.format = format
         showExport = true
+    }
+}
+
+/// The one writer for the per-folder stores (index, history, edits): writes run one at a time in the
+/// order they were asked for, and a snapshot still waiting is replaced by a newer one for the same file,
+/// so an older snapshot can never land on top of a newer one and a burst of saves costs one write.
+/// Keys are "<kind>:<folder path>".
+final class StoreWriter: @unchecked Sendable {
+    static let shared = StoreWriter()
+    private let queue = DispatchQueue(label: "ru.kozlov.kadr.stores", qos: .utility)
+    private let lock = NSLock()
+    private var pending: [(key: String, barrier: Bool, write: @Sendable () -> Void)] = []
+    private var running: [String] = []
+
+    /// Queues the write of `key` (a store file); replaces a write of it that hasn't started yet.
+    /// A `barrier` (edits following moved files) is never jumped: a snapshot asked for after it is
+    /// queued behind it instead of replacing the one before it.
+    func save(_ key: String, barrier: Bool = false, _ write: @escaping @Sendable () -> Void) {
+        lock.lock()
+        let idle = pending.isEmpty
+        if !barrier, let i = pending.lastIndex(where: { $0.key == key }), !pending[(i + 1)...].contains(where: \.barrier) {
+            pending[i].write = write
+        } else {
+            pending.append((key, barrier, write))
+        }
+        lock.unlock()
+        // A drain already queued will pick this one up too.
+        if idle { queue.async { self.drain() } }
+    }
+
+    /// Waits until everything queued so far is on disk (quit, before removing a store file).
+    func flush() { queue.sync { drain() } }
+
+    /// Waits only if something queued or being written concerns one of `folders` (or is a barrier, whose
+    /// folders aren't known): opening another folder doesn't wait for the old one's big index to be encoded.
+    func flush(touching folders: Set<String>) {
+        lock.lock()
+        let busy = pending.contains { $0.barrier || touches($0.key, folders) } || running.contains { touches($0, folders) }
+        lock.unlock()
+        if busy { flush() }
+    }
+
+    private func touches(_ key: String, _ folders: Set<String>) -> Bool {
+        guard let i = key.firstIndex(of: ":") else { return true }
+        return folders.contains(String(key[key.index(after: i)...]))
+    }
+
+    private func drain() {
+        lock.lock()
+        let jobs = pending
+        pending = []
+        running = jobs.map { $0.barrier ? "barrier" : $0.key }   // no folder in it: touches every folder
+        lock.unlock()
+        for j in jobs { j.write() }
+        lock.lock(); running = []; lock.unlock()
     }
 }

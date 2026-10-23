@@ -9,9 +9,10 @@ struct PhotoState: Codable, Equatable {
     var rating: Int
     var rejected: Bool
     var label: ColorLabel?
+    var otherLabel: String?
 
     init(_ p: Photo) {
-        adj = p.adj; rating = p.rating; rejected = p.rejected; label = p.label
+        adj = p.adj; rating = p.rating; rejected = p.rejected; label = p.label; otherLabel = p.otherLabel
     }
 }
 
@@ -128,50 +129,62 @@ extension Library {
         }
         guard canUndo else { flash(tr("Нечего отменять")); return }
         let e = history[historyPos - 1]
-        apply(e, forward: false)
+        let failed = apply(e, forward: false)
         historyPos -= 1
         scheduleHistorySave()
-        flash(tr("Отменено: \(e.title)"))
+        flashWritten(tr("Отменено: \(e.title)"), failed: failed)
     }
 
     func redo() {
         closeCrop()
         guard canRedo else { flash(tr("Нечего возвращать")); return }
         let e = history[historyPos]
-        apply(e, forward: true)
+        let failed = apply(e, forward: true)
         historyPos += 1
         scheduleHistorySave()
-        flash(tr("Возвращено: \(e.title)"))
+        flashWritten(tr("Возвращено: \(e.title)"), failed: failed)
     }
 
     /// Go to the state "after step n" (0 = original, before all history steps).
     func jumpHistory(to n: Int) {
         closeCrop()
         let target = min(max(n, 0), history.count)
-        while historyPos > target { apply(history[historyPos - 1], forward: false); historyPos -= 1 }
-        while historyPos < target { apply(history[historyPos], forward: true); historyPos += 1 }
+        var failed = 0
+        while historyPos > target { failed += apply(history[historyPos - 1], forward: false); historyPos -= 1 }
+        while historyPos < target { failed += apply(history[historyPos], forward: true); historyPos += 1 }
         scheduleHistorySave()
+        if failed > 0 { flash(tr("Не удалось записать XMP: \(failed) шт."), seconds: 4) }
     }
 
-    private func apply(_ e: HistoryEntry, forward: Bool) {
+    /// Returns how many XMP files could not be written.
+    @discardableResult
+    private func apply(_ e: HistoryEntry, forward: Bool) -> Int {
         var touched: [URL] = []
+        var failed = 0
         for (path, c) in e.changes {
             let id = URL(fileURLWithPath: path)
-            guard let i = photos.firstIndex(where: { $0.id.path == path }) else { continue }
+            guard let i = index[id] ?? photos.firstIndex(where: { $0.id.path == path }) else { continue }
             let s = forward ? c.after : c.before
-            let metaChanged = photos[i].rating != s.rating || photos[i].rejected != s.rejected || photos[i].label != s.label
+            // The foreign label is restored only by steps that changed it: steps saved before it was
+            // tracked carry nil there and must not wipe an Orange label read from the file.
+            let otherStep = c.before.otherLabel != c.after.otherLabel
+            var fields: Sidecar.Fields = []
+            if photos[i].rating != s.rating || photos[i].rejected != s.rejected { fields.insert(.rating) }
+            if photos[i].label != s.label || (otherStep && photos[i].otherLabel != s.otherLabel) { fields.insert(.label) }
             photos[i].adj = s.adj
             photos[i].rating = s.rating
             photos[i].rejected = s.rejected
             photos[i].label = s.label
-            if metaChanged { try? Sidecar.write(.init(rating: s.rating, rejected: s.rejected, label: s.label), for: photos[i].url) }
+            if otherStep { photos[i].otherLabel = s.otherLabel }
+            if !fields.isEmpty && !writeSidecar(i, fields) { failed += 1 }
             touched.append(id)
         }
         saveEditsSoon()
         // Show what changed: if the current photo isn't affected, move to an affected one.
         if let cur = currentID, !touched.contains(where: { $0.path == cur.path }), let first = touched.first {
-            select(photos.first { $0.id.path == first.path } ?? photos[0])
+            select(photo(first) ?? photos.first { $0.id.path == first.path } ?? photos[0])
         }
+        return failed
     }
 
     // MARK: - Step labels

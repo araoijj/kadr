@@ -148,6 +148,18 @@ struct ExportItem: Sendable {
     let index: Int      // sequence number within the save, starting at 1
 }
 
+extension DateFormatter {
+    /// "2026-10-23" for file and folder names: fixed POSIX locale and Gregorian calendar,
+    /// so a Buddhist or Japanese system calendar doesn't produce "2569-10-23".
+    static let isoDay: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.calendar = Calendar(identifier: .gregorian)
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+}
+
 enum Exporter {
     /// Output folder: destination or destination/<shoot name>.
     static func targetFolder(_ s: ExportSettings, shoot: URL?) -> URL? {
@@ -159,9 +171,7 @@ enum Exporter {
     /// File name from the template, without extension.
     static func baseName(_ item: ExportItem, template: String, folder: String?) -> String {
         let original = item.url.deletingPathExtension().lastPathComponent
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        let date = item.date.map { f.string(from: $0) } ?? ""
+        let date = item.date.map { DateFormatter.isoDay.string(from: $0) } ?? ""
         var name = template
             .replacingOccurrences(of: "{name}", with: original)
             .replacingOccurrences(of: "{folder}", with: folder ?? "")
@@ -172,37 +182,165 @@ enum Exporter {
         return name.isEmpty ? original : name
     }
 
-    /// A single photo. Returns false if the file already exists or an error occurred.
-    static func export(_ item: ExportItem, to folder: URL, _ s: ExportSettings, shootName: String?) -> Bool {
-        let fm = FileManager.default
-        try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
-        let base = baseName(item, template: s.nameTemplate, folder: shootName)
-        switch s.format {
-        case .original:
-            // RAW, XMP and the paired JPEG get the same new name so Capture One picks up the XMP.
-            var ok = false
-            for f in companions(of: item.url) where fm.fileExists(atPath: f.path) {
-                let target = folder.appendingPathComponent(base).appendingPathExtension(f.pathExtension)
-                guard !fm.fileExists(atPath: target.path) else { continue }
-                let done = (try? (s.move ? fm.moveItem(at: f, to: target) : fm.copyItem(at: f, to: target))) != nil
-                if f == item.url { ok = done }
+    /// One photo of a save with its output name decided up front: `base` is nil when it is already there.
+    struct Job: Sendable {
+        let item: ExportItem
+        let base: String?
+    }
+
+    /// What became of one photo. `moved` is the new place of a moved original, so its edits can follow it.
+    struct Outcome: Sendable {
+        var ok = false
+        var skipped = false
+        var errors: [String] = []
+        var moved: (from: URL, to: URL)?
+    }
+
+    /// Output names for the whole save, decided one after another before anything is written: parallel
+    /// JPEG workers then never pick the same free name. An original travels with its XMP and twin as one
+    /// set — one name for all of them; a set whose photo is already there (same size) is skipped whole.
+    static func plan(_ items: [ExportItem], to folder: URL, _ s: ExportSettings, shootName: String?) -> [Job] {
+        var reserved = Set<String>()
+        return items.map { item in
+            let base = baseName(item, template: s.nameTemplate, folder: shootName)
+            switch s.format {
+            case .original:
+                let files = existingCompanions(of: item.url)
+                let same = folder.appendingPathComponent(base).appendingPathExtension(item.url.pathExtension)
+                if let have = size(same), have == size(item.url) {
+                    return Job(item: item, base: nil)
+                }
+                return Job(item: item, base: freeBase(base, exts: setExtensions(files), in: folder, reserved: &reserved))
+            case .jpeg:
+                return Job(item: item, base: freeBase(base, exts: ["jpg"], in: folder, reserved: &reserved))
             }
-            return ok
-        case .jpeg:
-            let target = uniqueURL(folder.appendingPathComponent(base).appendingPathExtension("jpg"))
-            return writeJPEG(item, to: target, s)
         }
     }
 
+    /// `base`, or `base-2`, `base-3`… — the first under which none of the set's files exists or is taken.
+    static func freeBase(_ base: String, exts: [String], in folder: URL, reserved: inout Set<String>) -> String {
+        let fm = FileManager.default
+        var name = base, n = 2
+        // The disk is asked for the exact name (a case-sensitive volume would miss IMG_0001.CR3 asked as
+        // img_0001.cr3); the names taken in this run are compared case-insensitively.
+        func names(_ b: String) -> [String] { exts.map { "\(b).\($0)" } }
+        while names(name).contains(where: { reserved.contains($0.lowercased()) || fm.fileExists(atPath: folder.appendingPathComponent($0).path) }) {
+            name = "\(base)-\(n)"
+            n += 1
+        }
+        reserved.formUnion(names(name).map { $0.lowercased() })
+        return name
+    }
+
+    /// What a set takes up under its new name: its files, and the XMP always — a stale IMG.xmp already
+    /// there would otherwise become the photo's when it comes without one (its XMP couldn't be written).
+    static func setExtensions(_ files: [URL]) -> [String] {
+        let exts = files.map(\.pathExtension)
+        return exts.contains { $0.lowercased() == "xmp" } ? exts : exts + ["xmp"]
+    }
+
+    /// Moves (or copies) a photo with its companions under one name, all or nothing: when one of them
+    /// fails, the ones already done go back, so a RAW never sits in the new place without its XMP.
+    /// Returns the photo's new place (nil if the set stayed) and the errors.
+    static func transfer(_ files: [URL], of photo: URL, base: String, to folder: URL, move: Bool) -> (URL?, [String]) {
+        let fm = FileManager.default, shared = move && sharesSidecar(photo)
+        var done: [(from: URL, to: URL, moved: Bool)] = [], errors: [String] = []
+        for f in files {
+            let target = folder.appendingPathComponent(base).appendingPathExtension(f.pathExtension)
+            let moves = move && !(shared && f == Sidecar.url(for: photo))
+            do {
+                if moves { try fm.moveItem(at: f, to: target) } else { try fm.copyItem(at: f, to: target) }
+                done.append((f, target, moves))
+            } catch {
+                errors.append("\(f.lastPathComponent): \(error.localizedDescription)")
+                for d in done.reversed() {
+                    do {
+                        if d.moved { try fm.moveItem(at: d.to, to: d.from) } else { try fm.removeItem(at: d.to) }
+                    } catch {
+                        errors.append("\(d.to.lastPathComponent): \(error.localizedDescription)")
+                    }
+                }
+                return (nil, errors)
+            }
+        }
+        return (folder.appendingPathComponent(base).appendingPathExtension(photo.pathExtension), errors)
+    }
+
+    private static func size(_ u: URL) -> Int? {
+        (try? FileManager.default.attributesOfItem(atPath: u.path))?[.size] as? Int
+    }
+
+    /// A single photo under the name `plan` gave it.
+    static func export(_ job: Job, to folder: URL, _ s: ExportSettings) -> Outcome {
+        var out = Outcome()
+        guard let base = job.base else { out.skipped = true; return out }
+        let item = job.item, fm = FileManager.default
+        do {
+            try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        } catch {
+            out.errors.append("\(folder.lastPathComponent): \(error.localizedDescription)")
+            return out
+        }
+        switch s.format {
+        case .original:
+            // RAW, XMP and the paired JPEG get the same new name so Capture One picks up the XMP.
+            let (target, errors) = transfer(existingCompanions(of: item.url), of: item.url, base: base, to: folder, move: s.move)
+            out.errors = errors
+            if let target {
+                out.ok = true
+                if s.move { out.moved = (item.url, target) }
+            }
+        case .jpeg:
+            // Written under a hidden temporary name, then renamed without replacing anything (RENAME_EXCL):
+            // a file that appeared meanwhile is never overwritten, the JPEG takes the next free name instead.
+            let tmp = folder.appendingPathComponent(".\(base)-\(UUID().uuidString).kadr-tmp")
+            guard writeJPEG(item, to: tmp, s) else {
+                try? fm.removeItem(at: tmp)
+                out.errors.append("\(item.url.lastPathComponent): " + tr("не удалось записать JPEG"))
+                return out
+            }
+            var target = folder.appendingPathComponent(base).appendingPathExtension("jpg"), n = 2
+            while renamex_np(tmp.path, target.path, UInt32(RENAME_EXCL)) != 0 {
+                guard errno == EEXIST else {
+                    let reason = String(cString: strerror(errno))
+                    try? fm.removeItem(at: tmp)
+                    out.errors.append("\(item.url.lastPathComponent): \(reason)")
+                    return out
+                }
+                target = folder.appendingPathComponent("\(base)-\(n)").appendingPathExtension("jpg")
+                n += 1
+            }
+            out.ok = true
+        }
+        return out
+    }
+
+    /// The files that travel with a photo: itself, its XMP and — only for a RAW — the camera's JPEG/HEIF twin.
+    /// A JPG must not drag along a HEIC of the same name: that one is a photo of its own in the grid.
     static func companions(of url: URL) -> [URL] {
         let base = url.deletingPathExtension()
         var list = [url, Sidecar.url(for: url)]
-        for ext in ["JPG", "JPEG", "HIF", "HEIC"] where ext.lowercased() != url.pathExtension.lowercased() {
-            list.append(base.appendingPathExtension(ext))
+        if ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) {
+            for ext in ["JPG", "JPEG", "HIF", "HEIC"] { list.append(base.appendingPathExtension(ext)) }
         }
         // On a case-insensitive volume JPG and jpg are the same file.
         var seen = Set<String>()
         return list.filter { seen.insert($0.path.lowercased()).inserted }
+    }
+
+    /// A JPG and a HEIC (PNG, TIFF…) of the same name are two photos with one IMG.xmp between them:
+    /// moving one of them must leave the XMP for the other, so it goes as a copy.
+    static func sharesSidecar(_ url: URL) -> Bool {
+        let ext = url.pathExtension.lowercased()
+        guard !ImageStore.rawExtensions.contains(ext) else { return false }
+        let base = url.deletingPathExtension(), fm = FileManager.default
+        return ImageStore.imageExtensions.subtracting([ext]).contains { e in
+            [e, e.uppercased()].contains { fm.fileExists(atPath: base.appendingPathExtension($0).path) }
+        }
+    }
+
+    static func existingCompanions(of url: URL) -> [URL] {
+        companions(of: url).filter { FileManager.default.fileExists(atPath: $0.path) }
     }
 
     private static let context = CIContext(options: [.workingFormat: CIFormat.RGBAh, .cacheIntermediates: false])
@@ -267,17 +405,5 @@ enum Exporter {
         let e3 = CGSize(width: e2.width * k, height: e2.height * k)
         img = img.transformed(by: CGAffineTransform(scaleX: CGFloat(plan.width) / e3.width, y: CGFloat(plan.height) / e3.height))
         return img.cropped(to: CGRect(x: 0, y: 0, width: plan.width, height: plan.height))
-    }
-
-    private static func uniqueURL(_ url: URL) -> URL {
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: url.path) else { return url }
-        let base = url.deletingPathExtension().lastPathComponent, ext = url.pathExtension
-        var n = 2
-        while true {
-            let u = url.deletingLastPathComponent().appendingPathComponent("\(base)-\(n)").appendingPathExtension(ext)
-            if !fm.fileExists(atPath: u.path) { return u }
-            n += 1
-        }
     }
 }
