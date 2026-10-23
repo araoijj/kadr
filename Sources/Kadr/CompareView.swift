@@ -282,7 +282,7 @@ struct ComparePane: View {
                 let size = max(480, (px / 200).rounded(.up) * 200)
                 if let c = Renderer.shared.cachedThumbnail(url, adj, size: size) { image = c; return }
                 if image == nil { image = await Task.detached(priority: .userInitiated) { ImageStore.shared.preview(url) }.value }
-                if let t = await Task.detached(priority: .userInitiated) { await Renderer.shared.thumbnail(url, adj, size: size) }.value { image = t }
+                if let t = await Task.detached(priority: .userInitiated, operation: { await Renderer.shared.thumbnail(url, adj, size: size) }).value { image = t }
                 return
             }
             let screen = NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560

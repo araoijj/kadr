@@ -40,7 +40,7 @@ struct CullOverlay: View {
                     .font(.caption.weight(.semibold).monospacedDigit())
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .overlayCapsule()
-                    .help(tr("Техника и эстетика кадра, 0–100. Подсказка, а не приговор."))
+                    .help(AIModule.scoreHelp)
             }
         }
     }
@@ -158,6 +158,10 @@ struct CullSummary: View {
                         Label("\(r.title): \(n)", systemImage: r.icon).font(.callout)
                     }
                 }
+            }
+            // Said outright, so an empty «Служебный кадр» or a flat score isn't taken for "nothing found".
+            if lib.aiOn, lib.aiEnabled.contains(.aesthetics), !AIModule.supported.contains(.aesthetics) {
+                Label(AIModule.unsupportedNote, systemImage: "info.circle").font(.caption).foregroundStyle(.secondary)
             }
             Divider()
             VStack(alignment: .leading, spacing: 8) {

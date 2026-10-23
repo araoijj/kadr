@@ -587,6 +587,14 @@ final class LUTStore: @unchecked Sendable {
 enum EditPipeline {
     static let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
 
+    // The kernels here (and in Denoiser) are Core Image Kernel Language, deprecated since 10.14 but still working.
+    // They stay for now: the Command Line Tools have no Metal compiler (`xcrun metal` is missing), so a .ci.metal
+    // kernel can't be built without Xcode, and no chain of built-in filters reproduces them exactly — the vignette's
+    // double smoothstep has no counterpart, and built-in matrix/compositing filters work on premultiplied colour,
+    // so the alpha-blind linear mixes here (with values above 1 and the 100–200% LUT amount) come out different
+    // (measured on a test frame: up to 0.4 of 16-bit range). With Xcode: port each one to a `[[stitchable]]`
+    // function in a .ci.metal file built with `-fcikernel` / linked with `-cikernel` into a metallib in the bundle,
+    // load it with CIColorKernel/CIKernel(functionName:fromMetalLibraryData:), and check the output against these.
     private static let vignetteKernel = CIKernel(source: """
         kernel vec4 vignette(sampler s, vec2 c, float radius, float amount) {
             vec4 p = sample(s, samplerCoord(s));

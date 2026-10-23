@@ -182,7 +182,7 @@ final class CardImporter {
             result = msg
             if copied + skipped > 0 { done(openFolder) }
             if eject, failed == 0, !Task.isCancelled, let volume {
-                try? await NSWorkspace.shared.unmountAndEjectDevice(at: volume)
+                try? NSWorkspace.shared.unmountAndEjectDevice(at: volume)
             }
         }
     }

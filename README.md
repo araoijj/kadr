@@ -55,7 +55,7 @@ Supports RAW files from Sony, Canon, Nikon, Fujifilm, Olympus, Panasonic, Pentax
 
 Download the latest build from **[Releases](https://github.com/araoijj/kadr/releases/latest)**.
 
-- Requires a Mac with **Apple Silicon** and **macOS 14 Sonoma** or later; reject detection needs **macOS 15 Sequoia** or later.
+- Requires a Mac with **Apple Silicon** and **macOS 14 Sonoma** or later; on macOS 14 reject detection works (focus, blinks, faces, people, horizon), while the frame score and utility-shot detection need **macOS 15 Sequoia** or later, and the RAW highlight recovery switch appears on **macOS 26** or later.
 - Tested on **macOS 26 Tahoe** and **macOS 27** (Apple M2). macOS 14 and 15 are supported by the build but have not been tested yet — reports are welcome.
 - On macOS 27, use **1.4.9 / 1.5.0 beta 10** or later: earlier versions quit right after launch there.
 - Unzip and move **Kadr** to *Applications*.

@@ -575,7 +575,8 @@ struct AISettings: View {
         Form {
             Section {
                 ForEach(AIModule.allCases) { m in
-                    Toggle(isOn: Binding(get: { lib.aiEnabled.contains(m) }, set: { on in
+                    let supported = AIModule.supported.contains(m)
+                    Toggle(isOn: Binding(get: { supported && lib.aiEnabled.contains(m) }, set: { on in
                         if on { lib.aiEnabled.insert(m) } else { lib.aiEnabled.remove(m) }
                         lib.aiModulesChanged()
                     })) {
@@ -586,13 +587,15 @@ struct AISettings: View {
                                 Text(tr("~\(m.cost) мс")).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                             }
                             Text(m.detail).font(.caption).foregroundStyle(.secondary)
+                            if !supported { Text(tr("Только на macOS 15 и новее")).font(.caption).foregroundStyle(.orange) }
                         }
                     }
+                    .disabled(!supported)
                 }
             } header: {
                 Text(tr("Что считать при AI-анализе"))
             } footer: {
-                let ms = lib.aiEnabled.reduce(0) { $0 + $1.cost }
+                let ms = lib.aiEnabled.intersection(AIModule.supported).reduce(0) { $0 + $1.cost }
                 Text(tr("Выбрано: ~\(ms) мс на кадр, на 1000 кадров ~\(max(1, ms * 1000 / max(1, Prefs.analysisThreads) / 1000)) с. Выключенное не считается, а уже посчитанное перестаёт показываться. Включили модуль — досчитается только он."))
                     .font(.caption).foregroundStyle(.secondary)
             }

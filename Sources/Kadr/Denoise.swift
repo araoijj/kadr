@@ -231,6 +231,7 @@ final class Denoiser: @unchecked Sendable {
         return kernel.apply(extent: e, arguments: [base, d, Float(k)]) ?? base
     }
 
+    // Core Image Kernel Language, deprecated: see the note on EditPipeline's kernels for why it isn't Metal yet.
     private static let kernel = CIColorKernel(source:
         "kernel vec4 dn(__sample b, __sample d, float k) { vec3 c = clamp(b.rgb, 0.0, 1.0); return vec4(b.rgb + (d.rgb - c) * k, b.a); }")!
 }
@@ -265,27 +266,29 @@ extension Library {
         for id in ready { setDenoiseIfNeeded(id) }
         guard !list.isEmpty else { return }
         denoiseRunning = true; denoiseDone = 0; denoiseTotal = list.count; denoiseFraction = 0
-        denoiseTask = Task.detached(priority: .userInitiated) { [weak self] in
+        // A weak let, not a [weak self] capture: that one is a var, and the main-actor hops below would share it.
+        weak let lib = self
+        denoiseTask = Task.detached(priority: .userInitiated) {
             var ok = 0
             for (u, raw) in list {
                 if Task.isCancelled { break }
                 do {
-                    try Denoiser.shared.run(u, raw: raw) { f in Task { @MainActor in self?.denoiseFraction = f } }
+                    try Denoiser.shared.run(u, raw: raw) { f in Task { @MainActor in lib?.denoiseFraction = f } }
                     ok += 1
-                    await MainActor.run { self?.setDenoiseIfNeeded(u) }
+                    await MainActor.run { lib?.setDenoiseIfNeeded(u) }
                 } catch is CancellationError {
                     break
                 } catch {
-                    await MainActor.run { self?.flash(tr("Не удалось убрать шум: \(u.lastPathComponent)")) }
+                    await MainActor.run { lib?.flash(tr("Не удалось убрать шум: \(u.lastPathComponent)")) }
                 }
-                await MainActor.run { self?.denoiseDone += 1 }
+                await MainActor.run { lib?.denoiseDone += 1 }
             }
             let stopped = Task.isCancelled, done = ok
             await MainActor.run {
-                guard let self else { return }
-                self.denoiseRunning = false
+                guard let lib else { return }
+                lib.denoiseRunning = false
                 // Counts only the photos that got a result; after "Stop" it says so, not just "N of M".
-                self.flash((stopped ? tr("Остановлено. ") : "") + tr("Шум убран: \(done) из \(self.denoiseTotal)"))
+                lib.flash((stopped ? tr("Остановлено. ") : "") + tr("Шум убран: \(done) из \(lib.denoiseTotal)"))
             }
         }
     }

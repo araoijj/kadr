@@ -33,8 +33,10 @@ struct ContentView: View {
                 if let t = lib.toast { Toast(text: t).padding(.bottom, toastInset) }
             }
             .inspector(isPresented: $lib.showInfo) {
+                // Max 400, not 420: in the 1000 pt minimum window with the sidebar at its 300 this still leaves
+                // the photos column 300 pt instead of 280, less for the views there to overflow.
                 Inspector()
-                    .inspectorColumnWidth(min: 260, ideal: 320, max: 420)
+                    .inspectorColumnWidth(min: 260, ideal: 320, max: 400)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -70,11 +72,15 @@ struct ContentView: View {
             // onAppear can come again (window restored); one monitor is enough.
             guard monitor == nil else { return }
             monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown, .scrollWheel]) { e in
+                // Local monitors run on the main thread, so the event never leaves it; NSEvent isn't Sendable,
+                // hence handed out through an unchecked local rather than as assumeIsolated's result.
+                nonisolated(unsafe) var out: NSEvent?
                 MainActor.assumeIsolated {
-                    if e.type == .leftMouseDown { return ClickModifiers.handle(e, lib) }
-                    if e.type == .scrollWheel { return ScrollZoom.handle(e, lib) }
-                    return KeyHandler.handle(e, lib) ? nil : e
+                    if e.type == .leftMouseDown { out = ClickModifiers.handle(e, lib) }
+                    else if e.type == .scrollWheel { out = ScrollZoom.handle(e, lib) }
+                    else { out = KeyHandler.handle(e, lib) ? nil : e }
                 }
+                return out
             }
         }
         .onDisappear { if let monitor { NSEvent.removeMonitor(monitor); self.monitor = nil } }

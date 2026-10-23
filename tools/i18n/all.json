@@ -5988,5 +5988,20 @@
   "Photos are copied together with their XMP. The card and the files in the folder are not changed. Each copy is checked against the original: its size and its contents at the start, middle and end of the file.",
   "Las fotos se copian junto con su XMP. La tarjeta y los archivos de la carpeta no se modifican. Cada copia se compara con el original: tamaño y contenido al principio, en el medio y al final del archivo.",
   "Le foto vengono copiate insieme al loro XMP. La scheda e i file nella cartella non vengono modificati. Ogni copia viene confrontata con l’originale: dimensione e contenuto all’inizio, a metà e alla fine del file."
+ ],
+ "Оценка кадра и поиск служебных снимков — только на macOS 15 и новее": [
+  "Frame score and utility-shot detection need macOS 15 or later",
+  "La puntuación de la foto y la detección de capturas utilitarias requieren macOS 15 o posterior",
+  "Il punteggio della foto e il rilevamento degli scatti di servizio richiedono macOS 15 o successivo"
+ ],
+ "На этой macOS эстетика не оценивается: у кадров без недостатков одинаковая оценка 75.": [
+  "This macOS doesn't score aesthetics: every photo without flaws gets the same score of 75.",
+  "Esta versión de macOS no evalúa la estética: todas las fotos sin defectos reciben la misma puntuación, 75.",
+  "Questa versione di macOS non valuta l’estetica: tutte le foto senza difetti ricevono lo stesso punteggio, 75."
+ ],
+ "Только на macOS 15 и новее": [
+  "macOS 15 or later only",
+  "Solo en macOS 15 o posterior",
+  "Solo su macOS 15 o successivo"
  ]
 }

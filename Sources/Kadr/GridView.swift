@@ -279,7 +279,7 @@ struct Thumbnail: View {
                         .font(.system(size: 10, weight: .semibold).monospacedDigit())
                         .padding(.horizontal, 6).padding(.vertical, 3)
                         .overlayCapsule()
-                        .help(tr("Техника и эстетика кадра, 0–100. Подсказка, а не приговор."))
+                        .help(AIModule.scoreHelp)
                 }
             }
             Spacer()

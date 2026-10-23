@@ -53,17 +53,27 @@ struct CullData: Codable, Sendable, Hashable {
     var people: [CGRectCodable]?    // full-body boxes of people (for auto crop: never cut a figure)
     var modules: [String]?          // AI modules computed for this photo (AIModule raw values)
     var mesh: Bool?                 // eyes were measured by the MediaPipe face mesh (frames with faces are reanalyzed after the models are installed)
+    var vision: String?             // Vision API that computed it: "swift" (macOS 15+), "vn" (classic, macOS 14); nil — older versions
 }
 
 extension CullData {
     /// Modules already computed. Index entries from before modules existed: everything of that time,
     /// plus tags / similarity / people if their data is there.
     var computed: Set<AIModule> {
-        if let modules { return Set(modules.compactMap(AIModule.init(rawValue:))) }
-        var s: Set<AIModule> = [.faces, .subject, .exposure, .horizon, .aesthetics]
-        if tags != nil { s.insert(.tags) }
-        if print != nil { s.insert(.similarity) }
-        if people != nil { s.insert(.people) }
+        var s: Set<AIModule>
+        if let modules { s = Set(modules.compactMap(AIModule.init(rawValue:))) } else {
+            s = [.faces, .subject, .exposure, .horizon, .aesthetics]
+            if tags != nil { s.insert(.tags) }
+            if print != nil { s.insert(.similarity) }
+            if people != nil { s.insert(.people) }
+        }
+        // Older versions on macOS 14 ran no Vision at all yet marked every module done. Such an entry has no
+        // Vision output of any kind (a real run leaves at least an empty people list or a score), whatever modules
+        // were on. Only the clipping was really measured. Also applied on macOS 15+, where such an entry is opened
+        // too; a genuine old entry with nothing found and aesthetics / tags / similarity / people off gets recomputed once.
+        let noVision = faces.isEmpty && subject == nil && horizon == nil && aesthetics == nil
+            && tags == nil && print == nil && people == nil
+        if vision == nil, noVision, !s.subtracting([.exposure]).isEmpty { s.formIntersection([.exposure]) }
         return s
     }
 }
@@ -72,6 +82,16 @@ extension CullData {
 enum AIModule: String, CaseIterable, Codable, Identifiable, Sendable {
     case faces, subject, exposure, horizon, aesthetics, tags, similarity, people, identity
     var id: String { rawValue }
+
+    /// What this Mac can compute: the frame aesthetics score has no Vision request before macOS 15.
+    static let supported: Set<AIModule> = CullAnalyzer.modern ? Set(allCases) : Set(allCases).subtracting([.aesthetics])
+    /// Shown where an unsupported module would otherwise just be silently empty.
+    static var unsupportedNote: String { tr("Оценка кадра и поиск служебных снимков — только на macOS 15 и новее") }
+    /// Help for the score badges: without the aesthetics score every clean frame gets the same 75.
+    static var scoreHelp: String {
+        let base = tr("Техника и эстетика кадра, 0–100. Подсказка, а не приговор.")
+        return supported.contains(.aesthetics) ? base : base + " " + tr("На этой macOS эстетика не оценивается: у кадров без недостатков одинаковая оценка 75.")
+    }
 
     var title: String {
         switch self {
@@ -132,8 +152,14 @@ func printDistance(_ a: Data, _ b: Data) -> Double? {
 }
 
 enum CullAnalyzer {
+    /// The Swift Vision API (macOS 15+); otherwise the classic VN* requests, which give the same data on macOS 14.
+    /// `-debug.legacyVision YES` forces the classic path, so it can be checked on a newer Mac.
+    static let modern: Bool = {
+        guard #available(macOS 15.0, *) else { return false }
+        return !UserDefaults.standard.bool(forKey: "debug.legacyVision")
+    }()
+
     /// ~25 ms per frame after the first run (macOS models load once, ~1 s).
-    /// On macOS 14 there is no recognition (center sharpness, overexposure and crushed shadows only).
     static func analyze(_ img: CGImage) async -> CullData {
         await analyze(img, modules: Set(AIModule.allCases), into: nil)
     }
@@ -143,51 +169,33 @@ enum CullAnalyzer {
     static func analyze(_ img: CGImage, modules: Set<AIModule>, into base: CullData?) async -> CullData {
         var d = base ?? CullData()
         if base == nil { d.modules = [] }   // a fresh record has nothing computed yet (not the legacy "everything")
+        // Taken before the run: setting `vision` turns off the legacy-entry check, which would bring back its false list.
+        let had = d.computed
         var m = modules
         if m.contains(.identity) { m.insert(.faces) }   // recognition aligns by the face mesh points
         // New faces drop the identity vectors: recompute them along, or the photo stays "computed" without people.
-        if m.contains(.faces), d.computed.contains(.identity) { m.insert(.identity) }
+        if m.contains(.faces), had.contains(.identity) { m.insert(.identity) }
         // Subject sharpness and clipping on the face/subject depend on the faces: recompute them along.
-        if m.contains(.faces) || m.contains(.subject) { m.formUnion(d.computed.intersection([.subject, .exposure])) }
-        if #available(macOS 15.0, *) {
-            await analyzeVision(img, m, &d)
-        } else {
-            if m.contains(.subject) { d.subjectSharpness = ImageStore.shared.sharpness(img) }
-            if m.contains(.exposure) { (d.clipHigh, d.clipLow, d.meanLuma, d.brightLuma) = clipping(img) }
-        }
-        d.modules = d.computed.union(m).map(\.rawValue).sorted()
+        if m.contains(.faces) || m.contains(.subject) { m.formUnion(had.intersection([.subject, .exposure])) }
+        // Only what this macOS can compute is run and recorded: after an upgrade the rest is computed then.
+        m.formIntersection(AIModule.supported)
+        await analyzeVision(img, m, &d)
+        d.vision = modern ? "swift" : "vn"
+        d.modules = had.union(m).map(\.rawValue).sorted()
         return d
     }
 
-    @available(macOS 15.0, *)
     private static func analyzeVision(_ img: CGImage, _ m: Set<AIModule>, _ d: inout CullData) async {
-        // Vision measures from the bottom-left corner; convert to top-to-bottom.
-        func topDown(_ r: CGRect) -> CGRect { CGRect(x: r.minX, y: 1 - r.maxY, width: r.width, height: r.height) }
-
+        // One classic handler per frame (macOS 14): it prepares the image once for all requests. Creating it is free.
+        let vn = VNImageRequestHandler(cgImage: img)
         if m.contains(.faces) {
-            d.faces = []
             d.mesh = nil
-            let marks = (try? await DetectFaceLandmarksRequest().perform(on: img)) ?? []
-            let quality = (try? await DetectFaceCaptureQualityRequest().perform(on: img)) ?? []
-            for f in marks {
-                let r = topDown(f.boundingBox.cgRect)
-                // Quality comes from the second request, matched by the nearest box center.
-                let q = quality.min { a, b in
-                    dist(topDown(a.boundingBox.cgRect), r) < dist(topDown(b.boundingBox.cgRect), r)
-                }.flatMap { $0.captureQuality.map { Double($0.score) } }
-                var eyes: [Double] = []
-                for e in [f.landmarks?.leftEye, f.landmarks?.rightEye].compactMap({ $0 }) {
-                    let pts = e.points.map(\.cgPoint)
-                    guard let xmin = pts.map(\.x).min(), let xmax = pts.map(\.x).max(),
-                          let ymin = pts.map(\.y).min(), let ymax = pts.map(\.y).max(), xmax > xmin else { continue }
-                    eyes.append(Double((ymax - ymin) / (xmax - xmin)))
-                }
-                var face = FaceInfo(x: r.minX, y: r.minY, w: r.width, h: r.height, quality: q,
-                                    eyes: eyes.isEmpty ? nil : eyes.reduce(0, +) / Double(eyes.count))
-                face.px = Double(r.width) * Double(img.width)
-                face.pitch = f.pitch.converted(to: .degrees).value
-                face.sharpness = ImageStore.shared.sharpness(img, region: r)
-                d.faces.append(face)
+            d.faces = await faces(img, vn).map { f in
+                var face = FaceInfo(x: f.rect.minX, y: f.rect.minY, w: f.rect.width, h: f.rect.height, quality: f.quality, eyes: f.eyes)
+                face.px = Double(f.rect.width) * Double(img.width)
+                face.pitch = f.pitch
+                face.sharpness = ImageStore.shared.sharpness(img, region: f.rect)
+                return face
             }
             d.faces.sort { $0.w * $0.h > $1.w * $1.h }   // largest faces first
             // Eyes via the MediaPipe face mesh (~12 ms per face): tells a blink apart from a squint or a downward gaze.
@@ -210,11 +218,7 @@ enum CullAnalyzer {
 
         if m.contains(.subject) {
             d.subject = nil
-            if !d.faces.contains(where: \.reliable), let sal = try? await GenerateAttentionBasedSaliencyImageRequest().perform(on: img),
-               let o = sal.salientObjects.first {
-                let xs = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.x)
-                let ys = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.y)
-                let r = topDown(CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!))
+            if !d.faces.contains(where: \.reliable), let r = await salientObject(img, vn) {
                 d.subject = CGRectCodable(x: r.minX, y: r.minY, w: r.width, h: r.height)
             }
             // Sharpness of the "main" subject: the best of the large camera-facing faces, otherwise the saliency object, otherwise the frame center.
@@ -228,26 +232,13 @@ enum CullAnalyzer {
             }
         }
 
-        if m.contains(.tags), let cls = try? await ClassifyImageRequest().perform(on: img) {
-            // Only labels the classifier is confident in (90% precision).
-            d.tags = Array(cls.filter { $0.hasMinimumRecall(0.01, forPrecision: 0.9) }
-                .sorted { $0.confidence > $1.confidence }.prefix(10).map(\.identifier))
-        }
-        if m.contains(.similarity), let fp = try? await GenerateImageFeaturePrintRequest().perform(on: img) {
-            d.print = fp.data
-        }
+        if m.contains(.tags), let t = await tags(img, vn) { d.tags = t }
+        if m.contains(.similarity), let p = await featurePrint(img, vn) { d.print = p }
         if m.contains(.people) {
-            var humans = DetectHumanRectanglesRequest()
-            humans.upperBodyOnly = false
-            d.people = ((try? await humans.perform(on: img)) ?? []).filter { $0.confidence >= 0.5 }.map { o in
-                let r = topDown(o.boundingBox.cgRect)
-                return CGRectCodable(x: r.minX, y: r.minY, w: r.width, h: r.height)
-            }
+            d.people = await people(img, vn).map { CGRectCodable(x: $0.minX, y: $0.minY, w: $0.width, h: $0.height) }
         }
-        if m.contains(.horizon) {
-            d.horizon = (try? await DetectHorizonRequest().perform(on: img)).map { $0.angle.converted(to: .degrees).value }
-        }
-        if m.contains(.aesthetics), let a = try? await CalculateImageAestheticsScoresRequest().perform(on: img) {
+        if m.contains(.horizon) { d.horizon = await horizon(img, vn) }
+        if m.contains(.aesthetics), #available(macOS 15.0, *), let a = try? await CalculateImageAestheticsScoresRequest().perform(on: img) {
             d.aesthetics = Double(a.overallScore)
             d.utility = a.isUtility
         }
@@ -257,6 +248,118 @@ enum CullAnalyzer {
             else if let s = d.subject { d.subjectClip = clipping(img, region: s.rect) }
             else { d.subjectClip = nil }
         }
+    }
+
+    // MARK: Vision requests: the Swift API on macOS 15+, the classic VN* one on 14. Boxes are top-down frame fractions.
+
+    /// Vision measures from the bottom-left corner; convert to top-to-bottom.
+    private static func topDown(_ r: CGRect) -> CGRect { CGRect(x: r.minX, y: 1 - r.maxY, width: r.width, height: r.height) }
+
+    private struct RawFace { var rect: CGRect, quality: Double?, eyes: Double?, pitch: Double? }
+
+    /// Eye openness from the landmark contours: height / width, averaged over both eyes.
+    private static func eyeOpenness(_ eyes: [[CGPoint]]) -> Double? {
+        var r: [Double] = []
+        for pts in eyes {
+            guard let xmin = pts.map(\.x).min(), let xmax = pts.map(\.x).max(),
+                  let ymin = pts.map(\.y).min(), let ymax = pts.map(\.y).max(), xmax > xmin else { continue }
+            r.append(Double((ymax - ymin) / (xmax - xmin)))
+        }
+        return r.isEmpty ? nil : r.reduce(0, +) / Double(r.count)
+    }
+
+    private static func faces(_ img: CGImage, _ vn: VNImageRequestHandler) async -> [RawFace] {
+        if modern, #available(macOS 15.0, *) {
+            let marks = (try? await DetectFaceLandmarksRequest().perform(on: img)) ?? []
+            let quality = (try? await DetectFaceCaptureQualityRequest().perform(on: img)) ?? []
+            return marks.map { f in
+                let r = topDown(f.boundingBox.cgRect)
+                // Quality comes from the second request, matched by the nearest box center.
+                let q = quality.min { a, b in
+                    dist(topDown(a.boundingBox.cgRect), r) < dist(topDown(b.boundingBox.cgRect), r)
+                }.flatMap { $0.captureQuality.map { Double($0.score) } }
+                let eyes = [f.landmarks?.leftEye, f.landmarks?.rightEye].compactMap { $0?.points.map(\.cgPoint) }
+                return RawFace(rect: r, quality: q, eyes: eyeOpenness(eyes), pitch: f.pitch.converted(to: .degrees).value)
+            }
+        }
+        // Faces are found once (revision 3 also gives the head pitch) and handed to the landmarks and quality requests.
+        let rects = VNDetectFaceRectanglesRequest()
+        guard (try? vn.perform([rects])) != nil, let found = rects.results, !found.isEmpty else { return [] }
+        let marks = VNDetectFaceLandmarksRequest(), quality = VNDetectFaceCaptureQualityRequest()
+        marks.inputFaceObservations = found
+        quality.inputFaceObservations = found
+        // Landmarks failing keeps the found faces (without eyes), as the Swift path's own detection would.
+        let landmarks = (try? vn.perform([marks])) != nil ? marks.results ?? found : found
+        try? vn.perform([quality])
+        let qs = quality.results ?? []
+        return landmarks.map { f in
+            let r = topDown(f.boundingBox)
+            func nearest(_ o: [VNFaceObservation]) -> VNFaceObservation? {
+                o.min { a, b in dist(topDown(a.boundingBox), r) < dist(topDown(b.boundingBox), r) }
+            }
+            let q = nearest(qs)?.faceCaptureQuality.map(Double.init)
+            let pitch = (f.pitch ?? nearest(found)?.pitch).map { $0.doubleValue * 180 / .pi }
+            let eyes = [f.landmarks?.leftEye, f.landmarks?.rightEye].compactMap { $0?.normalizedPoints }
+            return RawFace(rect: r, quality: q, eyes: eyeOpenness(eyes), pitch: pitch)
+        }
+    }
+
+    private static func salientObject(_ img: CGImage, _ vn: VNImageRequestHandler) async -> CGRect? {
+        if modern, #available(macOS 15.0, *) {
+            guard let sal = try? await GenerateAttentionBasedSaliencyImageRequest().perform(on: img),
+                  let o = sal.salientObjects.first else { return nil }
+            let xs = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.x)
+            let ys = [o.topLeft, o.topRight, o.bottomLeft, o.bottomRight].map(\.cgPoint.y)
+            return topDown(CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!))
+        }
+        let r = VNGenerateAttentionBasedSaliencyImageRequest()
+        try? vn.perform([r])
+        return r.results?.first?.salientObjects?.first.map { topDown($0.boundingBox) }
+    }
+
+    /// Only labels the classifier is confident in (90% precision).
+    private static func tags(_ img: CGImage, _ vn: VNImageRequestHandler) async -> [String]? {
+        if modern, #available(macOS 15.0, *) {
+            guard let cls = try? await ClassifyImageRequest().perform(on: img) else { return nil }
+            return Array(cls.filter { $0.hasMinimumRecall(0.01, forPrecision: 0.9) }
+                .sorted { $0.confidence > $1.confidence }.prefix(10).map(\.identifier))
+        }
+        let r = VNClassifyImageRequest()
+        guard (try? vn.perform([r])) != nil, let cls = r.results else { return nil }
+        return Array(cls.filter { $0.hasMinimumRecall(0.01, forPrecision: 0.9) }
+            .sorted { $0.confidence > $1.confidence }.prefix(10).map(\.identifier))
+    }
+
+    private static func featurePrint(_ img: CGImage, _ vn: VNImageRequestHandler) async -> Data? {
+        if modern, #available(macOS 15.0, *) {
+            return try? await GenerateImageFeaturePrintRequest().perform(on: img).data
+        }
+        let r = VNGenerateImageFeaturePrintRequest()
+        try? vn.perform([r])
+        return r.results?.first?.data
+    }
+
+    /// Full-body boxes of people found with confidence.
+    private static func people(_ img: CGImage, _ vn: VNImageRequestHandler) async -> [CGRect] {
+        if modern, #available(macOS 15.0, *) {
+            var humans = DetectHumanRectanglesRequest()
+            humans.upperBodyOnly = false
+            return ((try? await humans.perform(on: img)) ?? []).filter { $0.confidence >= 0.5 }.map { topDown($0.boundingBox.cgRect) }
+        }
+        let r = VNDetectHumanRectanglesRequest()
+        r.upperBodyOnly = false
+        try? vn.perform([r])
+        return (r.results ?? []).filter { $0.confidence >= 0.5 }.map { topDown($0.boundingBox) }
+    }
+
+    /// Horizon tilt, degrees.
+    private static func horizon(_ img: CGImage, _ vn: VNImageRequestHandler) async -> Double? {
+        if modern, #available(macOS 15.0, *) {
+            return (try? await DetectHorizonRequest().perform(on: img)).map { $0.angle.converted(to: .degrees).value }
+        }
+        let r = VNDetectHorizonRequest()
+        try? vn.perform([r])
+        return r.results?.first.map { Double($0.angle) * 180 / .pi }
     }
 
     /// Fraction of overexposed pixels within a frame region.
