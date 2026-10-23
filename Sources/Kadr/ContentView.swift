@@ -41,9 +41,9 @@ struct ContentView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .toolbar { toolbar }
-        .sheet(isPresented: $lib.showExport) { ExportSheet().environment(lib) }
+        .sheet(isPresented: $lib.showExport) { ExportSheet().environment(lib).screenMetrics() }
         .sheet(isPresented: $lib.showImport) { ImportSheet().environment(lib) }
-        .sheet(isPresented: $lib.showShortcuts) { ShortcutsView() }
+        .sheet(isPresented: $lib.showShortcuts) { ShortcutsView().screenMetrics() }
         .sheet(isPresented: $lib.showCullSummary) { CullSummary().environment(lib) }
         .navigationTitle(lib.folder?.lastPathComponent ?? I18n.appName)
         .dropDestination(for: URL.self) { urls, _ in
@@ -54,6 +54,7 @@ struct ContentView: View {
             return true
         }
         .background(WindowTweaks())
+        .screenMetrics()
         .onAppear {
             Updater.checkAtLaunch()
             // kadr /path/to/folder — open it right away
@@ -310,45 +311,16 @@ struct EmptyState: View {
     }
 }
 
-struct KeyHints: View {
-    private let hints: [(String, String)] = [
-        ("← →", tr("листать")), ("1–5", tr("звёзды")), ("0", tr("снять оценку")), ("X", tr("отклонить")),
-        ("6–9", tr("цвет")), (tr("Пробел"), tr("сетка / кадр")), ("Z", tr("зум 100%")), ("I", tr("инфо")),
-        ("S", tr("кадр в папку")), ("⌘S", tr("сохранить отобранные")),
-        (tr("⌘ / ⇧ + клик"), tr("выделить несколько")), ("⌘A", tr("выделить всё")),
-        ("E", tr("обработка")), ("C", tr("сравнить кадры")), ("⌘I", tr("импорт с карты")), ("\\", tr("до / после")),
-    ]
-
-    var body: some View {
-        Grid(alignment: .leading, horizontalSpacing: 28, verticalSpacing: 8) {
-            ForEach(0..<hints.count / 2, id: \.self) { r in
-                GridRow {
-                    hint(hints[r * 2])
-                    hint(hints[r * 2 + 1])
-                }
-            }
-        }
-    }
-
-    private func hint(_ h: (String, String)) -> some View {
-        HStack(spacing: 8) {
-            Text(h.0)
-                .font(.caption.monospaced().weight(.medium))
-                .padding(.horizontal, 6).padding(.vertical, 2)
-                .background(RoundedRectangle(cornerRadius: 4).fill(Theme.key))
-            Text(h.1).font(.caption).foregroundStyle(.secondary)
-        }
-    }
-}
-
 /// ⌘-click and Ctrl-click add a frame to the selection (Ctrl, as Windows users are used to).
 /// On a Mac, Ctrl-click usually opens a menu, so over the grid and the filmstrip we turn it into ⌘-click
 /// (the menu is on right-click there); everywhere else Ctrl-click keeps opening context menus.
 @MainActor
 enum ClickModifiers {
     static func handle(_ e: NSEvent, _ lib: Library) -> NSEvent? {
-        lib.clickModifiers = e.modifierFlags.intersection([.command, .shift, .control])
-        guard e.modifierFlags.contains(.control), ClickAnchor.contains(e) else { return e }
+        // Only clicks on photos count: a ⌘-click in Settings or the sidebar must not linger for the next cell.
+        let onPhotos = ClickAnchor.contains(e)
+        lib.clickModifiers = onPhotos ? e.modifierFlags.intersection([.command, .shift, .control]) : []
+        guard onPhotos, e.modifierFlags.contains(.control) else { return e }
         let flags = e.modifierFlags.subtracting(.control).union(.command)
         return NSEvent.mouseEvent(with: .leftMouseDown, location: e.locationInWindow, modifierFlags: flags,
                                   timestamp: e.timestamp, windowNumber: e.windowNumber, context: nil,

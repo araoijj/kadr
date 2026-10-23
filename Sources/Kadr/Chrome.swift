@@ -289,3 +289,267 @@ struct WindowTweaks: NSViewRepresentable {
         }
     }
 }
+
+// MARK: - Shared controls
+
+/// An active filter as a small capsule with a cross: the filter bar and the «Фильтры» panel.
+struct Chip: View {
+    let text: String
+    var icon: String?
+    let clear: () -> Void
+
+    init(_ text: String, icon: String? = nil, clear: @escaping () -> Void) {
+        self.text = text; self.icon = icon; self.clear = clear
+    }
+
+    var body: some View {
+        Button(action: clear) {
+            HStack(spacing: 4) {
+                if let icon { Image(systemName: icon) }
+                Text(text).lineLimit(1)
+                Image(systemName: "xmark").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+            }
+            .font(.caption)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Theme.selected, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .help(tr("Снять этот фильтр"))
+    }
+}
+
+/// The colour labels as a row of dots, one click each: a label to set (info, selection bar) or to filter by.
+/// The chosen one gets a white ring; `dim` fades the others (not this photo's, or no frame has it).
+struct LabelDots: View {
+    var size: CGFloat
+    var spacing: CGFloat
+    /// A 22 pt click target around each dot; off where a bar's width must not change.
+    var target = false
+    var on: (ColorLabel) -> Bool = { _ in false }
+    var dim: (ColorLabel) -> Bool = { _ in false }
+    var dimmed = 0.35
+    var help: (ColorLabel) -> String = { $0.title }
+    let action: (ColorLabel) -> Void
+
+    var body: some View {
+        HStack(spacing: spacing) {
+            ForEach(ColorLabel.allCases) { l in
+                let set = on(l)
+                Button { action(l) } label: {
+                    Circle().fill(l.color).frame(width: size, height: size)
+                        .overlay(Circle().strokeBorder(.white, lineWidth: set ? 2 : 0))
+                        .opacity(dim(l) ? dimmed : 1)
+                        .modifier(TargetIf(on: target))
+                }
+                .buttonStyle(.plain)
+                .help(help(l))
+                .accessibilityLabel(l.title)
+                .accessibilityAddTraits(set ? .isSelected : [])
+            }
+        }
+    }
+}
+
+/// Stars 1–5 to click. With a `rating`, filled up to it; without one (several photos at once) all are
+/// filled, brighter towards five. `caption` is the tooltip and the spoken name; without it, "n ★".
+struct RatingStars: View {
+    var rating: Int?
+    var font: Font
+    var spacing: CGFloat
+    var caption: ((Int) -> String)?
+    let set: (Int) -> Void
+
+    var body: some View {
+        HStack(spacing: spacing) {
+            ForEach(1...5, id: \.self) { n in
+                let lit = rating.map { n <= $0 }
+                Button { set(n) } label: {
+                    Image(systemName: lit == false ? "star" : "star.fill")
+                        .font(font)
+                        .foregroundStyle(lit == nil ? Theme.star.opacity(0.35 + Double(n) * 0.13) : lit! ? Theme.star : .secondary)
+                        .hitTarget()
+                }
+                .buttonStyle(.plain)
+                .help(caption?(n) ?? "")
+                .accessibilityLabel(caption.map { Text($0(n)) } ?? Text(verbatim: "\(n) ★"))   // no words to translate
+                .accessibilityAddTraits(lit == true ? .isSelected : [])
+            }
+        }
+    }
+}
+
+private struct TargetIf: ViewModifier {
+    let on: Bool
+    func body(content: Content) -> some View {
+        if on { content.hitTarget() } else { content }
+    }
+}
+
+/// The line above an edit slider: a mark, the name, the value and a reset that appears once the value is
+/// changed; double-clicking the name resets too (unless `plain`).
+struct SliderHeader<Mark: View>: View {
+    let title: String
+    let value: String
+    let changed: Bool
+    var resetHelp: String?
+    /// The toning rows: the value stays quiet when changed, and the name doesn't reset.
+    var plain = false
+    let reset: () -> Void
+    @ViewBuilder let mark: Mark
+
+    var body: some View {
+        HStack(spacing: 6) {
+            mark
+            Text(title)
+                .foregroundStyle(changed ? .primary : .secondary)
+                .onTapGesture(count: 2) { if !plain { reset() } }
+            Spacer()
+            Text(value)
+                .font(.callout.monospacedDigit().weight(changed && !plain ? .semibold : .regular))
+                .foregroundStyle(changed && !plain ? .primary : .secondary)
+            Button(action: reset) { Image(systemName: "arrow.uturn.backward.circle.fill") }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .opacity(changed ? 1 : 0)
+                .disabled(!changed)
+                .help(resetHelp ?? "")
+        }
+    }
+}
+
+extension SliderHeader where Mark == SliderIcon {
+    init(_ title: String, icon: String, value: String, changed: Bool, resetHelp: String? = tr("Сбросить"), reset: @escaping () -> Void) {
+        self.init(title: title, value: value, changed: changed, resetHelp: resetHelp, reset: reset) {
+            SliderIcon(name: icon, changed: changed)
+        }
+    }
+}
+
+/// A slider's symbol, in the accent once its value is changed.
+struct SliderIcon: View {
+    let name: String
+    let changed: Bool
+    var body: some View {
+        Image(systemName: name).frame(width: 18).foregroundStyle(changed ? Color.accentColor : .secondary)
+    }
+}
+
+/// A slider over a colour strip (temperature, tint, hue) instead of its own track.
+struct GradientSlider: View {
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let colors: [Color]
+    var height: CGFloat = 4
+    var opacity = 0.7
+
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)
+                .frame(height: height).clipShape(Capsule()).opacity(opacity).padding(.horizontal, 2)
+            Slider(value: $value, in: range).tint(.clear)
+        }
+    }
+}
+
+/// A picture made off the main thread for `key`: `placeholder` until the first one arrives. A new key keeps
+/// the old picture until its own is ready (a thumbnail re-rendered after an edit doesn't flash), and a
+/// failed load keeps it too, unless `keepOnFailure` is off (a face or preview of something else entirely).
+struct LoadedImage<Key: Equatable, Content: View, Placeholder: View>: View {
+    let key: Key
+    let load: () async -> CGImage?
+    var keepOnFailure = true
+    @ViewBuilder let content: (CGImage) -> Content
+    @ViewBuilder let placeholder: () -> Placeholder
+    @State private var image: CGImage?
+
+    var body: some View {
+        // A ZStack, not a Group: the task must stay on one view when the placeholder gives way to the picture.
+        ZStack {
+            if let image { content(image) } else { placeholder() }
+        }
+        .task(id: key) {
+            let img = await load()
+            if img != nil || !keepOnFailure, !Task.isCancelled { image = img }
+        }
+    }
+}
+
+// MARK: - Screen
+
+/// The screen a window is on. `NSScreen.main` is the screen of the key window (or the first one), so with
+/// two monitors it sized renders and sheets for whichever screen had focus, not the one showing the photos.
+struct ScreenMetrics: Equatable {
+    var side: CGFloat = 2560     // the longer side, in pixels
+    var height: CGFloat = 900    // the visible height, in points
+    /// What a frame is developed at to fill this screen; capped, a 6K display would gain little for the time.
+    var renderSide: CGFloat { min(side, 3200) }
+}
+
+extension ScreenMetrics {
+    init(_ s: NSScreen) {
+        self.init(side: max(s.frame.width, s.frame.height) * s.backingScaleFactor, height: s.visibleFrame.height)
+    }
+}
+
+private struct ScreenKey: EnvironmentKey { static let defaultValue = ScreenMetrics() }
+
+extension EnvironmentValues {
+    var screen: ScreenMetrics {
+        get { self[ScreenKey.self] }
+        set { self[ScreenKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// Gives the views below the metrics of the screen their window is on, kept up when it moves to another.
+    /// Until the probe reports (after the view is in a window), `start` or the key window's screen stands in:
+    /// a first render or a sheet's height mustn't go by the 2560 / 900 defaults.
+    func screenMetrics(start: NSScreen? = nil) -> some View {
+        modifier(ScreenReader(metrics: (start ?? NSScreen.main).map(ScreenMetrics.init) ?? ScreenMetrics()))
+    }
+}
+
+private struct ScreenReader: ViewModifier {
+    @State var metrics: ScreenMetrics
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.screen, metrics)
+            .background(ScreenProbe { m in if m != metrics { metrics = m } })
+    }
+}
+
+private struct ScreenProbe: NSViewRepresentable {
+    let changed: (ScreenMetrics) -> Void
+
+    func makeNSView(context: Context) -> ProbeView { ProbeView() }
+    func updateNSView(_ v: ProbeView, context: Context) { v.changed = changed; v.report() }
+
+    final class ProbeView: NSView {
+        var changed: ((ScreenMetrics) -> Void)?
+        // nonisolated(unsafe): deinit removes it; NotificationCenter's removeObserver is thread-safe.
+        nonisolated(unsafe) private var observer: NSObjectProtocol?
+
+        deinit { observer.map(NotificationCenter.default.removeObserver) }
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            observer.map(NotificationCenter.default.removeObserver)
+            observer = nil
+            guard let w = window else { return }
+            observer = NotificationCenter.default.addObserver(forName: NSWindow.didChangeScreenNotification, object: w, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.report() }
+            }
+            report()
+        }
+
+        func report() {
+            guard let s = window?.screen else { return }
+            let m = ScreenMetrics(s)
+            // Deferred: state must not change while SwiftUI is placing this view.
+            DispatchQueue.main.async { [weak self] in self?.changed?(m) }
+        }
+    }
+}

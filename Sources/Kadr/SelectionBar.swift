@@ -27,24 +27,13 @@ struct SelectionBar: View {
 
             // Glyphs keep their size; the 22 pt frames are the click targets (a 13 pt dot was hard to hit).
             HStack(spacing: 0) {
-                ForEach(1...5, id: \.self) { n in
-                    Button { lib.setRating(n) } label: { Image(systemName: "star.fill").font(.callout).hitTarget() }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Theme.star.opacity(0.35 + Double(n) * 0.13))
-                        .help(tr("\(n) ★ всем"))
-                        .accessibilityLabel(tr("\(n) ★ всем"))
-                }
+                RatingStars(font: .callout, spacing: 0, caption: { tr("\($0) ★ всем") }) { lib.setRating($0) }
                 Button { lib.setRating(0) } label: { Image(systemName: "star.slash").font(.callout).hitTarget() }
                     .buttonStyle(.plain).foregroundStyle(.secondary).help(tr("Снять оценку"))
                     .accessibilityLabel(tr("Снять оценку"))
             }
 
-            HStack(spacing: 0) {
-                ForEach(ColorLabel.allCases) { l in
-                    Button { lib.toggleLabel(l) } label: { Circle().fill(l.color).frame(width: 13, height: 13).hitTarget() }
-                        .buttonStyle(.plain).help(l.title).accessibilityLabel(l.title)
-                }
-            }
+            LabelDots(size: 13, spacing: 0, target: true) { lib.toggleLabel($0) }
 
             divider
 

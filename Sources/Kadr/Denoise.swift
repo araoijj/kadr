@@ -15,45 +15,21 @@ final class Denoiser: @unchecked Sendable {
     private let tile = 512, overlap = 32
 
     private let lock = NSLock()
-    /// Serializes loading: one load in flight, others wait here, while `lock` and `installedLock` stay free for the UI.
-    private let loadLock = NSLock()
-    private let installedLock = NSLock()
-    private var model: MLModel?
-    private var tried = false
-    private var generation = 0   // bumped by install: a load that started before it is thrown away
-    private var installedCache: Bool?
-    var folder: URL { FaceMesh.shared.folder }
+    /// The Neural Engine can't run it (window attention); the GPU is fastest.
+    private let models = ModelSet([Denoiser.modelName], in: FaceMesh.shared.folder, computeUnits: .cpuAndGPU)
+    var folder: URL { models.folder }
     private let context = CIContext(options: [.workingFormat: CIFormat.RGBAh, .cacheIntermediates: false])
 
     /// Asked from view bodies: never waits for a model load.
-    var installed: Bool {
-        installedLock.withLock {
-            if let installedCache { return installedCache }
-            let v = FileManager.default.fileExists(atPath: folder.appendingPathComponent(Self.modelName + ".mlmodelc").path)
-            installedCache = v
-            return v
-        }
-    }
+    var installed: Bool { models.installed }
 
     func install(from src: URL) throws {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        try ModelInstall.place(src, at: folder.appendingPathComponent(Self.modelName + ".mlmodelc"))
-        lock.withLock { tried = false; model = nil; generation += 1 }
-        installedLock.withLock { installedCache = nil }
+        try ModelInstall.place(src, at: models.url(Self.modelName))
+        models.reset()
     }
 
-    private func load() -> MLModel? {
-        loadLock.withLock {
-            let (done, gen) = lock.withLock { (tried, generation) }
-            if !done {
-                let cfg = MLModelConfiguration()
-                cfg.computeUnits = .cpuAndGPU   // the Neural Engine can't run it (window attention); the GPU is fastest
-                let m = try? MLModel(contentsOf: folder.appendingPathComponent(Self.modelName + ".mlmodelc"), configuration: cfg)
-                lock.withLock { if generation == gen { model = m; tried = true } }
-            }
-            return lock.withLock { model }
-        }
-    }
+    private func load() -> MLModel? { models.model(Self.modelName) }
 
     // MARK: - Cache
 

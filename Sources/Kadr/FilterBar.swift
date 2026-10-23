@@ -309,18 +309,10 @@ struct FilterBar: View {
     }
 
     private var labels: some View {
-        HStack(spacing: 5) {
-            ForEach(ColorLabel.allCases) { l in
-                let on = lib.filter == .label(l)
-                Button { set(on ? .all : .label(l)) } label: {
-                    Circle().fill(l.color).frame(width: 12, height: 12)
-                        .overlay(Circle().strokeBorder(.white, lineWidth: on ? 2 : 0))
-                        .opacity(on || lib.count(.label(l)) > 0 ? 1 : 0.35)
-                }
-                .buttonStyle(.plain)
-                .help(l.title + " · \(lib.count(.label(l)))")
-            }
-        }
+        LabelDots(size: 12, spacing: 5,
+                  on: { lib.filter == .label($0) },
+                  dim: { lib.filter != .label($0) && lib.count(.label($0)) == 0 },
+                  help: { $0.title + " · \(lib.count(.label($0)))" }) { l in set(lib.filter == .label(l) ? .all : .label(l)) }
     }
 
     // MARK: - More
@@ -380,21 +372,22 @@ struct FilterBar: View {
 
     // MARK: - Shown
 
-    /// Extra filters as chips with a cross to clear each.
+    /// Extra filters as chips with a cross to clear each (`.fixedSize()`: ViewThatFits must see their width).
     private var chips: some View {
         HStack(spacing: 6) {
-            if let l = lib.lensFilter { chip(l, icon: "camera.aperture") { lib.lensFilter = nil } }
+            if let l = lib.lensFilter { Chip(l, icon: "camera.aperture") { lib.lensFilter = nil } }
             if let d = lib.dayFilter {
-                chip(d.formatted(.dateTime.day().month(.abbreviated).locale(I18n.locale)), icon: "calendar") { lib.dayFilter = nil }
+                Chip(d.formatted(.dateTime.day().month(.abbreviated).locale(I18n.locale)), icon: "calendar") { lib.dayFilter = nil }
             }
-            ForEach(lib.tagFilters.sorted(), id: \.self) { t in chip(TagNames.title(t), icon: "tag") { lib.toggleTag(t, add: true) } }
+            ForEach(lib.tagFilters.sorted(), id: \.self) { t in Chip(TagNames.title(t), icon: "tag") { lib.toggleTag(t, add: true) } }
             ForEach(lib.people.filter { lib.personFilters.contains($0.id) }) { p in
-                chip(p.title, icon: "person.crop.circle") { lib.togglePerson(p.id, add: true) }
+                Chip(p.title, icon: "person.crop.circle") { lib.togglePerson(p.id, add: true) }
             }
             if lib.hideRejected && lib.filter != .rejected {
-                chip(tr("брак скрыт"), icon: "eye.slash") { lib.hideRejected = false }
+                Chip(tr("брак скрыт"), icon: "eye.slash") { lib.hideRejected = false }
             }
         }
+        .fixedSize()
     }
 
     /// How many photos are shown; turns into a hint when extra filters hide some.
@@ -404,21 +397,5 @@ struct FilterBar: View {
             .font(.caption.monospacedDigit()).foregroundStyle(extra ? Color.accentColor : .secondary)
             .fixedSize()
             .help(extra ? tr("Часть кадров скрыта фильтрами объектива, даты, тегов, людей или «Скрыть брак» — см. панель «Фильтры» (⌥⌘2)") : "")
-    }
-
-    private func chip(_ text: String, icon: String, clear: @escaping () -> Void) -> some View {
-        Button(action: clear) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                Text(text).lineLimit(1)
-                Image(systemName: "xmark").font(.caption2.weight(.bold))
-            }
-            .font(.caption)
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Color.accentColor.opacity(0.2), in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .fixedSize()
-        .help(tr("Снять фильтр"))
     }
 }

@@ -86,15 +86,38 @@ def wrap():
         total += len(lits)
     print('обёрнуто строк:', total)
 
+def interpolations(body):
+    """Code inside each \\( … ) of a literal body, where nested tr("…") calls live."""
+    out, i = [], 0
+    while i < len(body):
+        if body.startswith('\\(', i):
+            depth, j = 1, i + 2
+            while j < len(body) and depth:
+                if body[j] == '"':
+                    j += 1
+                    while j < len(body) and body[j] != '"': j += 2 if body[j] == '\\' else 1
+                elif body[j] == '(': depth += 1
+                elif body[j] == ')': depth -= 1
+                j += 1
+            out.append(body[i + 2:j - 1]); i = j; continue
+        i += 2 if body[i] == '\\' else 1
+    return out
+
+def wrapped(code):
+    """Bodies of tr("…") literals, including ones nested in another literal's interpolation."""
+    for s, e, body in literals(code):
+        if code[max(0, s - 3):s] == 'tr(': yield body
+        for inner in interpolations(body): yield from wrapped(inner)
+
 def extract():
     os.makedirs(OUT, exist_ok=True)
+    # A wrapped string without Cyrillic (a credit line) is kept when it has a translation.
+    known = json.load(open(os.path.join(OUT, 'all.json')))
     seen = []
     for f in files():
-        code = open(f).read()
-        for s, e, body in literals(code):
-            if code[max(0, s - 3):s] == 'tr(' and CYR.search(body):
-                t = runtime(body)
-                if t not in seen: seen.append(t)
+        for body in wrapped(open(f).read()):
+            t = runtime(body)
+            if (CYR.search(body) or t in known) and t not in seen: seen.append(t)
     # Internal keys shown via tr(variable): style collection names.
     for k in ['Мои стили', 'Базовые', 'Портрет', 'Пейзаж', 'Кино', 'Чёрно-белые', 'Плёнка']:
         if k not in seen: seen.append(k)

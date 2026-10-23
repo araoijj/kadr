@@ -47,11 +47,5 @@ enum AnalysisIndex {
         if let d = try? JSONEncoder().encode(f) { try? d.write(to: file(for: dir), options: .atomic) }
     }
 
-    /// How much space the indexes take and how many folders they cover.
-    static func usage() -> (folders: Int, bytes: Int64) {
-        let files = (try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: [.fileSizeKey])) ?? []
-        return (files.count, files.reduce(0) { $0 + Int64((try? $1.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) })
-    }
-
     static func clear() { try? FileManager.default.removeItem(at: root) }
 }

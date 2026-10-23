@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ExportSheet: View {
     @Environment(Library.self) private var lib
+    @Environment(\.screen) private var screen
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -15,7 +16,7 @@ struct ExportSheet: View {
             Divider()
             // Lots of settings: they scroll, while the buttons always stay visible at the bottom.
             ScrollView { settings.padding(24) }
-                .frame(maxHeight: max(420, (NSScreen.main?.visibleFrame.height ?? 900) - 260))
+                .frame(maxHeight: max(420, screen.height - 260))
             Divider()
             footer.padding(24)
         }

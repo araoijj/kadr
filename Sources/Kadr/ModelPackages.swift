@@ -79,6 +79,64 @@ enum ModelInstall {
     }
 }
 
+/// Compiled Core ML models in the models folder, loaded together on first use: the one way the face mesh,
+/// face recognition, noise reduction and Remove Object load theirs.
+/// `installed` has its own lock and is cached: view bodies ask it on every redraw and never wait for a load.
+/// One load is in flight at a time (SAM + LaMa take up to ~10 s); other callers wait for it here, so the
+/// owner's own locks stay free. `reset()` after an install or removal throws away a load that started before it.
+final class ModelSet: @unchecked Sendable {
+    let names: [String]
+    let folder: URL
+    private let units: MLComputeUnits
+    private let lock = NSLock()
+    private let loadLock = NSLock()
+    private let installedLock = NSLock()
+    private var models: [String: MLModel] = [:]
+    private var tried = false
+    private var generation = 0
+    private var installedCache: Bool?
+
+    init(_ names: [String], in folder: URL, computeUnits: MLComputeUnits = .all) {
+        self.names = names
+        self.folder = folder
+        units = computeUnits
+    }
+
+    /// Where the compiled model of that name lives.
+    func url(_ name: String) -> URL { folder.appendingPathComponent(name + ".mlmodelc") }
+
+    /// Every model of the set is on disk (without loading).
+    var installed: Bool {
+        installedLock.withLock {
+            if let installedCache { return installedCache }
+            let v = names.allSatisfy { FileManager.default.fileExists(atPath: url($0).path) }
+            installedCache = v
+            return v
+        }
+    }
+
+    /// The loaded model; nil when it isn't installed or fails to load (not retried until `reset()`).
+    func model(_ name: String) -> MLModel? {
+        loadLock.withLock {
+            let (done, gen) = lock.withLock { (tried, generation) }
+            if !done {
+                let cfg = MLModelConfiguration()
+                cfg.computeUnits = units
+                var loaded: [String: MLModel] = [:]
+                for n in names { loaded[n] = try? MLModel(contentsOf: url(n), configuration: cfg) }
+                lock.withLock { if generation == gen { models = loaded; tried = true } }
+            }
+            return lock.withLock { models[name] }
+        }
+    }
+
+    /// The files changed (installed or removed): loaded models and the installed flag are stale.
+    func reset() {
+        lock.withLock { tried = false; models = [:]; generation += 1 }
+        installedLock.withLock { installedCache = nil }
+    }
+}
+
 extension FaceMesh {
     static let sources = [
         ModelSource(name: "MediaPipe Face Landmarker", author: "Google", license: "Apache 2.0",

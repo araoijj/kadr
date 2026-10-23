@@ -137,34 +137,6 @@ extension Library {
     }
 }
 
-/// Small face of a person for the sidebar.
-struct PersonFace: View {
-    @Environment(Library.self) private var lib
-    let person: Person
-    @State private var image: CGImage?
-
-    var body: some View {
-        ZStack {
-            Circle().fill(Theme.key)
-            if let image { Image(decorative: image, scale: 1).resizable().aspectRatio(contentMode: .fill).clipShape(Circle()) }
-            else { Image(systemName: "person.fill").font(.caption).foregroundStyle(.secondary) }
-        }
-        .frame(width: 22, height: 22)
-        .task(id: person.id) {
-            // The largest face of the person.
-            guard let ref = person.faces.max(by: { a, b in
-                (lib.photo(a.photo)?.cull?.faces[safe: a.index]?.px ?? 0) < (lib.photo(b.photo)?.cull?.faces[safe: b.index]?.px ?? 0)
-            }), let p = lib.photo(ref.photo), let f = p.cull?.faces[safe: ref.index] else { return }
-            let url = p.url
-            image = await Task.detached(priority: .utility) {
-                guard let img = ImageStore.shared.preview(url) else { return nil }
-                let W = Double(img.width), H = Double(img.height), side = max(f.w * W, f.h * H) * 1.3
-                return img.cropping(to: CGRect(x: (f.x + f.w / 2) * W - side / 2, y: (f.y + f.h / 2) * H - side / 2, width: side, height: side).integral)
-            }.value
-        }
-    }
-}
-
 extension Array {
     subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
 }

@@ -16,6 +16,7 @@ struct KadrApp: App {
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { lib.flushStores(); lib.saveFolderState() }
         }
+        KeyHandler.trackKeyWindow(lib)
         // Bundled face mesh: loaded in the background right at launch.
         Task.detached(priority: .utility) { FaceMesh.shared.installBundledIfNeeded() }
     }
@@ -40,73 +41,92 @@ struct KadrApp: App {
                 Button(tr("Проверить обновления…")) { Task { await Updater.check(manual: true) } }
             }
             CommandGroup(replacing: .undoRedo) {
-                Button(library.undoTitle.map { tr("Отменить: \($0)") } ?? tr("Отменить")) {
-                    if let um = NSApp.keyWindow?.firstResponder as? NSTextView { um.undoManager?.undo() } else { library.undo() }
+                // Not disabled off the photos: ⌘Z must keep reaching text fields in Settings and sheets. There
+                // the photo action's name is just dropped, since the item won't undo it.
+                Button((library.photosKey ? library.undoTitle : nil).map { tr("Отменить: \($0)") } ?? tr("Отменить")) {
+                    if let um = NSApp.keyWindow?.firstResponder as? NSTextView { um.undoManager?.undo() }
+                    else if KeyHandler.isPhotosWindow(KeyHandler.menuWindow(NSApp.keyWindow)) { library.undo() }
                 }
-                .keyboardShortcut("z")
-                Button(library.redoTitle.map { tr("Вернуть: \($0)") } ?? tr("Вернуть")) {
-                    if let um = NSApp.keyWindow?.firstResponder as? NSTextView { um.undoManager?.redo() } else { library.redo() }
+                .keyboardShortcut(Keys.undo)
+                Button((library.photosKey ? library.redoTitle : nil).map { tr("Вернуть: \($0)") } ?? tr("Вернуть")) {
+                    if let um = NSApp.keyWindow?.firstResponder as? NSTextView { um.undoManager?.redo() }
+                    else if KeyHandler.isPhotosWindow(KeyHandler.menuWindow(NSApp.keyWindow)) { library.redo() }
                 }
-                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .keyboardShortcut(Keys.redo)
                 Divider()
                 Button(tr("Журнал изменений")) { library.showInfo = true; library.inspectorTab = .history }
-                    .keyboardShortcut("y")
+                    .keyboardShortcut(Keys.history)
+                    .disabled(!library.photosKey)
             }
+            // Items that act on the photos are off while Settings, a sheet or an alert has the keys.
             CommandGroup(replacing: .newItem) {
-                Button(tr("Открыть папку…")) { library.chooseFolder() }
-                    .keyboardShortcut("o")
-                Button(tr("Импорт с карты памяти…")) { library.showImport = true }
-                    .keyboardShortcut("i")
+                Group {
+                    Button(tr("Открыть папку…")) { library.chooseFolder() }
+                        .keyboardShortcut(Keys.open)
+                    Button(tr("Импорт с карты памяти…")) { library.showImport = true }
+                        .keyboardShortcut(Keys.importCard)
+                }
+                .disabled(!library.photosKey)
             }
             CommandGroup(after: .toolbar) {
-                Button(tr("Увеличить")) { library.zoomIn() }.keyboardShortcut("=")
-                Button(tr("Уменьшить")) { library.zoomOut() }.keyboardShortcut("-")
-                Button(tr("Вписать в окно")) { library.setZoom(nil) }.keyboardShortcut("0")
-                Button(tr("Масштаб 100%")) { library.loupe = true; library.setZoom(1, at: library.loupeCenter) }.keyboardShortcut("1")
-                Divider()
-                // F itself is KeyHandler's: a bare menu key equivalent would fire while typing "f" in a field.
-                Button(library.fullscreen ? tr("Выйти из полноэкранного просмотра (F)") : tr("Во весь экран (F)")) { Fullscreen.shared.toggle(library) }
-                    .disabled(library.current == nil)
-                Divider()
-                // The sidebar's two tabs; ⌘1 itself is zoom 100%, as in other photo apps.
-                Button(tr("Панель: Источники")) { UserDefaults.standard.set(Sidebar.Tab.sources.rawValue, forKey: Sidebar.tabKey) }
-                    .keyboardShortcut("1", modifiers: [.command, .option])
-                Button(tr("Панель: Фильтры")) { UserDefaults.standard.set(Sidebar.Tab.filters.rawValue, forKey: Sidebar.tabKey) }
-                    .keyboardShortcut("2", modifiers: [.command, .option])
-                Button(tr("Сбросить все фильтры")) { library.resetFilters() }
-                    .keyboardShortcut("f", modifiers: [.command, .option])
-                    .disabled(library.filter == .all && !library.extraFiltersActive)
+                Group {
+                    Button(tr("Увеличить")) { library.zoomIn() }.keyboardShortcut(Keys.zoomIn)
+                    Button(tr("Уменьшить")) { library.zoomOut() }.keyboardShortcut(Keys.zoomOut)
+                    Button(tr("Вписать в окно")) { library.setZoom(nil) }.keyboardShortcut(Keys.zoomFit)
+                    Button(tr("Масштаб 100%")) { library.loupe = true; library.setZoom(1, at: library.loupeCenter) }.keyboardShortcut(Keys.zoom100)
+                    Divider()
+                    // F itself is KeyHandler's: a bare menu key equivalent would fire while typing "f" in a field.
+                    Button(library.fullscreen ? tr("Выйти из полноэкранного просмотра (F)") : tr("Во весь экран (F)")) { Fullscreen.shared.toggle(library) }
+                        .disabled(library.current == nil)
+                    Divider()
+                    // The sidebar's two tabs; ⌘1 itself is zoom 100%, as in other photo apps.
+                    Button(tr("Панель: Источники")) { UserDefaults.standard.set(Sidebar.Tab.sources.rawValue, forKey: Sidebar.tabKey) }
+                        .keyboardShortcut(Keys.sourcesPanel)
+                    Button(tr("Панель: Фильтры")) { UserDefaults.standard.set(Sidebar.Tab.filters.rawValue, forKey: Sidebar.tabKey) }
+                        .keyboardShortcut(Keys.filtersPanel)
+                    Button(tr("Сбросить все фильтры")) { library.resetFilters() }
+                        .keyboardShortcut(Keys.resetFilters)
+                        .disabled(library.filter == .all && !library.extraFiltersActive)
+                }
+                .disabled(!library.photosKey)
                 Divider()
             }
             CommandGroup(replacing: .help) {
-                Button(tr("Горячие клавиши")) { library.showShortcuts = true }.keyboardShortcut("/", modifiers: .command)
+                Button(tr("Горячие клавиши")) { library.showShortcuts = true }.keyboardShortcut(Keys.shortcuts)
+                    .disabled(!library.photosKey)
             }
             CommandMenu(tr("Обработка")) {
-                Button(tr("Выровнять экспозицию и баланс по текущему")) { library.matchToCurrent() }
-                    .keyboardShortcut("m", modifiers: [.command, .option])
-                Divider()
-                Button(tr("Копировать обработку")) { library.copyAdjustments() }
-                    .keyboardShortcut("c", modifiers: [.command, .shift])
-                Button(tr("Вставить обработку")) { library.pasteAdjustments() }
-                    .keyboardShortcut("v", modifiers: [.command, .shift])
-                Button(tr("Сбросить обработку")) { library.resetAdjustments() }
-                    .keyboardShortcut("r", modifiers: [.command, .option])
-                Divider()
-                Menu(tr("Применить стиль")) {
-                    ForEach(library.styles) { st in
-                        Button(st.name) { library.applyStyle(st) }
+                Group {
+                    Button(tr("Выровнять экспозицию и баланс по текущему")) { library.matchToCurrent() }
+                        .keyboardShortcut(Keys.match)
+                    Divider()
+                    Button(tr("Копировать обработку")) { library.copyAdjustments() }
+                        .keyboardShortcut(Keys.copyEdits)
+                    Button(tr("Вставить обработку")) { library.pasteAdjustments() }
+                        .keyboardShortcut(Keys.pasteEdits)
+                    Button(tr("Сбросить обработку")) { library.resetAdjustments() }
+                        .keyboardShortcut(Keys.resetEdits)
+                    Divider()
+                    Menu(tr("Применить стиль")) {
+                        ForEach(library.styles) { st in
+                            Button(st.name) { library.applyStyle(st) }
+                        }
                     }
+                    Button(tr("Загрузить LUT (.cube)…")) { library.importLUTs() }
+                    Divider()
+                    Toggle(tr("Показать до обработки"), isOn: $library.showOriginal)
                 }
-                Button(tr("Загрузить LUT (.cube)…")) { library.importLUTs() }
-                Divider()
-                Toggle(tr("Показать до обработки"), isOn: $library.showOriginal)
+                .disabled(!library.photosKey)
             }
             CommandMenu(tr("Отбор")) {
-                Toggle(tr("Слой «Отбор»: ярлыки AI, лица, прогресс (O)"), isOn: Binding(get: { library.culling }, set: { _ in library.toggleCullingLayer() }))
-                Button(tr("Итог отбора…")) { library.showCullSummary = true }
-                    .disabled(library.folder == nil)
-                Button(tr("Турнир: лучший кадр серии (T)")) { library.startTournament() }
-                    .disabled(!library.canCompare)
+                Group {
+                    Toggle(tr("Слой «Отбор»: ярлыки AI, лица, прогресс (O)"), isOn: Binding(get: { library.culling }, set: { _ in library.toggleCullingLayer() }))
+                    Button(tr("Итог отбора…")) { library.showCullSummary = true }
+                        .disabled(library.folder == nil)
+                    Button(tr("Турнир: лучший кадр серии (T)")) { library.startTournament() }
+                        .disabled(!library.canCompare)
+                }
+                .disabled(!library.photosKey)
                 Divider()
                 // Typed in a text field, ⌘⌫ keeps deleting to the line start; typed over a sheet or in Settings it
                 // does nothing. Chosen with the mouse, it moves the rejects unless a sheet is over the library.
@@ -115,31 +135,34 @@ struct KadrApp: App {
                     if typed, let tv = w?.firstResponder as? NSTextView { tv.deleteToBeginningOfLine(nil) }
                     else if KeyHandler.isPhotosWindow(typed ? w : KeyHandler.window) { library.moveRejected() }
                 }
-                    .keyboardShortcut(.delete, modifiers: .command)
-                Button(tr("Сохранить в папку…")) { library.showExport = true }
-                    .keyboardShortcut("s", modifiers: .command)
-                Button(tr("Открыть в Capture One")) { library.openVisibleInCaptureOne() }
-                    .keyboardShortcut("o", modifiers: [.command, .shift])
-                Divider()
-                Button(tr("Выделить всё")) { library.selectAll() }
-                Button(tr("Выделить серию")) { library.selectSeries() }
-                    .keyboardShortcut("a", modifiers: [.command, .shift])
-                Button(tr("Показать только серию этого кадра")) { if let p = library.current { library.showSeries(of: p) } }
-                    .disabled(library.current?.seriesID == nil)
-                Divider()
-                if library.aiRunning {
-                    Button(tr("Остановить AI-анализ")) { library.stopAI() }
-                } else {
-                    Button(tr("Запустить AI-анализ")) { library.startAI() }
-                        .keyboardShortcut("a", modifiers: [.command, .option])
-                        .disabled(library.folder == nil || library.analyzed < library.photos.count || library.aiPending == 0)
+                    .keyboardShortcut(Keys.moveRejected)
+                Group {
+                    Button(tr("Сохранить в папку…")) { library.showExport = true }
+                        .keyboardShortcut(Keys.export)
+                    Button(tr("Открыть в Capture One")) { library.openVisibleInCaptureOne() }
+                        .keyboardShortcut(Keys.captureOne)
+                    Divider()
+                    Button(tr("Выделить всё")) { library.selectAll() }
+                    Button(tr("Выделить серию")) { library.selectSeries() }
+                        .keyboardShortcut(Keys.selectSeries)
+                    Button(tr("Показать только серию этого кадра")) { if let p = library.current { library.showSeries(of: p) } }
+                        .disabled(library.current?.seriesID == nil)
+                    Divider()
+                    if library.aiRunning {
+                        Button(tr("Остановить AI-анализ")) { library.stopAI() }
+                    } else {
+                        Button(tr("Запустить AI-анализ")) { library.startAI() }
+                            .keyboardShortcut(Keys.startAI)
+                            .disabled(library.folder == nil || library.analyzed < library.photos.count || library.aiPending == 0)
+                    }
+                    Button(tr("Записать AI-теги в ключевые слова…")) { library.writeTagKeywords() }
+                        .disabled(library.folder == nil || library.aiRunning)
+                    AutoCropMenu(lib: library).disabled(library.folder == nil)
+                    Button(tr("Пересчитать анализ папки")) { library.reanalyze() }
+                    Button(tr("Показать в Finder")) { library.revealCurrent() }
+                        .keyboardShortcut(Keys.reveal)
                 }
-                Button(tr("Записать AI-теги в ключевые слова…")) { library.writeTagKeywords() }
-                    .disabled(library.folder == nil || library.aiRunning)
-                AutoCropMenu(lib: library).disabled(library.folder == nil)
-                Button(tr("Пересчитать анализ папки")) { library.reanalyze() }
-                Button(tr("Показать в Finder")) { library.revealCurrent() }
-                    .keyboardShortcut("r", modifiers: [.command, .shift])
+                .disabled(!library.photosKey)
                 Toggle(tr("Переходить дальше после оценки"), isOn: $library.autoAdvance)
             }
         }
@@ -162,9 +185,34 @@ struct KeyHandler {
 
     /// The library window (or full screen) with no sheet, alert or modal panel over it.
     static func isPhotosWindow(_ w: NSWindow?) -> Bool {
-        guard NSApp.modalWindow == nil, let w else { return false }
+        NSApp.modalWindow == nil && isPhotos(w)
+    }
+
+    /// Same, minus the modal check: an alert's runModal can still be winding down when the window regains key.
+    private static func isPhotos(_ w: NSWindow?) -> Bool {
+        guard let w else { return false }
         // Full screen counts only while the library has no sheet: one opened from there goes behind it.
         return (w is FullscreenWindow || w === window) && window?.attachedSheet == nil
+    }
+
+    /// The window a ⌘ menu item acts for: a popover over the library (thumbnail size, analysis progress) is
+    /// a key window of its own, and the items must keep working while one is open. Bare keys don't use this.
+    static func menuWindow(_ w: NSWindow?) -> NSWindow? {
+        guard let w, w.className.contains("Popover"), let parent = w.parent else { return w }
+        return parent
+    }
+
+    /// Keeps `lib.photosKey` current, so the ⌘ menu items that act on the photos are off while Settings,
+    /// a sheet or an alert has the keys (a sheet's window becomes key, the library's comes back after it).
+    /// No key window at all (the library closed with ⌘W) leaves them on: ⌘O must still open a folder.
+    static func trackKeyWindow(_ lib: Library) {
+        let update = { DispatchQueue.main.async { MainActor.assumeIsolated {
+            lib.photosKey = NSApp.keyWindow.map { isPhotos(menuWindow($0)) } ?? true
+        } } }
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification,
+                     NSWindow.willBeginSheetNotification, NSWindow.didEndSheetNotification] {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { _ in update() }
+        }
     }
 
     static func handle(_ e: NSEvent, _ lib: Library) -> Bool {

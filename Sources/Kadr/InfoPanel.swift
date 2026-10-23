@@ -68,17 +68,7 @@ struct InfoPanel: View {
 
     private func ratingControl(_ p: Photo) -> some View {
         HStack(spacing: 6) {
-            ForEach(1...5, id: \.self) { n in
-                Button { lib.setRating(p.rating == n ? 0 : n) } label: {
-                    Image(systemName: n <= p.rating ? "star.fill" : "star")
-                        .font(.title3)
-                        .foregroundStyle(n <= p.rating ? Theme.star : .secondary)
-                        .hitTarget()
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text(verbatim: "\(n) ★"))   // no words to translate
-                .accessibilityAddTraits(n <= p.rating ? .isSelected : [])
-            }
+            RatingStars(rating: p.rating, font: .title3, spacing: 6) { n in lib.setRating(p.rating == n ? 0 : n) }
             Spacer()
             Button { lib.toggleReject() } label: {
                 Image(systemName: p.rejected ? "xmark.circle.fill" : "xmark.circle")
@@ -95,21 +85,7 @@ struct InfoPanel: View {
 
     private func labelControl(_ p: Photo) -> some View {
         // 22 pt targets around the 18 pt dots, with the spacing cut by the same 4 pt: the row looks as before.
-        HStack(spacing: 6) {
-            ForEach(ColorLabel.allCases) { l in
-                Button { lib.toggleLabel(l) } label: {
-                    Circle()
-                        .fill(l.color.opacity(p.label == l ? 1 : 0.3))
-                        .frame(width: 18, height: 18)
-                        .overlay(Circle().strokeBorder(.white.opacity(p.label == l ? 0.9 : 0), lineWidth: 2))
-                        .hitTarget()
-                }
-                .buttonStyle(.plain)
-                .help(l.title)
-                .accessibilityLabel(l.title)
-                .accessibilityAddTraits(p.label == l ? .isSelected : [])
-            }
-        }
+        LabelDots(size: 18, spacing: 6, target: true, on: { p.label == $0 }, dim: { p.label != $0 }, dimmed: 0.3) { lib.toggleLabel($0) }
     }
 
     private func row(_ title: String, _ value: String?) -> some View {

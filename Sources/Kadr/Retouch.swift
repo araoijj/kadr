@@ -31,29 +31,15 @@ final class Retouch: @unchecked Sendable {
     static let files = ["SAM2_1SmallImageEncoderFLOAT16", "SAM2_1SmallPromptEncoderFLOAT16", "SAM2_1SmallMaskDecoderFLOAT16", "LaMa"]
 
     private let lock = NSLock()
-    /// Serializes loading (up to ~10 s for SAM + LaMa): one load in flight, others wait for it here,
-    /// while `lock` and `installedLock` stay free for the UI.
-    private let loadLock = NSLock()
-    private let installedLock = NSLock()
-    private var models: [String: MLModel] = [:]
-    private var tried = false
-    private var generation = 0   // bumped by install: a load that started before it is thrown away
-    private var installedCache: Bool?
+    private let models = ModelSet(Retouch.files, in: FaceMesh.shared.folder)
     private var embedding: (url: URL, out: MLFeatureProvider)?
     private let context = CIContext(options: [.workingFormat: CIFormat.RGBAh, .cacheIntermediates: false])
     /// One context for the mask helpers: creating a CIContext per call costs more than the work itself.
     private static let maskContext = CIContext(options: [.cacheIntermediates: false])
-    var folder: URL { FaceMesh.shared.folder }
+    var folder: URL { models.folder }
 
     /// Asked from view bodies: never waits for a model load.
-    var installed: Bool {
-        installedLock.withLock {
-            if let installedCache { return installedCache }
-            let v = Self.files.allSatisfy { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0 + ".mlmodelc").path) }
-            installedCache = v
-            return v
-        }
-    }
+    var installed: Bool { models.installed }
 
     /// Installs every .mlpackage of the set found under `src` (compiling them).
     func install(from src: URL) throws {
@@ -74,26 +60,12 @@ final class Retouch: @unchecked Sendable {
         defer { for c in compiled { try? fm.removeItem(at: c.url) } }
         for f in found { compiled.append((try MLModel.compileModel(at: f.src), f.name)) }
         // Whatever got placed, the loaded models are stale from here on, even if a later copy fails.
-        defer {
-            lock.withLock { tried = false; models = [:]; generation += 1 }
-            installedLock.withLock { installedCache = nil }
-        }
-        for c in compiled { try ModelInstall.place(c.url, at: folder.appendingPathComponent(c.name + ".mlmodelc")) }
+        defer { models.reset() }
+        for c in compiled { try ModelInstall.place(c.url, at: models.url(c.name)) }
     }
 
-    private func model(_ name: String) -> MLModel? {
-        loadLock.withLock {
-            let (done, gen) = lock.withLock { (tried, generation) }
-            if !done {
-                let cfg = MLModelConfiguration()
-                cfg.computeUnits = .all
-                var loaded: [String: MLModel] = [:]
-                for n in Self.files { loaded[n] = try? MLModel(contentsOf: folder.appendingPathComponent(n + ".mlmodelc"), configuration: cfg) }
-                lock.withLock { if generation == gen { models = loaded; tried = true } }
-            }
-            return lock.withLock { models[name] }
-        }
-    }
+    /// Loading takes up to ~10 s for SAM + LaMa and happens outside `lock`, so the UI never waits behind it.
+    private func model(_ name: String) -> MLModel? { models.model(name) }
 
     // MARK: - Select (SAM)
 

@@ -12,6 +12,7 @@ final class Fullscreen {
     /// The window F was pressed in: on exit the keys go back there, not to whichever window
     /// `NSApp.windows` lists first (that could be Settings).
     private weak var main: NSWindow?
+    private var observers: [NSObjectProtocol] = []
 
     var isActive: Bool { window != nil }
 
@@ -19,7 +20,9 @@ final class Fullscreen {
 
     func enter(_ lib: Library) {
         guard window == nil, lib.current != nil else { return }
-        main = NSApp.keyWindow ?? NSApp.mainWindow
+        // From the menu, a popover may be key. The library window as a last resort: without `main` its getting
+        // the keys back (⌘Tab, a Dock click) would read as another window and step out.
+        main = KeyHandler.menuWindow(NSApp.keyWindow) ?? NSApp.mainWindow ?? KeyHandler.window
         let screen = main?.screen ?? NSScreen.main ?? NSScreen.screens[0]
         let w = FullscreenWindow(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false)
         w.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 1)
@@ -28,24 +31,57 @@ final class Fullscreen {
         w.hasShadow = false
         w.isReleasedWhenClosed = false
         w.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
-        w.contentView = NSHostingView(rootView: FullscreenView().environment(lib).preferredColorScheme(.dark))
+        w.contentView = NSHostingView(rootView: FullscreenView().environment(lib).preferredColorScheme(.dark).screenMetrics(start: screen))
         NSApp.presentationOptions = [.autoHideMenuBar, .autoHideDock]
         w.makeKeyAndOrderFront(nil)
         window = w
         self.lib = lib
         lib.fullscreen = true
+        watchOtherWindows()
     }
 
-    func exit() {
+    /// `refocus: false` leaves the keys where they are: another window (Settings, an alert, an open panel) has them.
+    func exit(refocus: Bool = true) {
         guard let w = window else { return }
         window = nil
+        observers.forEach(NotificationCenter.default.removeObserver)
+        observers = []
         w.orderOut(nil)
         NSApp.presentationOptions = []
         lib?.fullscreen = false
-        let back = main.flatMap { $0.isVisible ? $0 : nil }
-            ?? NSApp.windows.first { $0.isVisible && $0 !== w && !($0 is NSPanel) }
-        back?.makeKeyAndOrderFront(nil)
+        if refocus {
+            let back = main.flatMap { $0.isVisible ? $0 : nil }
+                ?? NSApp.windows.first { $0.isVisible && $0 !== w && !($0 is NSPanel) }
+            back?.makeKeyAndOrderFront(nil)
+        }
         main = nil
+    }
+
+    /// This window sits above the menu bar, so anything else that opens — a sheet on the library, an alert,
+    /// an open panel, Settings — would be hidden under it. Step out for all of them, in one place.
+    private func watchOtherWindows() {
+        let nc = NotificationCenter.default
+        // A sheet goes on the library window under this one: step out and hand it the keys.
+        observers.append(nc.addObserver(forName: NSWindow.willBeginSheetNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { Fullscreen.shared.stepOut(refocus: true) }
+        })
+        // Any other window taking the keys (alerts and panels run modally, so they don't go through a sheet).
+        observers.append(nc.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { n in
+            MainActor.assumeIsolated {
+                // Not the library window: AppKit may hand it the keys back on ⌘Tab or a Dock click, and that
+                // isn't a reason to leave (nothing new is shown over it).
+                guard let w = n.object as? NSWindow, !(w is FullscreenWindow), w !== Fullscreen.shared.main else { return }
+                Fullscreen.shared.stepOut(refocus: false)
+            }
+        })
+    }
+
+    /// Deferred: exit() releases the window whose hosting view may be mid-update. Common and modal-panel
+    /// modes, so it also runs while an alert's runModal is spinning.
+    private func stepOut(refocus: Bool) {
+        RunLoop.main.perform(inModes: [.common, .modalPanel]) {
+            MainActor.assumeIsolated { Fullscreen.shared.exit(refocus: refocus) }
+        }
     }
 }
 
@@ -77,11 +113,7 @@ struct FullscreenView: View {
         }
         .onAppear { reveal() }
         .onChange(of: lib.currentID) { _, _ in reveal() }
-        // Sheets open on the library window, under this one: step out so the sheet is seen and gets the keys.
-        .onChange(of: lib.showShortcuts || lib.showCullSummary || lib.showExport || lib.showImport) { _, on in
-            // Deferred: exit() releases this view's own window, which must not happen mid-update.
-            if on { DispatchQueue.main.async { Fullscreen.shared.exit() } }
-        }
+        // Sheets, alerts and other windows: Fullscreen steps out for them itself (watchOtherWindows).
         .onContinuousHover { phase in if case .active = phase { reveal() } }
         .onDisappear { hideInfo?.cancel() }
     }

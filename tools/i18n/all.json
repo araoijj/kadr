@@ -49,21 +49,6 @@
   "Comparar · {}",
   "Confronto · {}"
  ],
- "← → — выбрать кадр · 1–5, X — оценка · Z — зум 100% · тянуть мышью — сдвиг · Esc — выход": [
-  "← → — pick photo · 1–5, X — rating · Z — 100% zoom · drag — pan · Esc — exit",
-  "← → — elegir foto · 1–5, X — valoración · Z — zoom 100% · arrastrar — mover · Esc — salir",
-  "← → — scegli foto · 1–5, X — valutazione · Z — zoom 100% · trascina — sposta · Esc — esci"
- ],
- "Оставить выбранный, остальные отклонить": [
-  "Keep selected, reject the rest",
-  "Conservar la elegida, rechazar el resto",
-  "Tieni la scelta, scarta le altre"
- ],
- "Выбранный кадр остаётся, остальные помечаются отклонёнными (X)": [
-  "The selected photo stays, the others are marked rejected (X)",
-  "La foto elegida se queda, las demás se marcan como rechazadas (X)",
-  "La foto scelta resta, le altre vengono segnate come scartate (X)"
- ],
  "Готово": [
   "Done",
   "Listo",
@@ -88,11 +73,6 @@
   "Open",
   "Abrir",
   "Apri"
- ],
- "Открыть папку (⌘O)": [
-  "Open folder (⌘O)",
-  "Abrir carpeta (⌘O)",
-  "Apri cartella (⌘O)"
  ],
  "Отменить": [
   "Undo",
@@ -129,16 +109,6 @@
   "Importar",
   "Importa"
  ],
- "Импорт с карты памяти (⌘I)": [
-  "Import from memory card (⌘I)",
-  "Importar desde tarjeta de memoria (⌘I)",
-  "Importa da scheda di memoria (⌘I)"
- ],
- "Анализ {}/{}": [
-  "Analyzing {}/{}",
-  "Analizando {}/{}",
-  "Analisi {}/{}"
- ],
  "Сортировать": [
   "Sort by",
   "Ordenar por",
@@ -159,16 +129,6 @@
   "Incluir subcarpetas",
   "Includi sottocartelle"
  ],
- "Сортировка": [
-  "Sorting",
-  "Orden",
-  "Ordinamento"
- ],
- "Сортировка и группировка: {}{}": [
-  "Sorting and grouping: {}{}",
-  "Orden y agrupación: {}{}",
-  "Ordinamento e raggruppamento: {}{}"
- ],
  "Размер превью": [
   "Thumbnail size",
   "Tamaño de miniaturas",
@@ -178,11 +138,6 @@
   "Save to folder",
   "Guardar en carpeta",
   "Salva nella cartella"
- ],
- "Сохранить отобранные в папку (⌘S). S — текущий кадр сразу": [
-  "Save picks to a folder (⌘S). S — current photo right away",
-  "Guardar las elegidas en una carpeta (⌘S). S — la foto actual al instante",
-  "Salva le scelte in una cartella (⌘S). S — la foto corrente subito"
  ],
  "Перенести отклонённые в «_Отклонённые»": [
   "Move rejected to “_Отклонённые”",
@@ -229,21 +184,6 @@
   "navegar",
   "sfoglia"
  ],
- "звёзды": [
-  "stars",
-  "estrellas",
-  "stelle"
- ],
- "снять оценку": [
-  "clear rating",
-  "quitar valoración",
-  "togli valutazione"
- ],
- "отклонить": [
-  "reject",
-  "rechazar",
-  "scarta"
- ],
  "цвет": [
   "color",
   "color",
@@ -288,11 +228,6 @@
   "select several",
   "seleccionar varias",
   "seleziona più foto"
- ],
- "выделить всё": [
-  "select all",
-  "seleccionar todo",
-  "seleziona tutto"
  ],
  "обработка": [
   "editing",
@@ -528,11 +463,6 @@
   "Camera matching",
   "Como en la cámara",
   "Come in fotocamera"
- ],
- "Стандартный macOS": [
-  "Standard macOS",
-  "Estándar de macOS",
-  "Standard macOS"
  ],
  "Цвета подобраны по JPEG камеры — правки начинаются с привычной картинки.": [
   "Colors matched to the camera JPEG — edits start from the familiar look.",
@@ -1219,11 +1149,6 @@
   "Mostrando {} de {}",
   "Mostrate {} di {}"
  ],
- "Снять фильтр": [
-  "Clear filter",
-  "Quitar filtro",
-  "Rimuovi filtro"
- ],
  "Провалы в тенях": [
   "Clipped shadows",
   "Sombras recortadas",
@@ -1384,11 +1309,6 @@
   "Otra carpeta…",
   "Altra cartella…"
  ],
- "Название съёмки, например «Свадьба Ивановых»": [
-  "Shoot name, e.g. “Smith wedding”",
-  "Nombre de la sesión, p. ej. «Boda García»",
-  "Nome dello scatto, ad es. «Matrimonio Rossi»"
- ],
  "Раскладывать по дням съёмки": [
   "Sort into folders by capture day",
   "Separar en carpetas por día de captura",
@@ -1418,11 +1338,6 @@
   "{} of {}",
   "{} de {}",
   "{} di {}"
- ],
- "Снимки копируются вместе с XMP. Карта и файлы в папке не меняются, каждая копия сверяется с оригиналом.": [
-  "Photos are copied together with their XMP. The card and files in the folder are not changed; every copy is checked against the original.",
-  "Las fotos se copian junto con su XMP. La tarjeta y los archivos de la carpeta no cambian; cada copia se compara con el original.",
-  "Le foto vengono copiate insieme ai loro XMP. La scheda e i file nella cartella non cambiano; ogni copia viene confrontata con l’originale."
  ],
  "Закрыть": [
   "Close",
@@ -1764,11 +1679,6 @@
   "Edición restablecida",
   "Modifiche ripristinate"
  ],
- "Нечего сохранять: кадр без обработки": [
-  "Nothing to save: the photo has no edits",
-  "Nada que guardar: la foto no tiene edición",
-  "Niente da salvare: la foto non ha modifiche"
- ],
  "Выберите LUT-файлы .cube": [
   "Choose .cube LUT files",
   "Elige archivos LUT .cube",
@@ -1783,26 +1693,6 @@
   "LUTs added: {}",
   "LUT añadidos: {}",
   "LUT aggiunti: {}"
- ],
- "Сравниваю первые 4 из {}": [
-  "Comparing the first 4 of {}",
-  "Comparando las 4 primeras de {}",
-  "Confronto delle prime 4 di {}"
- ],
- "Выделите 2–4 кадра: ⌘-клик или рамкой": [
-  "Select 2–4 photos: ⌘-click or drag a box",
-  "Selecciona 2–4 fotos: ⌘-clic o arrastrando un recuadro",
-  "Seleziona 2–4 foto: ⌘-clic o trascinando un riquadro"
- ],
- "Оставлен {}": [
-  "Kept {}",
-  "Conservada {}",
-  "Tenuta {}"
- ],
- "Оставлен {}, отклонено: {}": [
-  "Kept {}, rejected: {}",
-  "Conservada {}, rechazadas: {}",
-  "Tenuta {}, scartate: {}"
  ],
  "Без даты": [
   "No date",
@@ -1859,25 +1749,10 @@
   "No hay fotos rechazadas",
   "Nessuna foto scartata"
  ],
- "Перенести {} отклонённых в папку «_Отклонённые»?": [
-  "Move {} rejected photos to “_Отклонённые”?",
-  "¿Mover {} fotos rechazadas a «_Отклонённые»?",
-  "Spostare {} foto scartate in «_Отклонённые»?"
- ],
- "Файлы не удаляются — их можно вернуть обратно вручную.": [
-  "Files aren’t deleted — you can move them back by hand.",
-  "Los archivos no se borran: puedes devolverlos a mano.",
-  "I file non vengono eliminati: puoi riportarli indietro a mano."
- ],
  "Перенести": [
   "Move",
   "Mover",
   "Sposta"
- ],
- "Перенесено: {}": [
-  "Moved: {}",
-  "Movidas: {}",
-  "Spostate: {}"
  ],
  "Папка, куда сохранять отобранные снимки": [
   "Folder to save picks to",
@@ -2399,26 +2274,6 @@
   "Memoria",
   "Memoria"
  ],
- "Превью в памяти": [
-  "Previews in memory",
-  "Vistas previas en memoria",
-  "Anteprime in memoria"
- ],
- "1000 — экономно": [
-  "1000 — economical",
-  "1000 — económico",
-  "1000 — economico"
- ],
- "4000 — по умолчанию": [
-  "4000 — default",
-  "4000 — predeterminado",
-  "4000 — predefinito"
- ],
- "8000 — большие съёмки": [
-  "8000 — large shoots",
-  "8000 — sesiones grandes",
-  "8000 — scatti numerosi"
- ],
  "Проявленных кадров в памяти": [
   "Developed photos in memory",
   "Fotos reveladas en memoria",
@@ -2438,11 +2293,6 @@
   "6 — faster browsing",
   "6 — navegar más rápido",
   "6 — navigazione più veloce"
- ],
- "Превью ~0,3–1 МБ каждое, проявленный кадр ~60–80 МБ. Меньше — экономнее память, больше — быстрее листать назад. Применяется после перезапуска.": [
-  "A preview is ~0.3–1 MB, a developed photo ~60–80 MB. Less saves memory, more makes going back faster. Applies after a restart.",
-  "Una vista previa ocupa ~0,3–1 MB y una foto revelada ~60–80 MB. Menos ahorra memoria, más agiliza volver atrás. Se aplica tras reiniciar.",
-  "Un’anteprima occupa ~0,3–1 MB, una foto sviluppata ~60–80 MB. Meno risparmia memoria, più rende più veloce tornare indietro. Si applica dopo il riavvio."
  ],
  "Шагов на папку": [
   "Steps per folder",
@@ -2634,45 +2484,15 @@
   "Restaurado desde {}",
   "Ripristinato da {}"
  ],
- "Папки": [
-  "Folders",
-  "Carpetas",
-  "Cartelle"
- ],
- "Недавние": [
-  "Recent",
-  "Recientes",
-  "Recenti"
- ],
  "Импорт с карты…": [
   "Import from card…",
   "Importar de tarjeta…",
   "Importa da scheda…"
  ],
- "Показывать снимки из всех подпапок открытой папки": [
-  "Show photos from all subfolders of the open folder",
-  "Mostrar fotos de todas las subcarpetas de la carpeta abierta",
-  "Mostra le foto di tutte le sottocartelle della cartella aperta"
- ],
  "Съёмка": [
   "Shoot",
   "Sesión",
   "Scatto"
- ],
- "Объективы": [
-  "Lenses",
-  "Objetivos",
-  "Obiettivi"
- ],
- "Даты": [
-  "Dates",
-  "Fechas",
-  "Date"
- ],
- "Серий похожих: {}": [
-  "Similar series: {}",
-  "Series parecidas: {}",
-  "Serie simili: {}"
  ],
  "Считаю размер…": [
   "Estimating size…",
@@ -2694,16 +2514,6 @@
   "≈ {} por foto",
   "≈ {} per foto"
  ],
- "Вид": [
-  "View",
-  "Vista",
-  "Vista"
- ],
- "Сетка / Кадр (пробел)": [
-  "Grid / Photo (Space)",
-  "Cuadrícula / Foto (Espacio)",
-  "Griglia / Foto (Spazio)"
- ],
  "Кадрирование": [
   "Crop",
   "Recortar",
@@ -2713,16 +2523,6 @@
   "Before/after",
   "Antes/después",
   "Prima/dopo"
- ],
- "У кадра нет обработки — сравнивать не с чем": [
-  "The photo has no edits — nothing to compare",
-  "La foto no tiene edición: no hay nada que comparar",
-  "La foto non ha modifiche: niente da confrontare"
- ],
- "Выделите 2–4 кадра (⌘-клик или рамкой) или встаньте на кадр серии": [
-  "Select 2–4 photos (⌘-click or drag a box) or stand on a series photo",
-  "Selecciona 2–4 fotos (⌘-clic o recuadro) o sitúate en una foto de una serie",
-  "Seleziona 2–4 foto (⌘-clic o riquadro) o posizionati su una foto di una serie"
  ],
  "Детализация…": [
   "Detailing…",
@@ -2914,16 +2714,6 @@
   "Sí",
   "Sì"
  ],
- "Очередь пуста": [
-  "Queue is empty",
-  "La cola está vacía",
-  "La coda è vuota"
- ],
- "В этой очереди не осталось кадров — выберите другую сверху.": [
-  "No photos left in this queue — pick another one above.",
-  "No quedan fotos en esta cola: elige otra arriba.",
-  "Non restano foto in questa coda: scegline un’altra in alto."
- ],
  "Просмотрено {} из {}": [
   "Viewed {} of {}",
   "Vistas {} de {}",
@@ -2954,20 +2744,10 @@
   "Pasada rápida",
   "Passata rapida"
  ],
- "Очередь: какие кадры листать": [
-  "Queue: which photos to go through",
-  "Cola: qué fotos recorrer",
-  "Coda: quali foto scorrere"
- ],
  "Подсказки": [
   "Hints",
   "Sugerencias",
   "Suggerimenti"
- ],
- "Выключите — и отбор полностью ручной: без значков, очередей и автоанализа на экране": [
-  "Turn off for fully manual culling: no badges, queues or on-screen analysis",
-  "Desactívalo para una selección totalmente manual: sin marcas, colas ni análisis en pantalla",
-  "Disattiva per una selezione del tutto manuale: senza badge, code né analisi a schermo"
  ],
  "мягко": [
   "lenient",
@@ -2994,20 +2774,10 @@
   "Conservar las mejores de cada serie, rechazar el resto…",
   "Tieni le migliori di ogni serie, scarta le altre…"
  ],
- "P — оставить · X — брак · U — снять · ← → — листать · 1–5 — звёзды": [
-  "P — keep · X — reject · U — clear · ← → — browse · 1–5 — stars",
-  "P — conservar · X — rechazar · U — quitar · ← → — navegar · 1–5 — estrellas",
-  "P — tieni · X — scarta · U — togli · ← → — sfoglia · 1–5 — stelle"
- ],
  "Итог…": [
   "Summary…",
   "Resumen…",
   "Riepilogo…"
- ],
- "Лучший в серии": [
-  "Best in series",
-  "La mejor de la serie",
-  "La migliore della serie"
  ],
  "Выровнять": [
   "Straighten",
@@ -3089,20 +2859,10 @@
   "Continuar: fotos sin decidir ({})",
   "Continua: foto da decidere ({})"
  ],
- "Открывать папку сразу в режиме «Отбор»": [
-  "Open folders straight in Culling mode",
-  "Abrir las carpetas directamente en modo Selección",
-  "Apri le cartelle direttamente in modalità Selezione"
- ],
  "Сетка": [
   "Grid",
   "Cuadrícula",
   "Griglia"
- ],
- "Сетка / Кадр (пробел) / Отбор (O)": [
-  "Grid / Photo (Space) / Culling (O)",
-  "Cuadrícula / Foto (Espacio) / Selección (O)",
-  "Griglia / Foto (Spazio) / Selezione (O)"
  ],
  "Турнир · раунд {} из {}": [
   "Tournament · round {} of {}",
@@ -3128,11 +2888,6 @@
   "Exit",
   "Salir",
   "Esci"
- ],
- "Турнир по серии или выделенным (T)": [
-  "Tournament for a series or selection (T)",
-  "Torneo de una serie o de las seleccionadas (T)",
-  "Torneo su una serie o sulle selezionate (T)"
  ],
  "Сцена {}": [
   "Scene {}",
@@ -3208,11 +2963,6 @@
   "Scenes",
   "Escenas",
   "Scene"
- ],
- "Решено (оставлено или в браке) из всех кадров сцены": [
-  "Decided (kept or rejected) out of all photos in the scene",
-  "Decididas (conservadas o rechazadas) de todas las fotos de la escena",
-  "Decise (tenute o scartate) su tutte le foto della scena"
  ],
  "Моргнул в серии": [
   "Blinked in series",
@@ -3309,11 +3059,6 @@
   "Detener análisis IA",
   "Interrompi analisi IA"
  ],
- "доступен после индексации папки": [
-  "available after the folder is indexed",
-  "disponible tras indexar la carpeta",
-  "disponibile dopo l’indicizzazione della cartella"
- ],
  "Стоп": [
   "Stop",
   "Detener",
@@ -3328,11 +3073,6 @@
   "Finds blur, blinks, blown highlights and the best frames in bursts. Heavy on the Mac: ~1 minute per 1,000 photos (⌥⌘A).",
   "Detecta desenfoque, parpadeos, luces quemadas y las mejores fotos de cada ráfaga. Exige al Mac: ~1 minuto por cada 1000 fotos (⌥⌘A).",
   "Trova sfocature, occhi chiusi, alte luci bruciate e i migliori scatti delle raffiche. Impegna il Mac: ~1 minuto ogni 1000 foto (⌥⌘A)."
- ],
- "смаз · моргание · пересвет · лучшие в сериях": [
-  "blur · blinks · highlights · best in burst",
-  "desenfoque · parpadeos · luces · lo mejor de la ráfaga",
-  "sfocatura · occhi chiusi · alte luci · migliori della raffica"
  ],
  "Показывать находки AI-анализа: значки брака, AI-очереди и лица": [
   "Show AI findings: defect badges, AI queues and faces",
@@ -3354,20 +3094,10 @@
   "Acciones IA",
   "Azioni IA"
  ],
- "Турнир": [
-  "Tournament",
-  "Torneo",
-  "Torneo"
- ],
  "Запускать AI-анализ автоматически после индексации": [
   "Run AI analysis automatically after indexing",
   "Ejecutar el análisis IA automáticamente tras indexar",
   "Avvia l’analisi IA automaticamente dopo l’indicizzazione"
- ],
- "Лица, глаза, смаз, пересвет. Нагружает Mac: ~1 минута на 1000 кадров. Выключено — запуск кнопкой «Запустить AI-анализ» в режиме «Отбор» (⌥⌘A).": [
-  "Faces, eyes, blur, highlights. Heavy on the Mac: ~1 minute per 1,000 photos. When off, start it with “Run AI Analysis” in Culling mode (⌥⌘A).",
-  "Caras, ojos, desenfoque, luces. Exige al Mac: ~1 minuto por cada 1000 fotos. Desactivado: se inicia con «Ejecutar análisis IA» en el modo Selección (⌥⌘A).",
-  "Volti, occhi, sfocatura, alte luci. Impegna il Mac: ~1 minuto ogni 1000 foto. Se disattivato, avviala con «Avvia analisi IA» in modalità Selezione (⌥⌘A)."
  ],
  "Фильтры": [
   "Filters",
@@ -3379,30 +3109,10 @@
   "Abierta",
   "Aperta"
  ],
- "Места": [
-  "Locations",
-  "Ubicaciones",
-  "Posizioni"
- ],
- "Откройте папку на вкладке «Папки»": [
-  "Open a folder on the Folders tab",
-  "Abre una carpeta en la pestaña Carpetas",
-  "Apri una cartella nella scheda Cartelle"
- ],
- "Подсказки выключены": [
-  "Hints are off",
-  "Sugerencias desactivadas",
-  "Suggerimenti disattivati"
- ],
  "AI-отбор": [
   "AI Culling",
   "Selección IA",
   "Selezione IA"
- ],
- "Серии и дубли": [
-  "Bursts & Duplicates",
-  "Ráfagas y duplicados",
-  "Raffiche e duplicati"
  ],
  "Установить встроенные модели": [
   "Install Built-in Models",
@@ -3559,11 +3269,6 @@
   "Parpadeo (MediaPipe): cerrados ≥ 0.4",
   "Ammiccamento (MediaPipe): chiusi ≥ 0.4"
  ],
- "Улыбка (MediaPipe): явная ≥ 0.5": [
-  "Smile (MediaPipe): clear ≥ 0.5",
-  "Sonrisa (MediaPipe): clara ≥ 0.5",
-  "Sorriso (MediaPipe): netto ≥ 0.5"
- ],
  "Резкость лица относительно обычной для сцены": [
   "Face sharpness relative to the scene's usual",
   "Nitidez de la cara respecto a lo habitual en la escena",
@@ -3649,11 +3354,6 @@
   "etiqueta de color",
   "etichetta colore"
  ],
- "режим «Отбор»": [
-  "Culling mode",
-  "modo Selección",
-  "modalità Selezione"
- ],
  "турнир: ← / → — лучший кадр": [
   "tournament: ← / → — the better photo",
   "torneo: ← / →, la mejor foto",
@@ -3698,11 +3398,6 @@
   "100% / fit",
   "100% / ajustar",
   "100% / adatta"
- ],
- "увеличить / уменьшить / вписать": [
-  "zoom in / out / fit",
-  "acercar / alejar / ajustar",
-  "ingrandisci / riduci / adatta"
  ],
  "панель «Инфо»": [
   "Info panel",
@@ -3809,35 +3504,15 @@
   "Mejores fotos",
   "Foto migliori"
  ],
- "Лучшие": [
-  "Best",
-  "Mejores",
-  "Migliori"
- ],
  "Оставить": [
   "Keep",
   "Conservar",
   "Tieni"
  ],
- "Оставить (P) — ★, если оценки ещё нет": [
-  "Keep (P) — ★ if not rated yet",
-  "Conservar (P): ★ si aún no tiene valoración",
-  "Tieni (P): ★ se non ha ancora valutazione"
- ],
- "В брак / вернуть (X или Delete)": [
-  "Reject / restore (X or Delete)",
-  "Descartar / recuperar (X o Supr)",
-  "Scarta / ripristina (X o Canc)"
- ],
  "Клавиши": [
   "Keys",
   "Teclas",
   "Tasti"
- ],
- "Шпаргалка по клавишам и интерфейсу (?)": [
-  "Keyboard and interface cheat sheet (?)",
-  "Chuleta de teclas e interfaz (?)",
-  "Promemoria di tasti e interfaccia (?)"
  ],
  "Лица и глаза": [
   "Faces and eyes",
@@ -4024,11 +3699,6 @@
   "Eliminar ruido",
   "Rimuovi rumore"
  ],
- "Модель SCUNet на видеокарте: ~1 минута на кадр 24 Мп, потом — мгновенно. Света из RAW не теряются.": [
-  "SCUNet on the GPU: ~1 minute per 24 MP photo, then instant. RAW highlights are kept.",
-  "SCUNet en la GPU: ~1 minuto por foto de 24 MP, luego al instante. Se conservan las luces del RAW.",
-  "SCUNet sulla GPU: ~1 minuto per foto da 24 MP, poi istantaneo. Le alte luci del RAW restano."
- ],
  "Люди: распознавание лиц": [
   "People: face recognition",
   "Personas: reconocimiento facial",
@@ -4054,16 +3724,6 @@
   "18 MB",
   "18 MB"
  ],
- "77 МБ": [
-  "77 MB",
-  "77 MB",
-  "77 MB"
- ],
- "300 МБ": [
-  "300 MB",
-  "300 MB",
-  "300 MB"
- ],
  "установлен": [
   "installed",
   "instalado",
@@ -4084,11 +3744,6 @@
   "Paquetes de modelos",
   "Pacchetti di modelli"
  ],
- "Тяжёлые модели ставятся по желанию и хранятся в папке данных «Кадра». Работают офлайн, на этом Mac.": [
-  "Heavy models are optional and stored in Kadr's data folder. They run offline, on this Mac.",
-  "Los modelos pesados son opcionales y se guardan en la carpeta de datos de Kadr. Funcionan sin conexión, en este Mac.",
-  "I modelli pesanti sono facoltativi e salvati nella cartella dati di Kadr. Funzionano offline, su questo Mac."
- ],
  "Папка или .zip с моделями пакета «{}»": [
   "A folder or .zip with the “{}” models",
   "Carpeta o .zip con los modelos de «{}»",
@@ -4098,31 +3753,6 @@
   "Person {}",
   "Persona {}",
   "Persona {}"
- ],
- "Не удалось выделить — кликните в другое место объекта": [
-  "Couldn't select — click another spot on the object",
-  "No se pudo seleccionar: haz clic en otro punto del objeto",
-  "Selezione non riuscita: fai clic su un altro punto dell’oggetto"
- ],
- "Не удалось убрать объект": [
-  "Couldn't remove the object",
-  "No se pudo eliminar el objeto",
-  "Impossibile rimuovere l’oggetto"
- ],
- "Объект убран — ⌘Z, чтобы вернуть": [
-  "Object removed — ⌘Z to bring it back",
-  "Objeto eliminado: ⌘Z para recuperarlo",
-  "Oggetto rimosso: ⌘Z per ripristinarlo"
- ],
- "Кликните по объекту — AI выделит его целиком; ещё клик — добавить часть": [
-  "Click an object — AI selects all of it; another click adds a part",
-  "Haz clic en un objeto: la IA lo selecciona entero; otro clic añade una parte",
-  "Fai clic su un oggetto: l’IA lo seleziona intero; un altro clic aggiunge una parte"
- ],
- "Enter — убрать · клик — добавить к выделению · Esc — сбросить": [
-  "Enter — remove · click — add to selection · Esc — clear",
-  "Enter: eliminar · clic: añadir a la selección · Esc: borrar",
-  "Invio: rimuovi · clic: aggiungi alla selezione · Esc: azzera"
  ],
  "Сбросить выделение": [
   "Clear Selection",
@@ -4163,11 +3793,6 @@
   "Name…",
   "Poner nombre…",
   "Assegna nome…"
- ],
- "Клик — показать кадры с этим человеком; правый клик — назвать (одинаковые имена объединяют группы)": [
-  "Click — show photos with this person; right-click — name them (the same name merges groups)",
-  "Clic: mostrar fotos con esta persona; clic derecho: ponerle nombre (el mismo nombre une grupos)",
-  "Clic: mostra le foto con questa persona; clic destro: assegna un nome (lo stesso nome unisce i gruppi)"
  ],
  "Файл не совпадает с опубликованным архивом": [
   "The file doesn't match the published archive",
@@ -4258,11 +3883,6 @@
   "Denoise {}/{}",
   "Reducción de ruido {}/{}",
   "Riduzione rumore {}/{}"
- ],
- "Остановить шумоподавление": [
-  "Stop Denoise",
-  "Detener reducción de ruido",
-  "Interrompi riduzione rumore"
  ],
  "Выйти из «Убрать объект» (Esc)": [
   "Exit Remove Object (Esc)",
@@ -4394,16 +4014,6 @@
   "Haga clic en un objeto: la IA lo selecciona entero; otro clic añade una parte. Funcionan mejor cosas pequeñas y separadas sobre fondo simple: un transeúnte, basura, un cable, una señal. Zonas grandes, fondos complejos y objetos que tapan a personas salen peor.",
   "Fai clic su un oggetto: l'IA lo seleziona tutto; un altro clic aggiunge una parte. Riescono meglio cose piccole e separate su sfondo semplice: un passante, rifiuti, un filo, un cartello. Aree grandi, sfondi complessi e oggetti sovrapposti a persone vengono peggio."
  ],
- "Отметьте галочкой кадры, которые оставить (P или пробел)": [
-  "Check the photos to keep (P or Space)",
-  "Marca las fotos que quieres conservar (P o espacio)",
-  "Spunta le foto da tenere (P o spazio)"
- ],
- "Отмечено: {} из {} · Enter — оставить их, остальные отклонить": [
-  "Marked: {} of {} · Enter — keep them, reject the rest",
-  "Marcadas: {} de {} · Intro — conservarlas, rechazar el resto",
-  "Segnate: {} di {} · Invio — tienile, scarta le altre"
- ],
  "Снять отметки": [
   "Clear Marks",
   "Quitar marcas",
@@ -4424,11 +4034,6 @@
   "Las fotos marcadas reciben ★ (si no tenían valoración), las demás se rechazan (X). Deshacer — ⌘Z",
   "Le foto segnate ricevono ★ (se senza voto), le altre vengono scartate (X). Annulla — ⌘Z"
  ],
- "Отметить": [
-  "Mark",
-  "Marcar",
-  "Segna"
- ],
  "Оставить этот кадр (P или пробел для активного)": [
   "Keep this photo (P or Space for the active one)",
   "Conservar esta foto (P o espacio para la activa)",
@@ -4448,16 +4053,6 @@
   "Compare: choosing what to keep",
   "Comparar: cómo elegir qué conservar",
   "Confronto: come scegliere cosa tenere"
- ],
- "Галочка в углу кадра (или P, пробел) — оставить этот кадр. Можно отметить несколько.": [
-  "The checkmark in a photo’s corner (or P, Space) keeps that photo. You can mark several.",
-  "La marca en la esquina de la foto (o P, espacio) la conserva. Puedes marcar varias.",
-  "La spunta nell’angolo della foto (o P, spazio) la tiene. Puoi segnarne più di una."
- ],
- "Enter или «Оставить отмеченные» — отмеченные получат ★, остальные кадры сравнения будут отклонены (X).": [
-  "Enter or “Keep Marked” — marked photos get ★, the other compared photos are rejected (X).",
-  "Intro o «Conservar marcadas»: las marcadas reciben ★ y las demás se rechazan (X).",
-  "Invio o «Tieni le segnate»: le segnate ricevono ★, le altre vengono scartate (X)."
  ],
  "Двойной клик или Z — зум 100% сразу во всех кадрах, тянуть мышью — сдвиг.": [
   "Double-click or Z — 100% zoom in all photos at once; drag to pan.",
@@ -4488,26 +4083,6 @@
   "At the end you can mark the winner ★ and reject the rest — or change nothing.",
   "Al final puedes marcar la ganadora con ★ y rechazar el resto, o no cambiar nada.",
   "Alla fine puoi segnare la vincitrice con ★ e scartare le altre, o non cambiare nulla."
- ],
- "Отбор: быстрое решение по каждому кадру": [
-  "Culling: a quick decision on every photo",
-  "Selección: una decisión rápida para cada foto",
-  "Selezione: una decisione rapida su ogni foto"
- ],
- "P — оставить, X — брак, U — снять решение; после решения открывается следующий кадр.": [
-  "P — keep, X — reject, U — clear; after a decision the next photo opens.",
-  "P — conservar, X — rechazar, U — quitar decisión; después se abre la siguiente foto.",
-  "P — tieni, X — scarta, U — annulla; dopo la decisione si apre la foto successiva."
- ],
- "Очередь сверху выбирает, какие кадры листать: все или только без решения; после AI-анализа — ещё лучшие и возможный брак.": [
-  "The queue at the top picks which photos to go through: all or undecided only; after AI analysis also the best and possible rejects.",
-  "La cola de arriba elige qué fotos recorrer: todas o solo sin decidir; tras el análisis AI, también las mejores y los posibles descartes.",
-  "La coda in alto sceglie quali foto scorrere: tutte o solo senza decisione; dopo l’analisi AI anche le migliori e i possibili scarti."
- ],
- "AI-анализ запускается только кнопкой: он подсветит брак и лучшие кадры в сериях, но решаете вы.": [
-  "AI analysis runs only from its button: it highlights rejects and the best photos in bursts, but you decide.",
-  "El análisis AI solo se inicia con su botón: resalta descartes y las mejores fotos de cada ráfaga, pero decides tú.",
-  "L’analisi AI parte solo dal suo pulsante: evidenzia gli scarti e le foto migliori delle raffiche, ma decidi tu."
  ],
  "Тяните углы и края рамки, внутри рамки — сдвиг.": [
   "Drag the corners and edges of the frame; drag inside it to move.",
@@ -4829,45 +4404,10 @@
   "Más",
   "Altro"
  ],
- "Серии, дубли, AI-отбор, сцены, объективы, даты": [
-  "Bursts, duplicates, AI culling, scenes, lenses, dates",
-  "Ráfagas, duplicados, selección AI, escenas, objetivos, fechas",
-  "Raffiche, duplicati, selezione AI, scene, obiettivi, date"
- ],
  "брак скрыт": [
   "rejects hidden",
   "descartes ocultos",
   "scarti nascosti"
- ],
- "Двойной клик — открыть": [
-  "Double-click to open",
-  "Doble clic para abrir",
-  "Doppio clic per aprire"
- ],
- "Быстрый отбор": [
-  "Quick culling",
-  "Selección rápida",
-  "Selezione rapida"
- ],
- "← → — листать, пробел — открыть крупно, Z — 100%.": [
-  "← → — browse, Space — open large, Z — 100%.",
-  "← → — recorrer, espacio — ver en grande, Z — 100%.",
-  "← → — scorri, spazio — apri in grande, Z — 100%."
- ],
- "P — оставить, X — брак, U — снять решение. 1–5 — звёзды.": [
-  "P — keep, X — reject, U — clear. 1–5 — stars.",
-  "P — conservar, X — descartar, U — quitar decisión. 1–5 — estrellas.",
-  "P — tieni, X — scarta, U — annulla. 1–5 — stelle."
- ],
- "Сверху — фильтры: «Без решения» показывает то, что осталось разобрать. H — скрыть брак.": [
-  "Filters are at the top: “Undecided” shows what's left to cull. H hides rejects.",
-  "Los filtros están arriba: «Sin decidir» muestra lo que queda por revisar. H oculta los descartes.",
-  "I filtri sono in alto: «Senza decisione» mostra ciò che resta da selezionare. H nasconde gli scarti."
- ],
- "Слева — папки с прогрессом отбора: открыть — двойной клик или кнопка «Открыть».": [
-  "On the left, folders with culling progress: double-click or “Open” to open one.",
-  "A la izquierda, carpetas con el progreso de la selección: doble clic o «Abrir» para abrirlas.",
-  "A sinistra, cartelle con l’avanzamento della selezione: doppio clic o «Apri» per aprirle."
  ],
  "Брак скрыт (H — показать)": [
   "Rejects hidden (H to show)",
@@ -4879,16 +4419,6 @@
   "Los descartes vuelven a verse",
   "Gli scarti sono di nuovo visibili"
  ],
- "Продолжить": [
-  "Continue",
-  "Continuar",
-  "Continua"
- ],
- "Здесь появятся папки, которые вы открывали, — с прогрессом отбора.": [
-  "Folders you open appear here, with their culling progress.",
-  "Aquí aparecerán las carpetas que abras, con el progreso de la selección.",
-  "Qui compariranno le cartelle aperte, con l’avanzamento della selezione."
- ],
  "Карты памяти": [
   "Memory Cards",
   "Tarjetas de memoria",
@@ -4898,16 +4428,6 @@
   "Favorites",
   "Favoritos",
   "Preferiti"
- ],
- "Диски": [
-  "Drives",
-  "Discos",
-  "Dischi"
- ],
- "Убрать из списка": [
-  "Remove from List",
-  "Quitar de la lista",
-  "Rimuovi dall’elenco"
  ],
  "Решено {} из {}": [
   "{} of {} decided",
@@ -4929,30 +4449,10 @@
   "Contando nuevas…",
   "Conto le nuove…"
  ],
- "Открыть как папку": [
-  "Open as Folder",
-  "Abrir como carpeta",
-  "Apri come cartella"
- ],
- "Фото: {}": [
-  "Photos: {}",
-  "Fotos: {}",
-  "Foto: {}"
- ],
- " · подпапок: {}": [
-  " · subfolders: {}",
-  " · subcarpetas: {}",
-  " · sottocartelle: {}"
- ],
  "Считаю…": [
   "Counting…",
   "Contando…",
   "Conteggio…"
- ],
- "Показывать снимки из всех подпапок": [
-  "Show photos from all subfolders",
-  "Mostrar fotos de todas las subcarpetas",
-  "Mostra le foto di tutte le sottocartelle"
  ],
  "Оставить ({})": [
   "Keep ({})",
@@ -4964,11 +4464,6 @@
   "Conservar la activa",
   "Tieni l’attiva"
  ],
- "Часть кадров скрыта фильтрами объектива, даты, тегов или «Скрыть брак» — см. «Ещё»": [
-  "Some photos are hidden by the lens, date, tag or “Hide Rejects” filters — see “More”",
-  "Algunas fotos están ocultas por los filtros de objetivo, fecha, etiquetas u «Ocultar descartes»: ver «Más»",
-  "Alcune foto sono nascoste dai filtri obiettivo, data, tag o «Nascondi scarti»: vedi «Altro»"
- ],
  "Оставить все выделенные (P)": [
   "Keep all selected (P)",
   "Conservar todas las seleccionadas (P)",
@@ -4978,11 +4473,6 @@
   "Reject all selected (X)",
   "Descartar todas las seleccionadas (X)",
   "Scarta tutte le selezionate (X)"
- ],
- "Сравнить 2–4 кадра рядом (C)": [
-  "Compare 2–4 photos side by side (C)",
-  "Comparar 2–4 fotos lado a lado (C)",
-  "Confronta 2–4 foto affiancate (C)"
  ],
  "Сохранить выделенные в папку (⌘S)": [
   "Save the selected to a folder (⌘S)",
@@ -5164,11 +4654,6 @@
   "Comparar la ráfaga (C)",
   "Confronta la raffica (C)"
  ],
- "Серия похожих кадров: показать только её, выделить, сравнить": [
-  "A burst of similar photos: show only it, select it, compare it",
-  "Ráfaga de fotos parecidas: mostrar solo esta, seleccionarla, compararla",
-  "Raffica di foto simili: mostra solo questa, selezionala, confrontala"
- ],
  "Показать только эту серию": [
   "Show Only This Burst",
   "Mostrar solo esta ráfaga",
@@ -5178,11 +4663,6 @@
   "Compare 2–8 photos side by side (C)",
   "Comparar 2–8 fotos lado a lado (C)",
   "Confronta 2–8 foto affiancate (C)"
- ],
- "Выделите 2–8 кадров (⌘-клик или рамкой) или встаньте на кадр серии": [
-  "Select 2–8 photos (⌘-click or drag a box) or stand on a burst photo",
-  "Selecciona 2–8 fotos (⌘-clic o un recuadro) o sitúate en una foto de ráfaga",
-  "Seleziona 2–8 foto (⌘-clic o un riquadro) o posizionati su una foto di raffica"
  ],
  "Все кадры (Esc)": [
   "All photos (Esc)",
@@ -5264,16 +4744,6 @@
   "⌘Z o U — recuperar",
   "⌘Z o U — ripristina"
  ],
- "P — оставить (★), X — брак, U — снять решение. ← → — просто дальше, кадр остаётся «без решения».": [
-  "P — keep (★), X — reject, U — clear. ← → — just move on, the photo stays “undecided”.",
-  "P — conservar (★), X — descartar, U — quitar la decisión. ← → — seguir sin más, la foto queda «sin decidir».",
-  "P — tieni (★), X — scarta, U — annulla. ← → — vai avanti, la foto resta «senza decisione»."
- ],
- "1–5 — звёзды, пробел — открыть крупно, Z — 100%, ⌘Z — отменить любое решение.": [
-  "1–5 — stars, Space — open large, Z — 100%, ⌘Z — undo any decision.",
-  "1–5 — estrellas, espacio — ver en grande, Z — 100%, ⌘Z — deshacer cualquier decisión.",
-  "1–5 — stelle, spazio — apri in grande, Z — 100%, ⌘Z — annulla qualsiasi decisione."
- ],
  "Отбор за минуту": [
   "Culling in a minute",
   "Selección en un minuto",
@@ -5289,25 +4759,10 @@
   "← → — seguir sin más: la foto queda «sin decidir» y el filtro «Sin decidir» te devuelve a ella.",
   "← → — vai avanti: la foto resta «senza decisione» e il filtro «Senza decisione» ti ci riporta."
  ],
- "1–5 — звёзды, пробел — крупно, Z — 100%, C — сравнить серию, H — скрыть брак, ⌘Z — отменить.": [
-  "1–5 — stars, Space — large, Z — 100%, C — compare the burst, H — hide rejects, ⌘Z — undo.",
-  "1–5 — estrellas, espacio — en grande, Z — 100%, C — comparar la ráfaga, H — ocultar descartes, ⌘Z — deshacer.",
-  "1–5 — stelle, spazio — in grande, Z — 100%, C — confronta la raffica, H — nascondi scarti, ⌘Z — annulla."
- ],
- "Очередь сверху: все кадры или только без решения; после AI-анализа — ещё лучшие и возможный брак.": [
-  "The queue at the top: all photos or undecided only; after AI analysis also the best and possible rejects.",
-  "La cola de arriba: todas las fotos o solo sin decidir; tras el análisis AI, también las mejores y los posibles descartes.",
-  "La coda in alto: tutte le foto o solo senza decisione; dopo l’analisi AI anche le migliori e i possibili scarti."
- ],
  "F или Esc — выйти": [
   "F or Esc — exit",
   "F o Esc — salir",
   "F o Esc — esci"
- ],
- "Выйти из полноэкранного просмотра": [
-  "Exit Full Screen",
-  "Salir de pantalla completa",
-  "Esci dallo schermo intero"
  ],
  "Во весь экран": [
   "Full Screen",
@@ -5323,26 +4778,6 @@
   "Choose folders for Favorites",
   "Elija carpetas para Favoritos",
   "Scegli le cartelle per i Preferiti"
- ],
- "Папки, которые вы открывали, новые сверху. Клик — продолжить с места, где остановились.": [
-  "Folders you have opened, newest first. Click to continue where you left off.",
-  "Carpetas que ha abierto, las más recientes arriba. Clic para continuar donde lo dejó.",
-  "Cartelle che hai aperto, le più recenti in alto. Clic per continuare da dove eri rimasto."
- ],
- "Показывать": [
-  "Show",
-  "Mostrar",
-  "Mostra"
- ],
- "Очистить список": [
-  "Clear list",
-  "Vaciar la lista",
-  "Svuota l’elenco"
- ],
- "Ваши папки: ★ у недавней папки, правая кнопка в дереве или перетащите папку из Finder сюда.": [
-  "Your folders: ★ on a recent folder, right-click in the tree, or drop a folder from Finder here.",
-  "Sus carpetas: ★ en una carpeta reciente, clic derecho en el árbol o arrastre una carpeta desde el Finder aquí.",
-  "Le tue cartelle: ★ su una cartella recente, clic destro nell’albero o trascina qui una cartella dal Finder."
  ],
  "Добавить папку…": [
   "Add Folder…",
@@ -5399,20 +4834,10 @@
   "Marcadores a las carpetas con sus sesiones. Añada con ⋯ o arrastre una carpeta desde el Finder.",
   "Segnalibri alle cartelle dei tuoi servizi. Aggiungi con ⋯ o trascina una cartella dal Finder."
  ],
- "Закладки: места, где вы ищете съёмки. Клик по папке — карточка с кнопкой «Сканировать».": [
-  "Bookmarks: the places you look for shoots. Click a folder for its card with a Scan button.",
-  "Marcadores: los lugares donde busca sesiones. Clic en una carpeta para ver su tarjeta con el botón Escanear.",
-  "Segnalibri: i posti dove cerchi i servizi. Clic su una cartella per la scheda con il pulsante Scansiona."
- ],
  "Проводник": [
   "Explorer",
   "Explorador",
   "Esplora"
- ],
- "Вся файловая система: домашняя папка и диски. Клик — карточка папки, «Сканировать» — в «Съёмки».": [
-  "The whole file system: home and drives. Click for the folder card; Scan adds it to Shoots.",
-  "Todo el sistema de archivos: carpeta personal y discos. Clic para la tarjeta; Escanear la añade a Sesiones.",
-  "L’intero file system: home e dischi. Clic per la scheda; Scansiona la aggiunge ai Servizi."
  ],
  "Убрать из съёмок (файлы остаются на месте)": [
   "Remove from Shoots (files stay where they are)",
@@ -5438,11 +4863,6 @@
   "The folder is already in Shoots",
   "La carpeta ya está en Sesiones",
   "La cartella è già nei Servizi"
- ],
- "Папка попадёт в «Съёмки» и откроется": [
-  "The folder goes to Shoots and opens",
-  "La carpeta irá a Sesiones y se abrirá",
-  "La cartella va nei Servizi e si apre"
  ],
  "Закладки: места, где вы ищете съёмки. Клик открывает это место в «Проводнике».": [
   "Bookmarks: the places you look for shoots. A click opens the place in the Explorer.",
@@ -5674,11 +5094,6 @@
   "Cuántas fotos ya has visto con la capa «Selección» activada",
   "Quante foto hai già visto con il livello «Selezione» attivo"
  ],
- "брак": [
-  "rejects",
-  "descartes",
-  "scarti"
- ],
  "Итог отбора: сколько оставлено и отклонено, что делать дальше": [
   "Culling summary: how many kept and rejected, what to do next",
   "Resumen de la selección: cuántas se quedan y cuántas se descartan, qué hacer después",
@@ -5718,16 +5133,6 @@
   "Culling layer: AI tags, faces, progress",
   "capa «Selección»: etiquetas IA, caras, progreso",
   "livello «Selezione»: etichette IA, volti, avanzamento"
- ],
- "Слой «Отбор» (O): ярлыки AI на кадрах, лица на 100%, прогресс просмотра — в сетке и в кадре": [
-  "Culling layer (O): AI tags on the frames, faces at 100%, progress of the pass — in the grid and in the loupe",
-  "Capa «Selección» (O): etiquetas IA en las fotos, caras al 100 %, progreso; en la cuadrícula y en la foto",
-  "Livello «Selezione» (O): etichette IA sulle foto, volti al 100%, avanzamento; nella griglia e nella foto"
- ],
- "Турнир — для серии или 2+ выделенных кадров: ← / → — какой кадр лучше": [
-  "Tournament — for a burst or 2+ selected frames: ← / → — which frame is better",
-  "Torneo: para una ráfaga o 2+ fotos seleccionadas: ← / → indica cuál es mejor",
-  "Torneo: per una raffica o 2+ foto selezionate: ← / → indica quale è migliore"
  ],
  "AI-анализ": [
   "AI analysis",
@@ -5989,19 +5394,119 @@
   "Las fotos se copian junto con su XMP. La tarjeta y los archivos de la carpeta no se modifican. Cada copia se compara con el original: tamaño y contenido al principio, en el medio y al final del archivo.",
   "Le foto vengono copiate insieme al loro XMP. La scheda e i file nella cartella non vengono modificati. Ogni copia viene confrontata con l’originale: dimensione e contenuto all’inizio, a metà e alla fine del file."
  ],
- "Оценка кадра и поиск служебных снимков — только на macOS 15 и новее": [
-  "Frame score and utility-shot detection need macOS 15 or later",
-  "La puntuación de la foto y la detección de capturas utilitarias requieren macOS 15 o posterior",
-  "Il punteggio della foto e il rilevamento degli scatti di servizio richiedono macOS 15 o successivo"
+ "брак / вернуть из брака": [
+  "reject / restore",
+  "descartar / recuperar",
+  "scarta / ripristina"
  ],
- "На этой macOS эстетика не оценивается: у кадров без недостатков одинаковая оценка 75.": [
-  "This macOS doesn't score aesthetics: every photo without flaws gets the same score of 75.",
-  "Esta versión de macOS no evalúa la estética: todas las fotos sin defectos reciben la misma puntuación, 75.",
-  "Questa versione di macOS non valuta l’estetica: tutte le foto senza difetti ricevono lo stesso punteggio, 75."
+ "скрыть / показать брак": [
+  "hide / show rejects",
+  "ocultar / mostrar descartadas",
+  "nascondi / mostra scarti"
  ],
- "Только на macOS 15 и новее": [
-  "macOS 15 or later only",
-  "Solo en macOS 15 o posterior",
-  "Solo su macOS 15 o successivo"
+ "сбросить все фильтры": [
+  "clear all filters",
+  "quitar todos los filtros",
+  "rimuovi tutti i filtri"
+ ],
+ "к сетке": [
+  "back to the grid",
+  "volver a la cuadrícula",
+  "torna alla griglia"
+ ],
+ "назад: из 100%, из серии, к сетке; снять выделение": [
+  "back: out of 100%, out of the burst, to the grid; clear the selection",
+  "atrás: salir del 100 %, de la ráfaga, a la cuadrícula; quitar la selección",
+  "indietro: da 100%, dalla raffica, alla griglia; deseleziona"
+ ],
+ "увеличить / уменьшить / вписать / 100%": [
+  "zoom in / zoom out / fit / 100%",
+  "acercar / alejar / ajustar / 100 %",
+  "ingrandisci / riduci / adatta / 100%"
+ ],
+ "во весь экран; F или Esc — выйти": [
+  "full screen; F or Esc to exit",
+  "pantalla completa; F o Esc para salir",
+  "schermo intero; F o Esc per uscire"
+ ],
+ "панель: источники / фильтры": [
+  "sidebar: sources / filters",
+  "panel: fuentes / filtros",
+  "pannello: sorgenti / filtri"
+ ],
+ "сбросить обработку": [
+  "reset edits",
+  "restablecer la edición",
+  "reimposta le modifiche"
+ ],
+ "выровнять экспозицию и баланс по текущему": [
+  "match exposure and white balance to the current photo",
+  "igualar exposición y balance a la foto actual",
+  "uniforma esposizione e bilanciamento alla foto attuale"
+ ],
+ "открыть папку…": [
+  "open a folder…",
+  "abrir una carpeta…",
+  "apri una cartella…"
+ ],
+ "показать в Finder": [
+  "show in Finder",
+  "mostrar en el Finder",
+  "mostra nel Finder"
+ ],
+ "P, Пробел / X": [
+  "P, Space / X",
+  "P, Espacio / X",
+  "P, Spazio / X"
+ ],
+ "в сравнении: отметить «оставить» / «брак»": [
+  "in compare: mark “keep” / “reject”",
+  "en la comparación: marcar «conservar» / «descartar»",
+  "nel confronto: segna «tieni» / «scarta»"
+ ],
+ "в сравнении: применить отметки": [
+  "in compare: apply the marks",
+  "en la comparación: aplicar las marcas",
+  "nel confronto: applica i segni"
+ ],
+ "в сравнении: зум / размер кадров": [
+  "in compare: zoom / frame size",
+  "en la comparación: zoom / tamaño de las fotos",
+  "nel confronto: zoom / dimensione delle foto"
+ ],
+ "выйти из сравнения": [
+  "leave compare",
+  "salir de la comparación",
+  "esci dal confronto"
+ ],
+ "увеличить / уменьшить без ⌘": [
+  "zoom in / zoom out without ⌘",
+  "acercar / alejar sin ⌘",
+  "ingrandisci / riduci senza ⌘"
+ ],
+ "«Убрать объект»: убрать выделенное / снять выделение, выйти": [
+  "“Remove Object”: remove the selection / clear it, leave",
+  "«Eliminar objeto»: eliminar lo seleccionado / quitar la selección, salir",
+  "«Rimuovi oggetto»: rimuovi la selezione / deseleziona, esci"
+ ],
+ "звёзды": [
+  "stars",
+  "estrellas",
+  "stelle"
+ ],
+ "снять оценку": [
+  "clear rating",
+  "quitar valoración",
+  "togli valutazione"
+ ],
+ "отклонить": [
+  "reject",
+  "rechazar",
+  "scarta"
+ ],
+ "выделить всё": [
+  "select all",
+  "seleccionar todo",
+  "seleziona tutto"
  ]
 }

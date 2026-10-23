@@ -211,13 +211,14 @@ struct ComparePane: View {
     @State private var image: CGImage?
     @State private var full: CGImage?
     @State private var dragStart: CGPoint?
+    @Environment(\.displayScale) private var scale
+    @Environment(\.screen) private var screen
 
     private var marked: Bool { lib.compareKeep.contains(photo.id) }
     private var dropped: Bool { lib.compareReject.contains(photo.id) }
     private var markable: Bool { !lib.tournamentActive }
     /// Narrow frame: icons instead of captions, less chrome.
     private var compact: Bool { tile < 380 }
-    private var scale: CGFloat { NSScreen.main?.backingScaleFactor ?? 2 }
     /// Pixels the frame needs; small frames come from the camera preview (fast, hundreds of them are fine),
     /// big ones are developed at screen size.
     private var wantPixels: CGFloat { tile * scale * 1.3 }
@@ -285,9 +286,9 @@ struct ComparePane: View {
                 if let t = await Task.detached(priority: .userInitiated, operation: { await Renderer.shared.thumbnail(url, adj, size: size) }).value { image = t }
                 return
             }
-            let screen = NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560
+            let side = screen.renderSide
             if image == nil { image = await Task.detached(priority: .userInitiated) { ImageStore.shared.preview(url) }.value }
-            if let img = await Renderer.shared.render(url, adj, maxSide: min(screen, 3200), channel: "cmp-\(url.path)") {
+            if let img = await Renderer.shared.render(url, adj, maxSide: side, channel: "cmp-\(url.path)") {
                 image = img
             }
         }
@@ -385,7 +386,7 @@ struct ComparePane: View {
     /// Zoom that shows the frame at 100% (one image pixel per screen pixel). Skipped until the pane has a size.
     private func setZoom100(_ fit: CGFloat, pane: CGSize) {
         guard pane.width > 1, pane.height > 1 else { return }
-        lib.compareZoom100 = 1 / (fit * (NSScreen.main?.backingScaleFactor ?? 2))
+        lib.compareZoom100 = 1 / (fit * scale)
     }
 
     /// Keeps the frame from being pushed past the edge: the center stays at least half a window from the border.

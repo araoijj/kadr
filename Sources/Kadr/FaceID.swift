@@ -15,53 +15,26 @@ final class FaceID: @unchecked Sendable {
         CGPoint(x: 41.5493, y: 92.3655), CGPoint(x: 70.7299, y: 92.2041),
     ]
 
+    /// Held through inference.
     private let lock = NSLock()
-    private var model: MLModel?
-    private var tried = false
-    private var installedCache: Bool?
-    private let installedLock = NSLock()
-    var folder: URL { FaceMesh.shared.folder }
+    private let models = ModelSet([FaceID.modelName], in: FaceMesh.shared.folder)
+    var folder: URL { models.folder }
 
-    /// Its own lock: `lock` is held through loading and inference, and this is asked from view bodies.
-    var installed: Bool {
-        installedLock.withLock {
-            if let installedCache { return installedCache }
-            let v = FileManager.default.fileExists(atPath: folder.appendingPathComponent(Self.modelName + ".mlmodelc").path)
-            installedCache = v
-            return v
-        }
-    }
-
-    var available: Bool { lock.withLock { load(); return model != nil } }
+    /// Asked from view bodies: never waits for a model load.
+    var installed: Bool { models.installed }
 
     /// Compiles an .mlpackage (or copies an .mlmodelc) into the models folder.
     func install(from src: URL) throws {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        try ModelInstall.place(src, at: folder.appendingPathComponent(Self.modelName + ".mlmodelc"))
-        lock.withLock { tried = false; model = nil }
-        installedLock.withLock { installedCache = nil }
-    }
-
-    func uninstall() {
-        lock.withLock { tried = false; model = nil }
-        try? FileManager.default.removeItem(at: folder.appendingPathComponent(Self.modelName + ".mlmodelc"))
-        installedLock.withLock { installedCache = nil }
-    }
-
-    private func load() {
-        guard !tried else { return }
-        tried = true
-        let cfg = MLModelConfiguration()
-        cfg.computeUnits = .all
-        model = try? MLModel(contentsOf: folder.appendingPathComponent(Self.modelName + ".mlmodelc"), configuration: cfg)
+        try ModelInstall.place(src, at: models.url(Self.modelName))
+        models.reset()
     }
 
     /// Identity vector (L2-normalized float32) of the face whose five points (pixels of `img`, top-down) are given.
     func embedding(_ img: CGImage, align pts: [CGPoint]) -> Data? {
         guard pts.count == 5 else { return nil }
         return lock.withLock {
-            load()
-            guard let model else { return nil }
+            guard let model = models.model(Self.modelName) else { return nil }
             // Least-squares similarity transform template → image (complex form: z = a·w + b).
             let n = 5.0
             let wm = Self.template.reduce(CGPoint.zero) { CGPoint(x: $0.x + $1.x / n, y: $0.y + $1.y / n) }

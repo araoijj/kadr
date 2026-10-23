@@ -29,33 +29,23 @@ final class FaceMesh: @unchecked Sendable {
         296, 297, 300, 308, 310, 311, 312, 314, 317, 318, 321, 323, 324, 332, 334, 336, 338, 356, 361, 362, 365, 373, 374, 375, 377, 378, 379, 380, 381, 382,
         384, 385, 386, 387, 388, 389, 390, 397, 398, 400, 402, 405, 409, 415, 454, 466, 468, 469, 470, 471, 472, 473, 474, 475, 476, 477]
 
+    /// Held through analysis.
     private let lock = NSLock()
-    private var landmarks: MLModel?
-    private var blend: MLModel?
-    private var tried = false
-    let folder: URL
+    private let models: ModelSet
+    /// The models folder of every Core ML model ("Data folder"/Models).
+    var folder: URL { models.folder }
 
     init(folder: URL? = nil) {
         // KADR_MODELS points to another models folder (for test runs, so the "Data folder" stays untouched).
         let env = ProcessInfo.processInfo.environment["KADR_MODELS"].map { URL(fileURLWithPath: $0, isDirectory: true) }
-        self.folder = folder ?? env ?? AppFolders.support.appendingPathComponent("Models", isDirectory: true)
+        models = ModelSet(Self.modelNames, in: folder ?? env ?? AppFolders.support.appendingPathComponent("Models", isDirectory: true))
     }
 
     /// Models are installed and load.
-    var available: Bool { lock.withLock { load(); return landmarks != nil && blend != nil } }
+    var available: Bool { Self.modelNames.allSatisfy { models.model($0) != nil } }
 
     /// Models are on disk (without loading). Cached: it's queried for every frame and on every redraw.
-    /// Its own lock: `lock` is held through loading and analysis, and this is asked from view bodies.
-    var installed: Bool {
-        installedLock.withLock {
-            if let installedCache { return installedCache }
-            let v = Self.modelNames.allSatisfy { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0 + ".mlmodelc").path) }
-            installedCache = v
-            return v
-        }
-    }
-    private var installedCache: Bool?
-    private let installedLock = NSLock()
+    var installed: Bool { models.installed }
 
     /// Install models from a folder, a .zip archive or a single .mlpackage: compile to .mlmodelc and put into Models.
     func install(from src: URL) throws {
@@ -76,12 +66,11 @@ final class FaceMesh: @unchecked Sendable {
             let name = u.deletingPathExtension().lastPathComponent
             guard Self.modelNames.contains(name), ["mlpackage", "mlmodelc"].contains(u.pathExtension) else { continue }
             en?.skipDescendants()
-            try ModelInstall.place(u, at: folder.appendingPathComponent(name + ".mlmodelc"))
+            try ModelInstall.place(u, at: models.url(name))
             found += 1
         }
         guard found > 0 else { throw CocoaError(.fileNoSuchFile) }
-        lock.withLock { tried = false; landmarks = nil; blend = nil }
-        installedLock.withLock { installedCache = nil }
+        models.reset()
     }
 
     /// Models bundled with the app (Contents/Resources/FaceMesh); installed automatically on first launch.
@@ -98,19 +87,8 @@ final class FaceMesh: @unchecked Sendable {
     }
 
     func uninstall() {
-        lock.withLock { tried = false; landmarks = nil; blend = nil }
-        for n in Self.modelNames { try? FileManager.default.removeItem(at: folder.appendingPathComponent(n + ".mlmodelc")) }
-        installedLock.withLock { installedCache = nil }
-    }
-
-    private func load() {
-        guard !tried else { return }
-        tried = true
-        let cfg = MLModelConfiguration()
-        cfg.computeUnits = .all
-        func m(_ n: String) -> MLModel? { try? MLModel(contentsOf: folder.appendingPathComponent(n + ".mlmodelc"), configuration: cfg) }
-        landmarks = m(Self.modelNames[0])
-        blend = m(Self.modelNames[1])
+        for n in Self.modelNames { try? FileManager.default.removeItem(at: models.url(n)) }
+        models.reset()
     }
 
     /// Blink and squint for a face. `face` is the macOS box in frame fractions (y from top to bottom).
@@ -131,8 +109,7 @@ final class FaceMesh: @unchecked Sendable {
     /// in pixels of `img`, image-left first — the ArcFace order.
     func analyze(_ img: CGImage, face r: CGRect) -> (blend: [Double], align: [CGPoint])? {
         lock.withLock {
-            load()
-            guard let landmarks, let blend else { return nil }
+            guard let landmarks = models.model(Self.modelNames[0]), let blend = models.model(Self.modelNames[1]) else { return nil }
             let W = Double(img.width), H = Double(img.height)
             let side = max(r.width * W, r.height * H) * 1.8
             guard side >= 24,

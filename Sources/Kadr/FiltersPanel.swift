@@ -117,16 +117,10 @@ struct FiltersPanel: View {
     }
 
     private var colorButtons: some View {
-        ForEach(ColorLabel.allCases) { l in
-            let on = lib.filter == .label(l)
-            Button { set(on ? .all : .label(l)) } label: {
-                Circle().fill(l.color).frame(width: 14, height: 14)
-                    .overlay(Circle().strokeBorder(.white, lineWidth: on ? 2 : 0))
-                    .opacity(on || lib.count(.label(l)) > 0 ? 1 : 0.35)
-            }
-            .buttonStyle(.plain)
-            .help(l.title + " · \(lib.count(.label(l)))")
-        }
+        LabelDots(size: 14, spacing: 8,
+                  on: { lib.filter == .label($0) },
+                  dim: { lib.filter != .label($0) && lib.count(.label($0)) == 0 },
+                  help: { $0.title + " · \(lib.count(.label($0)))" }) { l in set(lib.filter == .label(l) ? .all : .label(l)) }
     }
 
     @ViewBuilder private var ai: some View {
@@ -366,49 +360,22 @@ struct FRow: View {
     }
 }
 
-/// Active filter as a small capsule with a cross.
-struct Chip: View {
-    let text: String
-    var icon: String?
-    let clear: () -> Void
-
-    init(_ text: String, icon: String? = nil, clear: @escaping () -> Void) {
-        self.text = text; self.icon = icon; self.clear = clear
-    }
-
-    var body: some View {
-        Button(action: clear) {
-            HStack(spacing: 4) {
-                if let icon { Image(systemName: icon) }
-                Text(text).lineLimit(1)
-                Image(systemName: "xmark").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
-            }
-            .font(.caption)
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Theme.selected, in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .help(tr("Снять этот фильтр"))
-    }
-}
-
 /// A person as a face, not a line of text: the face is cut from the best-quality photo of theirs.
 struct PersonTile: View {
     let person: Person
     let on: Bool
     let action: () -> Void
     @Environment(Library.self) private var lib
-    @State private var face: CGImage?
 
     var body: some View {
         Button(action: action) {
             VStack(spacing: 3) {
                 ZStack {
                     Circle().fill(Theme.control)
-                    if let face {
+                    LoadedImage(key: person.faces.first, load: { await Self.crop(person, lib) }, keepOnFailure: false) { face in
                         Image(decorative: face, scale: 1).resizable().scaledToFill()
                             .frame(width: 44, height: 44).clipShape(Circle())
-                    } else {
+                    } placeholder: {
                         Image(systemName: "person.fill").foregroundStyle(.tertiary)
                     }
                 }
@@ -423,7 +390,6 @@ struct PersonTile: View {
         }
         .buttonStyle(.plain)
         .help(person.title + " · \(person.photos.count)")
-        .task(id: person.faces.first) { face = await Self.crop(person, lib) }
     }
 
     /// The clearest face of the person, cut from its photo's thumbnail with some air around it.

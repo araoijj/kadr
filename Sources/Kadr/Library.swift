@@ -92,6 +92,7 @@ final class Library {
     var loupeDisplay: CGSize = .zero               // on-screen image size at the current zoom, in points
     var splitCompare = false                       // before/after split slider (Y)
     var fullscreen = false                         // full-screen viewing window is up (F)
+    var photosKey = true                           // the photos are the key window, no sheet over them (KeyHandler.trackKeyWindow)
     var splitPos: CGFloat = 0.5                    // split slider position, fraction of width
     static let zoomSteps: [CGFloat] = [0.25, 0.5, 1, 2, 4]
 
@@ -493,16 +494,6 @@ final class Library {
     func resetAdjustments() {
         setAdjustmentsForTargets(tr("Сброс к исходнику")) { $0 = .none }
         flash(tr("Обработка сброшена") + countSuffix)
-    }
-
-    func saveStyle(named name: String) {
-        guard let p = current, !p.adj.isIdentity else { flash(tr("Нечего сохранять: кадр без обработки")); return }
-        let n = name.trimmingCharacters(in: .whitespaces)
-        guard !n.isEmpty else { return }
-        styles.removeAll { !$0.builtIn && $0.name == n }
-        styles.append(Style(name: n, adj: p.adj))
-        StyleStore.save(styles)
-        flash(tr("Стиль «\(n)» сохранён"))
     }
 
     func deleteStyle(_ st: Style) {
@@ -1009,8 +1000,6 @@ final class Library {
         return photos[i]
     }
 
-    var seriesCount: Int { Set(photos.compactMap(\.seriesID)).count }
-
     func series(of p: Photo) -> [Photo] {
         guard let s = p.seriesID else { return [] }
         return photos.filter { $0.seriesID == s }
@@ -1215,28 +1204,52 @@ final class Library {
             if Prefs.aiAuto { startAI() }
             return
         }
-        let gen = folderGen
-        analysisTask = Task { [weak self] in
+        analysisTask = runPass(urls, work: { u in
             let store = ImageStore.shared
+            // As-shot white balance (~40 ms, CIRAWFilter) is not computed here: only editing needs it, so it's computed on demand.
+            let exif = store.exif(u)
+            guard let img = store.preview(u) else { return (u, exif, nil as UInt64?, nil as Double?) }
+            // Lightweight indexing only (~5 ms): EXIF, hash for series and duplicates, overall sharpness.
+            // Faces, eyes and the rest of the AI analysis run on a button press (startAI); it loads the Mac heavily.
+            return (u, exif, store.dHash(img), store.sharpness(img))
+        }, apply: { lib, b in
+            for (u, exif, h, s) in b {
+                guard let i = lib.index[u] else { continue }
+                lib.photos[i].exif = exif
+                lib.photos[i].hash = h
+                lib.photos[i].sharpness = s
+                lib.photos[i].indexed = true
+            }
+            lib.analyzed += b.count
+        }, done: { lib, cancelled in
+            guard !cancelled else { return }
+            lib.finishAnalysis()
+            if Prefs.aiAuto { lib.startAI() }
+        })
+    }
+
+    /// The folder's background passes (indexing, AI): `work` on a few low-priority threads, results handed to
+    /// `apply` on the main thread in batches (every change to photos redraws the counters for the whole folder),
+    /// the index saved as it goes (every 50 photos) and at the end. Results that arrive after another folder was
+    /// opened (or a reload) are dropped: open() already saved that folder's index. `done` runs last, for the same folder only.
+    private func runPass<Job: Sendable, Result: Sendable>(
+        _ jobs: [Job], work: @escaping @Sendable (Job) async -> Result,
+        apply: @escaping @MainActor (Library, [Result]) -> Void,
+        done: @escaping @MainActor (Library, _ cancelled: Bool) -> Void
+    ) -> Task<Void, Never> {
+        let gen = folderGen
+        return Task { [weak self] in
             let workers = min(max(1, Prefs.analysisThreads), 4)
             var sinceSave = 0
-            await withTaskGroup(of: (URL, ExifInfo, UInt64?, Double?, CullData?).self) { group in
-                var it = urls.makeIterator()
+            await withTaskGroup(of: Result.self) { group in
+                var it = jobs.makeIterator()
                 func add() -> Bool {
-                    guard let u = it.next() else { return false }
-                    group.addTask(priority: .utility) {
-                        // As-shot white balance (~40 ms, CIRAWFilter) is not computed here: only editing needs it, so it's computed on demand.
-                        let exif = store.exif(u)
-                        guard let img = store.preview(u) else { return (u, exif, nil, nil, nil) }
-                        // Lightweight indexing only (~5 ms): EXIF, hash for series and duplicates, overall sharpness.
-                        // Faces, eyes and the rest of the AI analysis run on a button press (startAI); it loads the Mac heavily.
-                        return (u, exif, store.dHash(img), store.sharpness(img), nil)
-                    }
+                    guard let job = it.next() else { return false }
+                    group.addTask(priority: .utility) { await work(job) }
                     return true
                 }
                 for _ in 0..<workers { _ = add() }
-                // Push results to the UI in batches: every change to photos redraws the counters for the whole folder.
-                var batch: [(URL, ExifInfo, UInt64?, Double?)] = []
+                var batch: [Result] = []
                 func flush() async {
                     let b = batch; batch = []
                     sinceSave += b.count
@@ -1244,34 +1257,24 @@ final class Library {
                     if save { sinceSave = 0 }
                     await MainActor.run {
                         guard let self, self.folderGen == gen else { return }
-                        for (u, exif, h, s) in b {
-                            guard let i = self.index[u] else { continue }
-                            self.photos[i].exif = exif
-                            self.photos[i].hash = h
-                            self.photos[i].sharpness = s
-                            self.photos[i].indexed = true
-                        }
+                        apply(self, b)
                         self.indexDirty = true
-                        self.analyzed += b.count
                         if save { self.saveIndex() }
                     }
                 }
-                while let (u, exif, h, s, _) = await group.next() {
+                while let r = await group.next() {
                     if Task.isCancelled { group.cancelAll(); break }
-                    batch.append((u, exif, h, s))
+                    batch.append(r)
                     if batch.count >= 16 { await flush() }
                     _ = add()
                 }
                 if !batch.isEmpty, !Task.isCancelled { await flush() }
             }
+            let cancelled = Task.isCancelled
             await MainActor.run {
-                // Another folder (or a reload) since: open() already saved this one's index.
                 guard let self, self.folderGen == gen else { return }
                 self.saveIndex()
-                if !Task.isCancelled {
-                    self.finishAnalysis()
-                    if Prefs.aiAuto { self.startAI() }
-                }
+                done(self, cancelled)
             }
         }
     }
@@ -1308,57 +1311,23 @@ final class Library {
         let urls = jobs.map(\.0)
         guard !urls.isEmpty else { return }
         aiRunning = true; aiDone = 0; aiTotal = urls.count
-        let gen = folderGen
-        aiTask = Task { [weak self] in
-            let store = ImageStore.shared
-            let workers = min(max(1, Prefs.analysisThreads), 4)
-            var sinceSave = 0
-            await withTaskGroup(of: (URL, CullData?).self) { group in
-                var it = jobs.makeIterator()
-                func add() -> Bool {
-                    guard let (u, mods, base) = it.next() else { return false }
-                    group.addTask(priority: .utility) {
-                        guard let img = store.preview(u) else { return (u, nil) }
-                        return (u, await CullAnalyzer.analyze(img, modules: mods, into: base))
-                    }
-                    return true
-                }
-                for _ in 0..<workers { _ = add() }
-                var batch: [(URL, CullData?)] = []
-                func flush() async {
-                    let b = batch; batch = []
-                    sinceSave += b.count
-                    let save = sinceSave >= 50
-                    if save { sinceSave = 0 }
-                    await MainActor.run {
-                        guard let self, self.folderGen == gen else { return }
-                        for (u, cull) in b {
-                            guard let i = self.index[u], let cull else { continue }
-                            if self.photos[i].cull == nil { self.aiCount += 1 }
-                            self.photos[i].cull = cull
-                        }
-                        self.indexDirty = true
-                        self.aiDone += b.count
-                        if save { self.saveIndex() }
-                    }
-                }
-                while let r = await group.next() {
-                    if Task.isCancelled { group.cancelAll(); break }
-                    batch.append(r)
-                    if batch.count >= 16 { await flush() }
-                    _ = add()
-                }
-                if !batch.isEmpty, !Task.isCancelled { await flush() }
+        aiTask = runPass(jobs, work: { job in
+            let (u, mods, base) = job
+            guard let img = ImageStore.shared.preview(u) else { return (u, nil as CullData?) }
+            return (u, await CullAnalyzer.analyze(img, modules: mods, into: base))
+        }, apply: { lib, b in
+            for (u, cull) in b {
+                guard let i = lib.index[u], let cull else { continue }
+                if lib.photos[i].cull == nil { lib.aiCount += 1 }
+                lib.photos[i].cull = cull
             }
-            await MainActor.run {
-                // After a folder switch aiRunning belongs to the new folder's analysis, if any.
-                guard let self, self.folderGen == gen else { return }
-                self.saveIndex()
-                self.aiRunning = false
-                self.finishAnalysis()   // best in series and medians, now taking faces and eyes into account
-                if Prefs.tagsToXMP, !Task.isCancelled { self.writeTagKeywords(ask: false) }
-            }
-        }
+            lib.aiDone += b.count
+        }, done: { lib, cancelled in
+            // After a folder switch aiRunning belongs to the new folder's analysis, if any (runPass drops it then).
+            lib.aiRunning = false
+            lib.finishAnalysis()   // best in series and medians, now taking faces and eyes into account
+            if Prefs.tagsToXMP, !cancelled { lib.writeTagKeywords(ask: false) }
+        })
     }
 
     func stopAI() { aiTask?.cancel() }

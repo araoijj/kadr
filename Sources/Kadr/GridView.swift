@@ -186,20 +186,19 @@ struct Thumbnail: View {
     let photo: Photo
     let selected: Bool
     var focused = false
-    @State private var image: CGImage?
 
     var body: some View {
         VStack(spacing: 6) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8).fill(selected ? Color.accentColor.opacity(0.16) : Theme.cell)
-                if let image {
+                LoadedImage(key: ThumbKey(url: photo.url, adj: photo.adj), load: { await Renderer.thumb(for: photo) }) { image in
                     Image(decorative: image, scale: 1)
                         .resizable()
                         .interpolation(.high)
                         .aspectRatio(contentMode: .fit)
                         .padding(8)
                         .opacity(photo.rejected ? 0.28 : 1)
-                } else {
+                } placeholder: {
                     ProgressView().controlSize(.small)
                 }
                 badges
@@ -224,9 +223,6 @@ struct Thumbnail: View {
             .padding(.horizontal, 4)
         }
         .contentShape(Rectangle())
-        .task(id: ThumbKey(url: photo.url, adj: photo.adj)) {
-            if let img = await Renderer.thumb(for: photo) { image = img }
-        }
     }
 
     private var badges: some View {

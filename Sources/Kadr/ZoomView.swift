@@ -14,6 +14,7 @@ struct ZoomableLoupe: View {
     @State private var before: CGImage?
     @State private var beforeRegion: CGRect = .zero
     @State private var beforeFor: URL?
+    @Environment(\.displayScale) private var backing
 
     private var split: Bool { lib.splitCompare && !photo.adj.isIdentity && !lib.showOriginal }
 
@@ -23,7 +24,6 @@ struct ZoomableLoupe: View {
         GeometryReader { geo in
             let pane = geo.size
             let px = pixelSize
-            let backing = NSScreen.main?.backingScaleFactor ?? 2
             // "Fit" as a fraction of 100%; floored, since a tiny pane would make it negative ("−%" in the bar).
             let fit = min(max(pane.width - 40, 1) / max(px.width, 1), max(pane.height - 40, 1) / max(px.height, 1)) * backing
             ZStack {
@@ -300,14 +300,23 @@ struct ZoomBar: View {
 }
 
 /// Invisible anchor point that lets wheel/trackpad scrolling know the cursor is over the frame.
+/// All of them (the library's and full screen's): one static view went stale when the other left.
 struct LoupeAnchor: NSViewRepresentable {
-    @MainActor static weak var view: NSView?
+    @MainActor private static let views = NSHashTable<NSView>.weakObjects()
     func makeNSView(context: Context) -> NSView {
         let v = PassthroughView()
-        LoupeAnchor.view = v
+        Self.views.add(v)
         return v
     }
-    func updateNSView(_ v: NSView, context: Context) { LoupeAnchor.view = v }
+    func updateNSView(_ v: NSView, context: Context) {}
+
+    /// The event is over a frame in its own window; scrolling anywhere else stays ordinary scrolling.
+    @MainActor static func contains(_ e: NSEvent) -> Bool {
+        views.allObjects.contains { v in
+            v.window != nil && v.window == e.window && !v.isHiddenOrHasHiddenAncestor
+                && v.bounds.contains(v.convert(e.locationInWindow, from: nil))
+        }
+    }
 
     final class PassthroughView: NSView {
         override func hitTest(_ point: NSPoint) -> NSView? { nil }
@@ -318,8 +327,8 @@ struct LoupeAnchor: NSViewRepresentable {
 @MainActor
 enum ScrollZoom {
     static func handle(_ e: NSEvent, _ lib: Library) -> NSEvent? {
-        guard lib.loupe, !lib.comparing, let v = LoupeAnchor.view, v.window == e.window,
-              v.bounds.contains(v.convert(e.locationInWindow, from: nil)) else { return e }
+        // Only from the loupe, as before: full screen opened from the grid has no wheel zoom.
+        guard lib.loupe, !lib.comparing, LoupeAnchor.contains(e) else { return e }
         let k: CGFloat = e.hasPreciseScrollingDeltas ? 1 : 12
         if e.modifierFlags.contains(.command) || e.modifierFlags.contains(.option) {
             let cur = lib.loupeZoom ?? lib.fitZoom

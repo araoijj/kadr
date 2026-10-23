@@ -5,6 +5,7 @@ struct LoupeView: View {
     @Environment(Library.self) private var lib
     /// Height of the bar floating at the bottom (zoom, remove, crop with up to four rows), with its margin.
     @State private var bottomBar: CGFloat = 44
+    @Environment(\.screen) private var screen
 
     var body: some View {
         VStack(spacing: 0) {
@@ -74,8 +75,8 @@ struct LoupeView: View {
                 let raw = lib.current?.adj.raw ?? RawDevelop()
                 try? await Task.sleep(for: .milliseconds(400))
                 guard !Task.isCancelled else { return }
-                let screen = NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560
-                Renderer.shared.prewarm(u, maxSide: min(screen, 3200), raw: raw)
+                // The same size SharpPreview develops at, so the render it asks for is this one.
+                Renderer.shared.prewarm(u, maxSide: screen.renderSide, raw: raw)
             }
             Filmstrip()
         }
@@ -187,6 +188,7 @@ struct SharpPreview: View {
     @Environment(Library.self) private var lib
     @State private var sharp: CGImage?
     @State private var sharpFor: URL?
+    @Environment(\.screen) private var screen
 
     var body: some View {
         Group {
@@ -204,7 +206,7 @@ struct SharpPreview: View {
             let url = photo.url
             try? await Task.sleep(for: .milliseconds(120))   // fast browsing: don't develop every frame
             guard !Task.isCancelled else { return }
-            let side = Self.screenSide
+            let side = screen.renderSide
             // JPEG and other formats: just read at screen size (~50 ms).
             guard ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) else {
                 if let img = await Task.detached(priority: .userInitiated, operation: { ImageStore.shared.decoded(url, maxSide: side) }).value,
@@ -228,10 +230,6 @@ struct SharpPreview: View {
             }
         }
     }
-
-    static var screenSide: CGFloat {
-        min(NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560, 3200)
-    }
 }
 
 /// Full RAW render, 1 image pixel = 1 screen pixel. Drag with the mouse / scroll.
@@ -244,6 +242,7 @@ struct EditedImage: View {
     @State private var shownFor: URL?
     @State private var exact = false      // the exact RAW is shown, not the fast preview-based version
     @State private var rendering: UUID?   // the render owning the badge: a cancelled one clears it only if no successor took it
+    @Environment(\.screen) private var screen
 
     var body: some View {
         Group {
@@ -295,8 +294,7 @@ struct EditedImage: View {
             let token = UUID()
             rendering = token
             defer { if rendering == token { rendering = nil } }
-            let screen = NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560
-            if let img = await Renderer.shared.render(url, a, maxSide: min(screen, 3200), channel: channel),
+            if let img = await Renderer.shared.render(url, a, maxSide: screen.renderSide, channel: channel),
                !Task.isCancelled, shownFor == url {
                 image = img
                 exact = true
@@ -336,18 +334,15 @@ struct Filmstrip: View {
 struct StripCell: View {
     let photo: Photo
     let selected: Bool
-    @State private var image: CGImage?
 
     var body: some View {
-        ZStack {
-            if let image {
-                Image(decorative: image, scale: 1)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .opacity(photo.rejected ? 0.3 : 1)
-            } else {
-                Color.white.opacity(0.05)
-            }
+        LoadedImage(key: ThumbKey(url: photo.url, adj: photo.adj), load: { await Renderer.thumb(for: photo) }) { image in
+            Image(decorative: image, scale: 1)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .opacity(photo.rejected ? 0.3 : 1)
+        } placeholder: {
+            Color.white.opacity(0.05)
         }
         .frame(width: 76, height: 76)
         .clipShape(RoundedRectangle(cornerRadius: 5))
@@ -359,9 +354,6 @@ struct StripCell: View {
                     .foregroundStyle(Theme.star)
                     .padding(3)
             }
-        }
-        .task(id: ThumbKey(url: photo.url, adj: photo.adj)) {
-            if let img = await Renderer.thumb(for: photo) { image = img }
         }
     }
 }

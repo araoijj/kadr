@@ -484,37 +484,15 @@ struct EditPanel: View {
             lib.setAdjustments(a)
         })
         return VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .frame(width: 18)
-                    .foregroundStyle(changed ? Color.accentColor : .secondary)
-                Text(title)
-                    .font(.body)
-                    .foregroundStyle(changed ? .primary : .secondary)
-                    .onTapGesture(count: 2) { binding.wrappedValue = defaultValue }
-                Spacer()
-                Text(format?(value) ?? (value == 0 ? "0" : String(format: range.lowerBound < 0 ? "%+.0f" : "%.0f", value)))
-                    .font(.callout.monospacedDigit().weight(changed ? .semibold : .regular))
-                    .foregroundStyle(changed ? .primary : .secondary)
-                Button { binding.wrappedValue = defaultValue } label: {
-                    Image(systemName: "arrow.uturn.backward.circle.fill")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .opacity(changed ? 1 : 0)
-                .disabled(!changed)
-                .help(tr("Сбросить"))
-            }
-            ZStack {
-                if let gradient {
-                    LinearGradient(colors: gradient, startPoint: .leading, endPoint: .trailing)
-                        .frame(height: 4).clipShape(Capsule()).opacity(0.7).padding(.horizontal, 2)
-                    Slider(value: binding, in: range).tint(.clear)
-                } else if range.lowerBound < 0 {
-                    BipolarSlider(value: binding, range: range)   // 0 in the middle: no fill at 0
-                } else {
-                    Slider(value: binding, in: range)
-                }
+            SliderHeader(title, icon: icon,
+                         value: format?(value) ?? (value == 0 ? "0" : String(format: range.lowerBound < 0 ? "%+.0f" : "%.0f", value)),
+                         changed: changed) { binding.wrappedValue = defaultValue }
+            if let gradient {
+                GradientSlider(value: binding, range: range, colors: gradient)
+            } else if range.lowerBound < 0 {
+                BipolarSlider(value: binding, range: range)   // 0 in the middle: no fill at 0
+            } else {
+                Slider(value: binding, in: range)
             }
         }
     }
@@ -581,23 +559,10 @@ struct EditPanel: View {
         func fmt(_ v: Double) -> String { "\(Int(v.rounded()).formatted(.number.grouping(.never))) K" }
         let shot = known.map(fmt) ?? "…"
         return VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Image(systemName: "thermometer.medium").frame(width: 18).foregroundStyle(changed ? Color.accentColor : .secondary)
-                Text(tr("Температура")).foregroundStyle(changed ? .primary : .secondary)
-                    .onTapGesture(count: 2) { binding.wrappedValue = asShot }
-                Spacer()
-                Text(known == nil ? "…" : fmt(k)).font(.callout.monospacedDigit().weight(changed ? .semibold : .regular))
-                    .foregroundStyle(changed ? .primary : .secondary)
-                Button { binding.wrappedValue = asShot } label: { Image(systemName: "arrow.uturn.backward.circle.fill") }
-                    .buttonStyle(.plain).foregroundStyle(.secondary).opacity(changed ? 1 : 0).disabled(!changed)
-                    .help(tr("Как снято"))
-            }
-            ZStack {
-                LinearGradient(colors: [.blue, .gray, .orange], startPoint: .leading, endPoint: .trailing)
-                    .frame(height: 4).clipShape(Capsule()).opacity(0.7).padding(.horizontal, 2)
-                Slider(value: binding, in: range).tint(.clear)
-            }
-            .disabled(known == nil)
+            SliderHeader(tr("Температура"), icon: "thermometer.medium", value: known == nil ? "…" : fmt(k), changed: changed,
+                         resetHelp: tr("Как снято")) { binding.wrappedValue = asShot }
+            GradientSlider(value: binding, range: range, colors: [.blue, .gray, .orange])
+                .disabled(known == nil)
             HStack {
                 Text(isRaw ? tr("Как снято: \(shot)") : tr("Не RAW: сдвиг от 5500 K")).font(.caption2).foregroundStyle(.secondary)
                 Spacer()
@@ -612,26 +577,18 @@ struct EditPanel: View {
     private func hueSlider(_ title: String, hue: WritableKeyPath<Adjustments, Double>, sat: WritableKeyPath<Adjustments, Double>, _ p: Photo) -> some View {
         let h = p.adj[keyPath: hue], s = p.adj[keyPath: sat]
         return VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
+            SliderHeader(title: title, value: s == 0 ? tr("выкл") : tr("\(Int(h))° · сила \(Int(s))"), changed: s != 0, plain: true,
+                         reset: { var a = p.adj; a[keyPath: sat] = 0; lib.setAdjustments(a) }) {
                 Circle().fill(Color(hue: h / 360, saturation: max(0.15, s / 100), brightness: 0.9)).frame(width: 14, height: 14)
-                Text(title).font(.body).foregroundStyle(s == 0 ? .secondary : .primary)
-                Spacer()
-                Text(s == 0 ? tr("выкл") : tr("\(Int(h))° · сила \(Int(s))")).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
-                Button { var a = p.adj; a[keyPath: sat] = 0; lib.setAdjustments(a) } label: { Image(systemName: "arrow.uturn.backward.circle.fill") }
-                    .buttonStyle(.plain).foregroundStyle(.secondary).opacity(s == 0 ? 0 : 1).disabled(s == 0)
             }
-            ZStack {
-                LinearGradient(colors: stride(from: 0.0, through: 1.0, by: 1 / 6).map { Color(hue: $0, saturation: 0.75, brightness: 0.95) },
-                               startPoint: .leading, endPoint: .trailing)
-                    .frame(height: 6).clipShape(Capsule()).padding(.horizontal, 2)
-                Slider(value: Binding(get: { h }, set: { v in
-                    var a = p.adj
-                    a[keyPath: hue] = v.rounded()
-                    if a[keyPath: sat] == 0 { a[keyPath: sat] = 30 }
-                    lib.setAdjustments(a)
-                }), in: 0...360)
-                .tint(.clear)
-            }
+            GradientSlider(value: Binding(get: { h }, set: { v in
+                var a = p.adj
+                a[keyPath: hue] = v.rounded()
+                if a[keyPath: sat] == 0 { a[keyPath: sat] = 30 }
+                lib.setAdjustments(a)
+            }), range: 0...360,
+            colors: stride(from: 0.0, through: 1.0, by: 1 / 6).map { Color(hue: $0, saturation: 0.75, brightness: 0.95) },
+            height: 6, opacity: 1)
             HStack(spacing: 6) {
                 Text(tr("Сила")).font(.caption).foregroundStyle(.secondary).frame(width: 34, alignment: .leading)
                 Slider(value: Binding(get: { s }, set: { v in var a = p.adj; a[keyPath: sat] = v.rounded(); lib.setAdjustments(a) }), in: 0...100)
@@ -705,23 +662,25 @@ struct NewStyleSheet: View {
 struct StylePreview: View {
     let photo: Photo?
     let adj: Adjustments
-    @State private var image: CGImage?
 
     var body: some View {
         ZStack {
             Theme.cell
-            if let image {
+            LoadedImage(key: photo.map { ThumbKey(url: $0.url, adj: adj) }, load: load, keepOnFailure: false) { image in
                 Image(decorative: image, scale: 1).resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Color.clear
             }
         }
         .frame(height: 70)
         .clipShape(RoundedRectangle(cornerRadius: 4))
-        .task(id: photo.map { ThumbKey(url: $0.url, adj: adj) }) {
-            guard let url = photo?.url else { return }
-            let a = adj
-            if let c = Renderer.shared.cachedThumbnail(url, a, size: 220) { image = c; return }
-            image = await Task.detached(priority: .utility) { await Renderer.shared.thumbnail(url, a, size: 220) }.value
-        }
+    }
+
+    private func load() async -> CGImage? {
+        guard let url = photo?.url else { return nil }
+        let a = adj
+        if let c = Renderer.shared.cachedThumbnail(url, a, size: 220) { return c }
+        return await Task.detached(priority: .utility) { await Renderer.shared.thumbnail(url, a, size: 220) }.value
     }
 }
 
@@ -765,17 +724,8 @@ struct EngineSlider: View {
         let v = live ?? value ?? defaultValue
         let changed = value != nil
         VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Image(systemName: icon).frame(width: 18).foregroundStyle(changed ? Color.accentColor : .secondary)
-                Text(title).foregroundStyle(changed ? .primary : .secondary)
-                    .onTapGesture(count: 2) { commit(nil) }
-                Spacer()
-                Text("\(Int(v.rounded()))").font(.callout.monospacedDigit().weight(changed ? .semibold : .regular))
-                    .foregroundStyle(changed ? .primary : .secondary)
-                Button { commit(nil) } label: { Image(systemName: "arrow.uturn.backward.circle.fill") }
-                    .buttonStyle(.plain).foregroundStyle(.secondary).opacity(changed ? 1 : 0).disabled(!changed)
-                    .help(tr("Как у движка по умолчанию: \(Int(defaultValue.rounded()))"))
-            }
+            SliderHeader(title, icon: icon, value: "\(Int(v.rounded()))", changed: changed,
+                         resetHelp: tr("Как у движка по умолчанию: \(Int(defaultValue.rounded()))")) { commit(nil) }
             Slider(value: Binding(get: { v }, set: { live = $0.rounded() }), in: range) { editing in
                 guard !editing, let l = live else { return }
                 live = nil
@@ -794,6 +744,7 @@ struct DetailPreview: View {
     @State private var dragStart: CGPoint?
     @State private var image: CGImage?
     @State private var busy = false
+    @Environment(\.displayScale) private var scale
     private let height: CGFloat = 170
 
     private struct Key: Hashable {
@@ -802,7 +753,6 @@ struct DetailPreview: View {
 
     var body: some View {
         GeometryReader { g in
-            let scale = NSScreen.main?.backingScaleFactor ?? 2
             let px = CGSize(width: (g.size.width * scale).rounded(), height: (height * scale).rounded())
             let full = lib.pixelSize(photo)
             let iw = max(1, full.width * photo.adj.cropW), ih = max(1, full.height * photo.adj.cropH)

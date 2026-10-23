@@ -31,15 +31,12 @@ enum Sidecar {
         static let label = Fields(rawValue: 2)
     }
 
-    /// Every XMP read-modify-write goes through this lock: AI keywords are written in the background
-    /// while ratings are set on the main thread, and two unserialised writers to one file lose each other's change.
-    /// Held for one file at a time, so the main thread waits a few milliseconds at most.
+    /// Serialises `modify`. Held for one file at a time, so the main thread waits a few milliseconds at most.
     private static let writer = NSLock()
 
     static func read(for photo: URL) -> Values {
         var v = Values()
-        guard let data = try? Data(contentsOf: url(for: photo)),
-              let doc = try? XMLDocument(data: data) else { return v }
+        guard let doc = document(for: photo) else { return v }
         let descs = descriptions(in: doc)
         let rating = descs.lazy.compactMap { value(of: "Rating", in: $0) }.first.flatMap { Int($0) } ?? 0
         if rating < 0 {
@@ -58,66 +55,73 @@ enum Sidecar {
 
     static func write(_ v: Values, _ fields: Fields, for photo: URL) throws {
         guard !fields.isEmpty else { return }
-        writer.lock()
-        defer { writer.unlock() }
-        let file = url(for: photo)
-        let doc = try packet(file)
-        if fields.contains(.rating) {
-            set("Rating", to: v.rejected ? "-1" : String(v.rating), in: doc)
-            set("Rating", ns: kadrNS, prefix: "kadr", to: v.rejected && v.rating > 0 ? String(v.rating) : nil, in: doc)
+        try modify(photo) { doc in
+            if fields.contains(.rating) {
+                set("Rating", to: v.rejected ? "-1" : String(v.rating), in: doc)
+                set("Rating", ns: kadrNS, prefix: "kadr", to: v.rejected && v.rating > 0 ? String(v.rating) : nil, in: doc)
+            }
+            if fields.contains(.label) { set("Label", to: v.label?.rawValue ?? v.otherLabel, in: doc) }
+            return true
         }
-        if fields.contains(.label) { set("Label", to: v.label?.rawValue ?? v.otherLabel, in: doc) }
-        let out = doc.xmlData(options: [.nodePrettyPrint])
-        try out.write(to: file, options: .atomic)
     }
 
     /// Keywords (dc:subject), the field Capture One and Lightroom search by. Adds the missing words to the ones
     /// already there, never removes any. Returns how many were added; the file is written only if something changed.
     @discardableResult
     static func addKeywords(_ words: [String], for photo: URL) throws -> Int {
+        var added = 0
+        try modify(photo) { doc in
+            let descs = descriptions(in: doc)
+            // The Description that already has dc:subject (a file can have several Description blocks), else the first.
+            let found = descs.lazy.compactMap { d in
+                d.children?.first(where: { $0.localName == "subject" && ($0 as? XMLElement)?.uri == dcNS }) as? XMLElement
+            }.first
+            guard let desc = (found?.parent as? XMLElement) ?? descs.first else { return false }
+            if desc.resolveNamespace(forName: "dc:subject") == nil {
+                desc.addNamespace(XMLNode.namespace(withName: "dc", stringValue: dcNS) as! XMLNode)
+            }
+            let subject: XMLElement
+            if let found {
+                subject = found
+            } else {
+                subject = XMLElement(name: "dc:subject", uri: dcNS)
+                desc.addChild(subject)
+            }
+            let bag: XMLElement
+            if let b = subject.children?.first(where: { ["Bag", "Seq"].contains($0.localName ?? "") }) as? XMLElement {
+                bag = b
+            } else {
+                bag = XMLElement(name: "rdf:Bag", uri: rdfNS)
+                subject.addChild(bag)
+            }
+            var have = Set((bag.children ?? []).compactMap { $0.stringValue?.lowercased() })
+            for w in words where !w.isEmpty && !have.contains(w.lowercased()) {
+                let li = XMLElement(name: "rdf:li", uri: rdfNS)
+                li.stringValue = w
+                bag.addChild(li)
+                have.insert(w.lowercased())
+                added += 1
+            }
+            return added > 0
+        }
+        return added
+    }
+
+    /// The one read-modify-write of an XMP: `change` edits the packet (the existing one, so fields Kadr doesn't
+    /// know survive) and says whether anything changed; only then is the file written.
+    /// Every write goes through `writer`: AI keywords are written in the background while ratings are set on
+    /// the main thread, and two unserialised writers to one file lose each other's change.
+    private static func modify(_ photo: URL, _ change: (XMLDocument) -> Bool) throws {
         writer.lock()
         defer { writer.unlock() }
         let file = url(for: photo)
         let doc = try packet(file)
-        let descs = descriptions(in: doc)
-        // The Description that already has dc:subject (a file can have several Description blocks), else the first.
-        let found = descs.lazy.compactMap { d in
-            d.children?.first(where: { $0.localName == "subject" && ($0 as? XMLElement)?.uri == dcNS }) as? XMLElement
-        }.first
-        guard let desc = (found?.parent as? XMLElement) ?? descs.first else { return 0 }
-        if desc.resolveNamespace(forName: "dc:subject") == nil {
-            desc.addNamespace(XMLNode.namespace(withName: "dc", stringValue: dcNS) as! XMLNode)
-        }
-        let subject: XMLElement
-        if let found {
-            subject = found
-        } else {
-            subject = XMLElement(name: "dc:subject", uri: dcNS)
-            desc.addChild(subject)
-        }
-        let bag: XMLElement
-        if let b = subject.children?.first(where: { ["Bag", "Seq"].contains($0.localName ?? "") }) as? XMLElement {
-            bag = b
-        } else {
-            bag = XMLElement(name: "rdf:Bag", uri: rdfNS)
-            subject.addChild(bag)
-        }
-        var have = Set((bag.children ?? []).compactMap { $0.stringValue?.lowercased() })
-        var added = 0
-        for w in words where !w.isEmpty && !have.contains(w.lowercased()) {
-            let li = XMLElement(name: "rdf:li", uri: rdfNS)
-            li.stringValue = w
-            bag.addChild(li)
-            have.insert(w.lowercased())
-            added += 1
-        }
-        guard added > 0 else { return 0 }
+        guard change(doc) else { return }
         try doc.xmlData(options: [.nodePrettyPrint]).write(to: file, options: .atomic)
-        return added
     }
 
     static func keywords(for photo: URL) -> [String] {
-        guard let data = try? Data(contentsOf: url(for: photo)), let doc = try? XMLDocument(data: data) else { return [] }
+        guard let doc = document(for: photo) else { return [] }
         let li = (try? doc.nodes(forXPath: "//*[local-name()='subject']//*[local-name()='li']")) ?? []
         return li.compactMap(\.stringValue)
     }
@@ -132,6 +136,11 @@ enum Sidecar {
       </rdf:RDF>
     </x:xmpmeta>
     """
+
+    /// The photo's XMP as it is on disk; nil when there is none or it doesn't parse.
+    private static func document(for photo: URL) -> XMLDocument? {
+        (try? Data(contentsOf: url(for: photo))).flatMap { try? XMLDocument(data: $0) }
+    }
 
     /// The existing XMP, or a fresh packet when there is none (or it has no Description to write into).
     private static func packet(_ file: URL) throws -> XMLDocument {
