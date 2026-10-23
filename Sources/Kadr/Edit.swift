@@ -395,6 +395,11 @@ final class LUTStore: @unchecked Sendable {
     static let shared = LUTStore()
     private let lock = NSLock()
     private var cache: [String: (size: Int, data: Data)] = [:]
+    private var gen = 0
+
+    /// Bumped (under the lock) when a LUT is replaced; thumbnail cache keys carry it, so a thumbnail rendered
+    /// with the old cube while the file was being swapped is stored under a key nobody asks for again.
+    var generation: Int { lock.withLock { gen } }
 
     static func isLUT(_ name: String) -> Bool {
         let e = (name as NSString).pathExtension.lowercased()
@@ -437,19 +442,27 @@ final class LUTStore: @unchecked Sendable {
         var ok: [String] = []
         for u in urls where Self.isLUT(u.lastPathComponent) {
             let dest = AppFolders.luts.appendingPathComponent(u.lastPathComponent)
-            // A file with the same name replaces the old LUT: forget its parsed cube and the thumbnails made with it,
-            // and re-render the views showing it (their ThumbKey carries the revision).
-            if FileManager.default.fileExists(atPath: dest.path) {
-                try? FileManager.default.removeItem(at: dest)
-                lock.withLock { cache[u.lastPathComponent] = nil }
+            // A file with the same name replaces the old LUT. It is checked first, copied next to the old one and
+            // swapped in, so a render in flight never finds the LUT missing; only then are its parsed cube and the
+            // thumbnails made with it dropped, and the views showing it re-render (their ThumbKey carries the revision).
+            let parsed = u.pathExtension.lowercased() == "png" ? Self.parseHald(u) : Self.parseCube(u)
+            guard let parsed else { continue }
+            let replacing = FileManager.default.fileExists(atPath: dest.path)
+            let tmp = dest.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).\(dest.pathExtension)")
+            guard (try? FileManager.default.copyItem(at: u, to: tmp)) != nil else { continue }
+            guard (try? FileManager.default.replaceItemAt(dest, withItemAt: tmp)) != nil else {
+                try? FileManager.default.removeItem(at: tmp)
+                continue
+            }
+            lock.withLock {
+                cache[u.lastPathComponent] = parsed
+                if replacing { gen += 1 }
+            }
+            if replacing {
                 Renderer.shared.clearThumbnails()
                 LUTRevision.shared.value += 1
             }
-            if (try? FileManager.default.copyItem(at: u, to: dest)) != nil, cube(u.lastPathComponent) != nil {
-                ok.append(u.lastPathComponent)
-            } else {
-                try? FileManager.default.removeItem(at: dest)
-            }
+            ok.append(u.lastPathComponent)
         }
         return ok
     }

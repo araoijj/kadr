@@ -221,7 +221,8 @@ struct ComparePane: View {
     /// Pixels the frame needs; small frames come from the camera preview (fast, hundreds of them are fine),
     /// big ones are developed at screen size.
     private var wantPixels: CGFloat { tile * scale * 1.3 }
-    private struct RenderKey: Hashable { let url: URL; let adj: Adjustments; let bucket: Int }
+    /// `luts` is read in body, so a LUT replaced under the same name renders the pane again (like ThumbKey).
+    private struct RenderKey: Hashable { let url: URL; let adj: Adjustments; let bucket: Int; var luts = LUTRevision.shared.value }
 
     var body: some View {
         GeometryReader { geo in

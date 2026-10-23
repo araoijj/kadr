@@ -185,7 +185,8 @@ final class Renderer: @unchecked Sendable {
     /// (it may be switched on before it is computed).
     private func thumbKey(_ url: URL, _ adj: Adjustments, _ size: CGFloat) -> NSString {
         let dn = adj.aiDenoise > 0 && Denoiser.shared.hasResult(url, adj.raw) ? "|dn" : ""
-        return "\(url.path)|\(adj.hashValue)|\(Int(size))\(dn)" as NSString
+        let lut = adj.lut == nil ? "" : "|l\(LUTStore.shared.generation)"
+        return "\(url.path)|\(adj.hashValue)|\(Int(size))\(dn)\(lut)" as NSString
     }
 
     /// Small developed source for thumbnails: its own little cache, so the grid never evicts the loupe's bases.
