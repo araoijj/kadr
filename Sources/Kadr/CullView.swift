@@ -19,8 +19,12 @@ struct CullOverlay: View {
                 tag(tr("Оставлено") + " " + String(repeating: "★", count: photo.rating), "checkmark.circle.fill", .green)
             }
             if lib.aiOn {
-                ForEach(v.reasons) { r in tag(r.title, r.icon, r.isDefect ? .orange : .yellow).help(lib.explain(r, photo)) }
-                if photo.isBestInSeries { tag(tr("Лучший в серии"), "sparkles", Theme.star) }
+                // The best of a burst is the keeper: what the analysis found there is advice, not a defect.
+                // «Best in series» itself is said by the loupe's burst badge right above.
+                ForEach(v.reasons) { r in
+                    tag(r.title, r.icon, photo.isBestInSeries ? .secondary : r.isDefect ? .orange : .yellow)
+                        .help(lib.explain(r, photo))
+                }
                 if v.reasons.contains(.underexposed) {
                     Button { lib.brightenDark() } label: { tag(tr("Осветлить"), "sun.max", .accentColor) }
                         .buttonStyle(.plain)
@@ -35,7 +39,7 @@ struct CullOverlay: View {
                 Text(tr("Оценка \(v.score)"))
                     .font(.caption.weight(.semibold).monospacedDigit())
                     .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(.black.opacity(0.6), in: Capsule())
+                    .overlayCapsule()
                     .help(tr("Техника и эстетика кадра, 0–100. Подсказка, а не приговор."))
             }
         }
@@ -46,7 +50,7 @@ struct CullOverlay: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(c)
             .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(.black.opacity(0.65), in: Capsule())
+            .overlayCapsule()
     }
 }
 

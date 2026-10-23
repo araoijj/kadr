@@ -145,7 +145,7 @@ struct PersonFace: View {
 
     var body: some View {
         ZStack {
-            Circle().fill(.white.opacity(0.08))
+            Circle().fill(Theme.key)
             if let image { Image(decorative: image, scale: 1).resizable().aspectRatio(contentMode: .fill).clipShape(Circle()) }
             else { Image(systemName: "person.fill").font(.caption).foregroundStyle(.secondary) }
         }

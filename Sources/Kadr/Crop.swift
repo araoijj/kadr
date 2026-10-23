@@ -175,7 +175,7 @@ struct CropEditor: View {
                 Text(sizeLabel(r))
                     .font(.caption.monospacedDigit())
                     .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(.black.opacity(0.65), in: Capsule())
+                    .overlayCapsule()
                     .offset(x: box.minX + 6, y: box.minY + 6)
             }
             .frame(width: pane.width, height: pane.height, alignment: .topLeading)
@@ -285,7 +285,7 @@ struct CropBar: View {
                             }
                             .lineLimit(1).fixedSize()
                             .padding(.horizontal, 8).padding(.vertical, 4)
-                            .background(RoundedRectangle(cornerRadius: 6).fill((adj.cropAspect ?? "free") == f.id ? Color.accentColor.opacity(0.4) : .white.opacity(0.06)))
+                            .background(RoundedRectangle(cornerRadius: 6).fill((adj.cropAspect ?? "free") == f.id ? Color.accentColor.opacity(0.4) : Theme.control))
                         }
                         .buttonStyle(.plain)
                     }
@@ -310,25 +310,42 @@ struct CropBar: View {
                     Button(tr("Готово")) { lib.finishCrop() }.buttonStyle(.borderedProminent).fixedSize()
                     HintButton(id: "crop")
                 }
-                // Last option: the slider gives way, so the row never asks for more than the column has.
+                // Icons only: the slider gives way first.
                 HStack(spacing: 6) {
                     Image(systemName: "level").foregroundStyle(.secondary).help(tr("Горизонт"))
                     angleSlider(adj).frame(minWidth: 40, maxWidth: 220)
                     angleValue(adj)
                     Divider().frame(height: 16)
-                    Button { lib.resetCrop() } label: { Image(systemName: "arrow.counterclockwise") }.help(tr("Сбросить"))
-                    if lib.multiSelected {
-                        Button { lib.applyCropToTargets() } label: { Image(systemName: "square.stack") }.help(tr("На все выделенные"))
+                    cropButtons
+                }
+                // Last option, about 300 pt: the buttons go under the slider, which can shrink to nothing,
+                // so the bar never asks for more than the column has.
+                VStack(spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "level").foregroundStyle(.secondary).help(tr("Горизонт"))
+                        angleSlider(adj).frame(minWidth: 0, maxWidth: 220)
+                        angleValue(adj)
                     }
-                    Button { lib.cancelCrop() } label: { Image(systemName: "xmark") }.help(tr("Отмена"))
-                    Button { lib.finishCrop() } label: { Image(systemName: "checkmark") }
-                        .buttonStyle(.borderedProminent).help(tr("Готово"))
-                    HintButton(id: "crop")
+                    cropButtons
                 }
             }
             .controlSize(.small)
         }
         .floatingBar(RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// Reset, apply to the selection, cancel, done: icon buttons for the narrow variants.
+    private var cropButtons: some View {
+        HStack(spacing: 6) {
+            Button { lib.resetCrop() } label: { Image(systemName: "arrow.counterclockwise") }.help(tr("Сбросить"))
+            if lib.multiSelected {
+                Button { lib.applyCropToTargets() } label: { Image(systemName: "square.stack") }.help(tr("На все выделенные"))
+            }
+            Button { lib.cancelCrop() } label: { Image(systemName: "xmark") }.help(tr("Отмена"))
+            Button { lib.finishCrop() } label: { Image(systemName: "checkmark") }
+                .buttonStyle(.borderedProminent).help(tr("Готово"))
+            HintButton(id: "crop")
+        }
     }
 
     private func reviewRow(hint: Bool) -> some View {
@@ -345,15 +362,16 @@ struct CropBar: View {
         .help(tr("Enter — принять (можно поправить рамку) · Esc или → — пропустить"))
     }
 
+    /// An action, not a format: drawn like an unselected chip, so only the chosen format is highlighted.
     private var autoButton: some View {
         Button { lib.autoCropCurrent() } label: {
             HStack(spacing: 4) {
-                if lib.autoCropBusy { ProgressView().controlSize(.mini) } else { Image(systemName: "sparkles") }
+                if lib.autoCropBusy { ProgressView().controlSize(.mini) } else { Image(systemName: "sparkles").foregroundStyle(Color.accentColor) }
                 Text(tr("Авто")).font(.caption.weight(.semibold)).lineLimit(1)
             }
             .fixedSize()
             .padding(.horizontal, 8).padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color.accentColor.opacity(0.25)))
+            .background(RoundedRectangle(cornerRadius: 6).fill(Theme.control))
         }
         .buttonStyle(.plain)
         .help(tr("AI предложит рамку и горизонт: лица и главный объект — по третям, в выбранном формате (A)"))
@@ -392,11 +410,11 @@ struct CropBar: View {
     }
 
     private func angleSlider(_ adj: Adjustments) -> some View {
-        Slider(value: Binding(get: { adj.angle }, set: { v in
+        BipolarSlider(value: Binding(get: { adj.angle }, set: { v in
             guard var a = lib.current?.adj else { return }
             a.angle = (v * 10).rounded() / 10
             lib.setAdjustments(a)
-        }), in: -15...15)
+        }), range: -15...15)
     }
 
     private func angleValue(_ adj: Adjustments) -> some View {

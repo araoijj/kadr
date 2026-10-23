@@ -8,34 +8,41 @@ struct SelectionBar: View {
     var body: some View {
         Bar(edge: .bottom) {
             ViewThatFits(in: .horizontal) {
+                // Each width with tighter gaps too: they pay for the 22 pt click targets, so captions and
+                // icons give way at about the same widths as before.
                 row(captions: true)
+                row(captions: true, spacing: 6)
                 row(captions: false)
+                row(captions: false, spacing: 6)
             }
         }
     }
 
-    private func row(captions: Bool) -> some View {
-        HStack(spacing: 12) {
+    private func row(captions: Bool, spacing: CGFloat = 12) -> some View {
+        HStack(spacing: spacing) {
             Text(captions ? tr("Выделено \(lib.targets.count)") : "\(lib.targets.count)")
                 .font(.callout.weight(.semibold)).monospacedDigit().fixedSize()
 
             divider
 
-            HStack(spacing: 2) {
+            // Glyphs keep their size; the 22 pt frames are the click targets (a 13 pt dot was hard to hit).
+            HStack(spacing: 0) {
                 ForEach(1...5, id: \.self) { n in
-                    Button { lib.setRating(n) } label: { Image(systemName: "star.fill").font(.callout) }
+                    Button { lib.setRating(n) } label: { Image(systemName: "star.fill").font(.callout).hitTarget() }
                         .buttonStyle(.plain)
                         .foregroundStyle(Theme.star.opacity(0.35 + Double(n) * 0.13))
                         .help(tr("\(n) ★ всем"))
+                        .accessibilityLabel(tr("\(n) ★ всем"))
                 }
-                Button { lib.setRating(0) } label: { Image(systemName: "star.slash").font(.callout) }
+                Button { lib.setRating(0) } label: { Image(systemName: "star.slash").font(.callout).hitTarget() }
                     .buttonStyle(.plain).foregroundStyle(.secondary).help(tr("Снять оценку"))
+                    .accessibilityLabel(tr("Снять оценку"))
             }
 
-            HStack(spacing: 6) {
+            HStack(spacing: 0) {
                 ForEach(ColorLabel.allCases) { l in
-                    Button { lib.toggleLabel(l) } label: { Circle().fill(l.color).frame(width: 13, height: 13) }
-                        .buttonStyle(.plain).help(l.title)
+                    Button { lib.toggleLabel(l) } label: { Circle().fill(l.color).frame(width: 13, height: 13).hitTarget() }
+                        .buttonStyle(.plain).help(l.title).accessibilityLabel(l.title)
                 }
             }
 
@@ -54,8 +61,9 @@ struct SelectionBar: View {
 
             Spacer(minLength: 0)
 
-            Button { lib.clearSelection() } label: { Image(systemName: "xmark") }
+            Button { lib.clearSelection() } label: { Image(systemName: "xmark").hitTarget() }
                 .buttonStyle(.plain).foregroundStyle(.secondary).help(tr("Снять выделение (Esc)"))
+                .accessibilityLabel(tr("Снять выделение (Esc)"))
         }
     }
 
@@ -71,9 +79,10 @@ struct SelectionBar: View {
         }
         .buttonStyle(.plain)
         .help(help)
+        .accessibilityLabel(title)
     }
 
     private var divider: some View {
-        Rectangle().fill(.white.opacity(0.15)).frame(width: 1, height: 16)
+        Divider().frame(height: 16)
     }
 }

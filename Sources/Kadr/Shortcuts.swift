@@ -69,9 +69,11 @@ struct ShortcutsView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(k).font(.callout.monospaced().weight(.semibold))
                         .padding(.horizontal, 6).padding(.vertical, 1)
-                        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+                        .background(Theme.key, in: RoundedRectangle(cornerRadius: 4))
                         .frame(minWidth: 110, alignment: .leading)
+                    // Wraps instead of truncating: the grid sizes a row before it knows the column's final width.
                     Text(v).font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }

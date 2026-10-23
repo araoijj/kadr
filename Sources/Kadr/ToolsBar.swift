@@ -20,7 +20,11 @@ struct ToolsBar: View {
                 }
             }
             .padding(2)
-            .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 7))
+            .background {
+                // macOS 26+ wraps the toolbar item in a glass capsule already: a second plate inside it
+                // was a background within a background.
+                if #available(macOS 26, *) {} else { RoundedRectangle(cornerRadius: 7).fill(.white.opacity(0.07)) }
+            }
 
             // No tournament button: the toolbar must not grow (with the inspector open it would squeeze the
             // sidebar below its minimum); T, the burst badge and the «Отбор» menu start one.
@@ -95,11 +99,18 @@ struct ToolsBar: View {
             Image(systemName: icon).font(.system(size: 14, weight: .medium))
                 .frame(width: 30, height: 24)
             .padding(.horizontal, 1).padding(.vertical, 1)
-            .background(RoundedRectangle(cornerRadius: 6).fill(on ? Color.accentColor.opacity(0.3) : .clear))
+            .background(Self.mark.fill(on ? Color.accentColor.opacity(0.3) : .clear))
             .foregroundStyle(on ? Color.primary : enabled ? Color.primary.opacity(0.85) : Color.secondary.opacity(0.5))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .tip(title, key: key, icon: icon, enabled ? text : (disabledText ?? text))
+        // The hover card is not read by VoiceOver: the name is.
+        .accessibilityLabel(title)
+    }
+
+    /// The active tool's mark: inside the glass capsule of macOS 26+ a capsule, not a box in a capsule.
+    private static var mark: AnyShape {
+        if #available(macOS 26, *) { AnyShape(Capsule()) } else { AnyShape(RoundedRectangle(cornerRadius: 6)) }
     }
 }

@@ -44,9 +44,13 @@ struct ImportSheet: View {
                         Button(tr("Выбрать…")) { chooseBase() }
                     }
                     .padding(10)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.05)))
-                    TextField(tr("Название съёмки, например «Свадьба Ивановых»"), text: $b.shootName)
-                        .textFieldStyle(.roundedBorder)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Theme.fill))
+                    // A label above, not only the placeholder: once typed into, the field must still say what it is.
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(tr("Название съёмки")).font(.callout)
+                        TextField(tr("например «Свадьба Ивановых»"), text: $b.shootName)
+                            .textFieldStyle(.roundedBorder)
+                    }
                     Toggle(tr("Раскладывать по дням съёмки"), isOn: $b.splitByDay)
                     if !imp.days.isEmpty {
                         VStack(alignment: .leading, spacing: 3) {
@@ -82,8 +86,9 @@ struct ImportSheet: View {
 
             Divider()
             HStack {
-                Text(tr("Снимки копируются вместе с XMP. Карта и файлы в папке не меняются, каждая копия сверяется с оригиналом."))
+                Text(tr("Снимки копируются вместе с XMP. Карта и файлы в папке не меняются. У каждой копии сверяются с оригиналом размер и содержимое в начале, середине и конце файла."))
                     .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer()
                 if imp.copying {
                     Button(tr("Остановить")) { imp.cancel() }

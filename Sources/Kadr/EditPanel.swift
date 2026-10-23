@@ -12,8 +12,7 @@ struct Inspector: View {
                 Text(tr("Обработка")).tag(Library.InspectorTab.edit)
                 Text(tr("Журнал")).tag(Library.InspectorTab.history)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            .tabs()
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             HistogramView(photo: lib.current)
@@ -48,8 +47,7 @@ struct EditPanel: View {
                 Text(tr("Стили")).tag(1)
                 Text("LUT").tag(2)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            .tabs()
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             ScrollView {
@@ -192,12 +190,8 @@ struct EditPanel: View {
             section(tr("Профиль"), .profile, p) {
                 // Short names: a segmented control never shrinks below its labels, and the long ones
                 // pushed the whole panel wider than a narrow inspector.
-                Picker("", selection: Binding(get: { p.adj.profile }, set: { v in var a = p.adj; a.profile = v; lib.setAdjustments(a) })) {
-                    Text(tr("Камера")).tag(Adjustments.Profile.camera)
-                    Text("macOS").tag(Adjustments.Profile.standard)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                ChoiceSegments(selection: Binding(get: { p.adj.profile }, set: { v in var a = p.adj; a.profile = v; lib.setAdjustments(a) }),
+                               options: [(Adjustments.Profile.camera, tr("Камера")), (.standard, "macOS")])
                 .help(tr("Камера — цвета как в JPEG камеры; macOS — проявление RAW движком macOS как есть"))
                 Text(p.adj.profile == .camera
                      ? tr("Цвета подобраны по JPEG камеры — правки начинаются с привычной картинки.")
@@ -304,7 +298,7 @@ struct EditPanel: View {
                 .font(.caption)
             }
             .padding(4)
-            .background(RoundedRectangle(cornerRadius: 6).fill(active ? Color.accentColor.opacity(0.3) : .white.opacity(0.05)))
+            .background(RoundedRectangle(cornerRadius: 6).fill(active ? Color.accentColor.opacity(0.3) : Theme.fill))
             .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(active ? Color.accentColor : .clear, lineWidth: 1.5))
         }
         .buttonStyle(.plain)
@@ -381,7 +375,7 @@ struct EditPanel: View {
                 .font(.caption2)
             }
             .padding(4)
-            .background(RoundedRectangle(cornerRadius: 6).fill(active ? Color.accentColor.opacity(0.3) : .white.opacity(0.05)))
+            .background(RoundedRectangle(cornerRadius: 6).fill(active ? Color.accentColor.opacity(0.3) : Theme.fill))
             .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(active ? Color.accentColor : .clear, lineWidth: 1.5))
         }
         .buttonStyle(.plain)
@@ -515,9 +509,12 @@ struct EditPanel: View {
                 if let gradient {
                     LinearGradient(colors: gradient, startPoint: .leading, endPoint: .trailing)
                         .frame(height: 4).clipShape(Capsule()).opacity(0.7).padding(.horizontal, 2)
+                    Slider(value: binding, in: range).tint(.clear)
+                } else if range.lowerBound < 0 {
+                    BipolarSlider(value: binding, range: range)   // 0 in the middle: no fill at 0
+                } else {
+                    Slider(value: binding, in: range)
                 }
-                Slider(value: binding, in: range)
-                    .tint(gradient == nil ? .accentColor : .clear)
             }
         }
     }
@@ -648,7 +645,9 @@ struct NewStyleSheet: View {
     @Environment(Library.self) private var lib
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
-    @State private var collection = "Мои стили"
+    /// What the field shows: collection names are stored untranslated ("Мои стили" is also the
+    /// key `Style.collectionOrder` sorts by), so the field holds the translated name and saving maps it back.
+    @State private var collection = tr("Мои стили")
     @State private var groups: Set<StyleGroup> = []
 
     var body: some View {
@@ -664,7 +663,7 @@ struct NewStyleSheet: View {
                 HStack {
                     TextField(tr("Мои стили"), text: $collection).textFieldStyle(.roundedBorder)
                     Menu(tr("Выбрать")) {
-                        ForEach(lib.userCollections, id: \.self) { c in Button(tr(c)) { collection = c } }
+                        ForEach(lib.userCollections, id: \.self) { c in Button(tr(c)) { collection = tr(c) } }
                     }
                     .fixedSize()
                 }
@@ -687,7 +686,8 @@ struct NewStyleSheet: View {
                 Spacer()
                 Button(tr("Отмена")) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(tr("Сохранить стиль")) {
-                    lib.createStyle(name: name, groups: groups, collection: collection)
+                    lib.createStyle(name: name, groups: groups,
+                                    collection: lib.userCollections.first { tr($0) == collection } ?? collection)
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -709,7 +709,7 @@ struct StylePreview: View {
 
     var body: some View {
         ZStack {
-            Color.white.opacity(0.04)
+            Theme.cell
             if let image {
                 Image(decorative: image, scale: 1).resizable().aspectRatio(contentMode: .fill)
             }
@@ -734,7 +734,7 @@ struct LUTPeek: View {
         Text(tr("Сравнить"))
             .font(.caption.weight(.medium))
             .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Capsule().fill(saved != nil ? Color.accentColor.opacity(0.4) : .white.opacity(0.1)))
+            .background(Capsule().fill(saved != nil ? Color.accentColor.opacity(0.4) : Theme.key))
             .gesture(DragGesture(minimumDistance: 0)
                 .onChanged { _ in
                     guard saved == nil, let a = lib.current?.adj else { return }
@@ -814,7 +814,7 @@ struct DetailPreview: View {
                     Image(decorative: image, scale: scale).interpolation(.none)
                 }
                 Text("1:1").font(.caption2.weight(.bold)).padding(.horizontal, 5).padding(.vertical, 2)
-                    .background(.black.opacity(0.6), in: Capsule()).padding(6)
+                    .overlayCapsule().padding(6)
                 if busy { ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity) }
             }
             .frame(width: g.size.width, height: height)

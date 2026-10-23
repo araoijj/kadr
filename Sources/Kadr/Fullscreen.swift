@@ -9,6 +9,9 @@ final class Fullscreen {
     static let shared = Fullscreen()
     private var window: NSWindow?
     private weak var lib: Library?
+    /// The window F was pressed in: on exit the keys go back there, not to whichever window
+    /// `NSApp.windows` lists first (that could be Settings).
+    private weak var main: NSWindow?
 
     var isActive: Bool { window != nil }
 
@@ -16,7 +19,8 @@ final class Fullscreen {
 
     func enter(_ lib: Library) {
         guard window == nil, lib.current != nil else { return }
-        let screen = NSApp.keyWindow?.screen ?? NSScreen.main ?? NSScreen.screens[0]
+        main = NSApp.keyWindow ?? NSApp.mainWindow
+        let screen = main?.screen ?? NSScreen.main ?? NSScreen.screens[0]
         let w = FullscreenWindow(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false)
         w.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 1)
         w.backgroundColor = .black
@@ -38,7 +42,10 @@ final class Fullscreen {
         w.orderOut(nil)
         NSApp.presentationOptions = []
         lib?.fullscreen = false
-        NSApp.windows.first { $0.isVisible && $0 !== w && !($0 is NSPanel) }?.makeKeyAndOrderFront(nil)
+        let back = main.flatMap { $0.isVisible ? $0 : nil }
+            ?? NSApp.windows.first { $0.isVisible && $0 !== w && !($0 is NSPanel) }
+        back?.makeKeyAndOrderFront(nil)
+        main = nil
     }
 }
 
@@ -51,7 +58,7 @@ final class FullscreenWindow: NSWindow {
 struct FullscreenView: View {
     @Environment(Library.self) private var lib
     @State private var showInfo = true
-    @State private var infoToken = 0
+    @State private var hideInfo: Task<Void, Never>?
 
     var body: some View {
         ZStack {
@@ -76,16 +83,18 @@ struct FullscreenView: View {
             if on { DispatchQueue.main.async { Fullscreen.shared.exit() } }
         }
         .onContinuousHover { phase in if case .active = phase { reveal() } }
+        .onDisappear { hideInfo?.cancel() }
     }
 
     /// Show the strip and hide it 2.5 s after the last reason to show it.
     private func reveal() {
-        infoToken += 1
-        let token = infoToken
         withAnimation(.easeOut(duration: 0.12)) { showInfo = true }
-        Task { @MainActor in
+        // One timer, restarted: hover fires on every mouse move, and a sleeping Task per move piled up.
+        hideInfo?.cancel()
+        hideInfo = Task { @MainActor in
             try? await Task.sleep(for: .seconds(2.5))
-            if infoToken == token { withAnimation(.easeOut(duration: 0.4)) { showInfo = false } }
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.4)) { showInfo = false }
         }
     }
 }

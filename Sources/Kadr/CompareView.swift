@@ -332,8 +332,8 @@ struct ComparePane: View {
             .fixedSize()
             .foregroundStyle(on ? tint : .white)
             .padding(.horizontal, compact ? 6 : 8).padding(.vertical, compact ? 3 : 5)
-            .background(.black.opacity(on ? 0.7 : 0.45), in: Capsule())
-            .overlay(Capsule().strokeBorder(on ? tint : .white.opacity(0.35)))
+            .overlayCapsule(edge: !on, strong: on)
+            .overlay { if on { Capsule().strokeBorder(tint) } }
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -346,7 +346,7 @@ struct ComparePane: View {
             HStack(spacing: 4) {
                 Text(photo.name).font(.caption.weight(.medium)).lineLimit(1).truncationMode(.middle)
                     .padding(.horizontal, 6).padding(.vertical, 3)
-                    .background(focused ? Color.accentColor.opacity(0.85) : .black.opacity(0.55), in: Capsule())
+                    .background(focused ? Color.accentColor.opacity(0.85) : Theme.overlay, in: Capsule())
                     .layoutPriority(-1)
                 if photo.isBestInSeries && !compact { Badge(text: tr("Самый резкий"), icon: "sparkles", tint: Theme.star) }
                 else if photo.isBestInSeries { Image(systemName: "sparkles").foregroundStyle(Theme.star).font(.caption) }
@@ -358,13 +358,13 @@ struct ComparePane: View {
             HStack(spacing: 8) {
                 if marked {
                     Label(tr("Остаётся"), systemImage: "checkmark.circle.fill").font(.callout.weight(.semibold)).foregroundStyle(Theme.keep)
-                        .padding(.horizontal, 8).padding(.vertical, 3).background(.black.opacity(0.7), in: Capsule())
+                        .padding(.horizontal, 8).padding(.vertical, 3).overlayCapsule()
                 } else if dropped {
                     Label(tr("В брак"), systemImage: "xmark.circle.fill").font(.callout.weight(.semibold)).foregroundStyle(Theme.reject)
-                        .padding(.horizontal, 8).padding(.vertical, 3).background(.black.opacity(0.7), in: Capsule())
+                        .padding(.horizontal, 8).padding(.vertical, 3).overlayCapsule()
                 } else if markable && !lib.compareKeep.isEmpty && !lib.compareHasExplicitRejects {
                     Label(tr("Будет отклонён"), systemImage: "xmark.circle").font(.callout.weight(.medium)).foregroundStyle(Theme.reject)
-                        .padding(.horizontal, 8).padding(.vertical, 3).background(.black.opacity(0.7), in: Capsule())
+                        .padding(.horizontal, 8).padding(.vertical, 3).overlayCapsule()
                 } else if photo.rejected {
                     Label(tr("Отклонён"), systemImage: "xmark.circle.fill").font(.callout.weight(.semibold)).foregroundStyle(Theme.reject)
                 }
@@ -374,7 +374,7 @@ struct ComparePane: View {
                 if let s = photo.sharpness, let m = lib.maxSharpness, m > 0, tile >= 240 {
                     Text(compact ? "\(Int(s / m * 100))%" : tr("резкость \(Int(s / m * 100))%")).font(.caption.monospacedDigit())
                         .padding(.horizontal, 6).padding(.vertical, 3)
-                        .background(.black.opacity(0.55), in: Capsule())
+                        .overlayCapsule()
                 }
             }
         }

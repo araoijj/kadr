@@ -73,31 +73,41 @@ struct InfoPanel: View {
                     Image(systemName: n <= p.rating ? "star.fill" : "star")
                         .font(.title3)
                         .foregroundStyle(n <= p.rating ? Theme.star : .secondary)
+                        .hitTarget()
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text(verbatim: "\(n) ★"))   // no words to translate
+                .accessibilityAddTraits(n <= p.rating ? .isSelected : [])
             }
             Spacer()
             Button { lib.toggleReject() } label: {
                 Image(systemName: p.rejected ? "xmark.circle.fill" : "xmark.circle")
                     .font(.title3)
                     .foregroundStyle(p.rejected ? Theme.reject : .secondary)
+                    .hitTarget()
             }
             .buttonStyle(.plain)
             .help(tr("Отклонить (X)"))
+            .accessibilityLabel(tr("Отклонить (X)"))
+            .accessibilityAddTraits(p.rejected ? .isSelected : [])
         }
     }
 
     private func labelControl(_ p: Photo) -> some View {
-        HStack(spacing: 10) {
+        // 22 pt targets around the 18 pt dots, with the spacing cut by the same 4 pt: the row looks as before.
+        HStack(spacing: 6) {
             ForEach(ColorLabel.allCases) { l in
                 Button { lib.toggleLabel(l) } label: {
                     Circle()
                         .fill(l.color.opacity(p.label == l ? 1 : 0.3))
                         .frame(width: 18, height: 18)
                         .overlay(Circle().strokeBorder(.white.opacity(p.label == l ? 0.9 : 0), lineWidth: 2))
+                        .hitTarget()
                 }
                 .buttonStyle(.plain)
                 .help(l.title)
+                .accessibilityLabel(l.title)
+                .accessibilityAddTraits(p.label == l ? .isSelected : [])
             }
         }
     }
@@ -129,7 +139,7 @@ struct SharpnessBar: View {
             }
             GeometryReader { g in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.08))
+                    Capsule().fill(Theme.track)
                     Capsule().fill(k > 0.5 ? Color.green : k > 0.25 ? Color.yellow : Theme.reject)
                         .frame(width: g.size.width * k)
                 }

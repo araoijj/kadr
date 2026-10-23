@@ -3,6 +3,8 @@ import SwiftUI
 
 struct LoupeView: View {
     @Environment(Library.self) private var lib
+    /// Height of the bar floating at the bottom (zoom, remove, crop with up to four rows), with its margin.
+    @State private var bottomBar: CGFloat = 44
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,10 +46,20 @@ struct LoupeView: View {
                     }
                     .frame(maxHeight: .infinity, alignment: .top)
                     .padding(16)
-                    .padding(.bottom, lib.cropMode ? 130 : 56)   // the zoom / remove bar; the crop bar has up to three rows
+                    // Measured, not guessed: in a narrow column the crop bar grows to four rows.
+                    .padding(.bottom, bottomBar + 12)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Over the photo, not the whole area: centred on the frame when the faces column is on the right.
+            .overlay(alignment: .bottom) {
+                Group {
+                    if lib.cropMode { CropBar() } else if lib.removeMode { RemoveBar() } else { ZoomBar() }
+                }
+                .padding(.horizontal, 12).padding(.bottom, 12)
+                // Only pads the badges above; the bar's own size never depends on it, so no layout loop.
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bottomBar = $0 }
+            }
             // Faces at 100% while culling, if the frame still has room (narrow window: faces are viewed via zoom).
             if lib.culling, lib.aiOn, g.size.width >= 640, !lib.cropMode, !lib.removeMode,
                let p = lib.current, !(p.cull?.faces.isEmpty ?? true) {
@@ -55,12 +67,6 @@ struct LoupeView: View {
                 FacesColumn(photo: p).frame(width: 210)
             }
             }
-            }
-            .overlay(alignment: .bottom) {
-                Group {
-                    if lib.cropMode { CropBar() } else if lib.removeMode { RemoveBar() } else { ZoomBar() }
-                }
-                .padding(.horizontal, 12).padding(.bottom, 12)
             }
             .task(id: lib.currentID) {
                 // Prepare the current frame's RAW in advance so the first style applies instantly.
@@ -109,8 +115,7 @@ struct LoupeView: View {
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(width: 20, height: 20)
-                        .background(.black.opacity(0.8), in: Circle())
-                        .overlay(Circle().strokeBorder(.white.opacity(0.18)))
+                        .overlayCircle(edge: true)
                 }
                 .menuStyle(.button)
                 .buttonStyle(.plain)
@@ -260,7 +265,7 @@ struct EditedImage: View {
                     Text(tr("Проявляю RAW…")).font(.caption)
                 }
                 .padding(.horizontal, 10).padding(.vertical, 5)
-                .background(.black.opacity(0.6), in: Capsule())
+                .overlayCapsule()
                 .padding(10)
             }
         }

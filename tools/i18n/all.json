@@ -5973,5 +5973,20 @@
   "Objects were removed before the RAW settings changed — the patches may not match the photo. Restore them and remove again.",
   "Los objetos se quitaron antes de cambiar los ajustes RAW: los parches pueden no coincidir con la foto. Restáuralos y quítalos de nuevo.",
   "Gli oggetti sono stati rimossi prima di cambiare le impostazioni RAW: le toppe potrebbero non coincidere con la foto. Ripristinali e rimuovili di nuovo."
+ ],
+ "Название съёмки": [
+  "Shoot name",
+  "Nombre de la sesión",
+  "Nome dello scatto"
+ ],
+ "например «Свадьба Ивановых»": [
+  "e.g. “Smith wedding”",
+  "p. ej. «Boda García»",
+  "ad es. «Matrimonio Rossi»"
+ ],
+ "Снимки копируются вместе с XMP. Карта и файлы в папке не меняются. У каждой копии сверяются с оригиналом размер и содержимое в начале, середине и конце файла.": [
+  "Photos are copied together with their XMP. The card and the files in the folder are not changed. Each copy is checked against the original: its size and its contents at the start, middle and end of the file.",
+  "Las fotos se copian junto con su XMP. La tarjeta y los archivos de la carpeta no se modifican. Cada copia se compara con el original: tamaño y contenido al principio, en el medio y al final del archivo.",
+  "Le foto vengono copiate insieme al loro XMP. La scheda e i file nella cartella non vengono modificati. Ogni copia viene confrontata con l’originale: dimensione e contenuto all’inizio, a metà e alla fine del file."
  ]
 }

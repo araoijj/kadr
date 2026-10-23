@@ -212,15 +212,48 @@ struct BackgroundJobs: View {
     }
 }
 
+/// Design tokens. Parts built from them live in Chrome.swift:
+/// - `.overlayCapsule()` / `.overlayCircle()` — every label, badge and small mark over a photo.
+/// - Segmented choices come in two looks: `.tabs()` switches what a panel shows (system segmented,
+///   neutral selection); `ChoiceSegments` sets a value of the photo or the export (drawn here, accent
+///   selection) — so a tab never looks like a setting, on any macOS version.
+/// - `RadioRow` — one option of a single choice listed in rows; `BipolarSlider` — a slider with 0 in the middle.
 enum Theme {
     static let canvas = Color(red: 0.085, green: 0.088, blue: 0.095)
-    static let cell = Color.white.opacity(0.04)
+    // A preview's tile lies on the canvas, which is dark in any theme: a white wash, or a light theme
+    // would draw black tiles on black.
+    static let cell = wash(0.04, contrast: 0.10, onCanvas: true)
+    // Fills on the window's own surfaces: a wash of the label colour (white on dark, black on light) that
+    // gets stronger with Increase Contrast. A bare white.opacity only works on the dark theme.
+    static let fill = wash(0.05, contrast: 0.12)       // a box of grouped content: destination, summary
+    static let control = wash(0.06, contrast: 0.16)    // an option that is off: chip, radio row
+    static let selected = Color.accentColor.opacity(0.22)   // the option that is on
+    static let track = wash(0.10, contrast: 0.30)      // a track drawn by hand: BipolarSlider, gauges
+    static let key = wash(0.09, contrast: 0.25)        // a keycap, a small inline button, a placeholder
+    // Over a photo the frame decides the background, so these stay dark in any theme. Solid enough for a
+    // bright frame: a see-through capsule hid the burst badge (Liquid Glass makes everything lighter).
+    static let overlay = Color.black.opacity(0.8)
+    static let overlayStrong = Color.black.opacity(0.9)    // hover, or a mark that is set
+    static let overlayEdge = Color.white.opacity(0.18)
+    static let overlayEdgeStrong = Color.white.opacity(0.5)
+    static let tabTint = Color.gray                        // selection of a tab switcher (`.tabs()`)
     static let bar = Color.black.opacity(0.2)        // top and bottom strips
     static let barHeight: CGFloat = 38
     static let barPadding: CGFloat = 14
     static let star = Color(red: 0.98, green: 0.80, blue: 0.30)
     static let reject = Color(red: 0.93, green: 0.33, blue: 0.31)
     static let keep = Color(red: 0.36, green: 0.80, blue: 0.47)
+
+    /// The label colour at `alpha`, resolved per appearance, so a fill follows the theme and the
+    /// Increase Contrast setting instead of assuming a dark window.
+    static func wash(_ alpha: CGFloat, contrast: CGFloat, onCanvas: Bool = false) -> Color {
+        Color(nsColor: NSColor(name: nil) { a in
+            let name = a.bestMatch(from: [.darkAqua, .aqua, .accessibilityHighContrastDarkAqua, .accessibilityHighContrastAqua])
+            let dark = onCanvas || name == .darkAqua || name == .accessibilityHighContrastDarkAqua
+            let high = name == .accessibilityHighContrastDarkAqua || name == .accessibilityHighContrastAqua
+            return (dark ? NSColor.white : .black).withAlphaComponent(high ? contrast : alpha)
+        })
+    }
 }
 
 // MARK: - Empty state
@@ -294,7 +327,7 @@ struct KeyHints: View {
             Text(h.0)
                 .font(.caption.monospaced().weight(.medium))
                 .padding(.horizontal, 6).padding(.vertical, 2)
-                .background(RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.08)))
+                .background(RoundedRectangle(cornerRadius: 4).fill(Theme.key))
             Text(h.1).font(.caption).foregroundStyle(.secondary)
         }
     }

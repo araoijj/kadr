@@ -487,7 +487,7 @@ struct RemoveView: View {
                         if let t = lib.removeBusyText {
                             Text(t).font(.callout.weight(.medium))
                                 .padding(.horizontal, 12).padding(.vertical, 6)
-                                .background(.black.opacity(0.6), in: Capsule())
+                                .overlayCapsule()
                         }
                     }
                     .frame(width: geo.size.width, height: geo.size.height)

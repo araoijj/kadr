@@ -127,7 +127,7 @@ struct ZoomableLoupe: View {
             if rendering {
                 HStack(spacing: 6) { ProgressView().controlSize(.small); Text(tr("Детализация…")).font(.caption) }
                     .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(.black.opacity(0.6), in: Capsule())
+                    .overlayCapsule()
                     .padding(12)
             }
         }
@@ -239,16 +239,21 @@ struct ZoomBar: View {
         return HStack(spacing: 4) {
             Button { lib.zoomOut() } label: { Image(systemName: "minus.magnifyingglass") }
                 .disabled(z == nil).help(tr("Уменьшить (⌘−)"))
+            // As in ToolsBar: with no edit there is nothing to compare, and the split would not be drawn.
+            let canSplit = !(lib.current?.adj.isIdentity ?? true)
+            let split = lib.splitCompare && canSplit
             Button { lib.splitCompare.toggle() } label: {
                 Group {
                     if splitTitle { Label(tr("До/после"), systemImage: "rectangle.split.2x1") } else { Image(systemName: "rectangle.split.2x1") }
                 }
-                .font(.caption.weight(lib.splitCompare ? .semibold : .regular))
+                .font(.caption.weight(split ? .semibold : .regular))
                 .lineLimit(1).fixedSize()
                 .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(Capsule().fill(lib.splitCompare ? Color.accentColor.opacity(0.35) : .clear))
+                .background(Capsule().fill(split ? Color.accentColor.opacity(0.35) : .clear))
             }
-            .help(tr("Шторка «до / после» (Y): тяните линию по кадру"))
+            .disabled(!canSplit)
+            .help(canSplit ? tr("Шторка «до / после» (Y): тяните линию по кадру") : tr("У кадра нет обработки — сравнивать не с чем."))
+            .accessibilityLabel(tr("До/после"))
             if let levels {
                 Divider().frame(height: 14)
                 level(tr("Вписать"), nil, active: z == nil, help: tr("⌘0 или двойной клик"))
@@ -380,7 +385,7 @@ struct SplitHandle: View {
     private func tag(_ t: String) -> some View {
         Text(t).font(.caption2.weight(.bold))
             .padding(.horizontal, 6).padding(.vertical, 2)
-            .background(.black.opacity(0.6), in: Capsule())
+            .overlayCapsule()
             .foregroundStyle(.white)
     }
 }

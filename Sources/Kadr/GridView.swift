@@ -11,23 +11,36 @@ struct GridView: View {
     @State private var frames = CellFrames()
     @State private var marquee: CGRect?
     @State private var marqueeBase: Set<URL> = []
+    // Read once and then on its notification: plugging in or removing a mouse flips it, and the
+    // column count must follow without waiting for the next resize.
+    @State private var scrollerStyle = NSScroller.preferredScrollerStyle
 
     var body: some View {
         let sections = lib.sections
         let list = sections.flatMap(\.photos)
         VStack(spacing: 0) {
         GeometryReader { geo in
+            // Exactly the count ↑/↓ move by: an adaptive grid would add a column when a legacy scroller
+            // hides (few photos), and the arrows would no longer follow the rows on screen.
+            let count = columnCount(geo.size.width)
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: lib.thumbSize), spacing: spacing)], spacing: spacing,
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: count), spacing: spacing,
                               pinnedViews: [.sectionHeaders]) {
                         ForEach(sections, id: \.title) { section in
                         Section {
                         ForEach(section.photos) { p in
                             Thumbnail(photo: p, selected: lib.isSelected(p), focused: p.id == lib.currentID && lib.multiSelected)
                                 .id(p.id)
-                                .onTapGesture(count: 2) { lib.select(p); lib.loupe = true }
-                                .onTapGesture { lib.click(p) }
+                                // One recogniser, not count: 2 + count: 1: with both, SwiftUI holds every
+                                // single click for the double-click interval, and selecting felt laggy.
+                                // The first click selects at once; the second of a double opens the frame.
+                                // Not with ⌘/⇧/⌃: two quick toggles of one cell are two clicks, not an open.
+                                .onTapGesture {
+                                    let e = NSApp.currentEvent
+                                    let extend = e?.modifierFlags.intersection([.command, .shift, .control]).isEmpty == false
+                                    if (e?.clickCount ?? 1) >= 2 && !extend { lib.select(p); lib.loupe = true } else { lib.click(p) }
+                                }
                                 .photoContextMenu(p)
                                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("grid")) } action: { frames.rects[p.id] = $0 }
                                 .onDisappear { frames.rects[p.id] = nil }
@@ -68,6 +81,10 @@ struct GridView: View {
             }
             .onChange(of: geo.size.width, initial: true) { _, w in updateColumns(w) }
             .onChange(of: lib.thumbSize) { _, _ in updateColumns(geo.size.width) }
+            .onChange(of: scrollerStyle) { _, _ in updateColumns(geo.size.width) }
+            .onReceive(NotificationCenter.default.publisher(for: NSScroller.preferredScrollerStyleDidChangeNotification)) { _ in
+                scrollerStyle = NSScroller.preferredScrollerStyle
+            }
         }
         // Over the grid, not above it: a card in the column's flow would set the column's min height and width.
         .overlay(alignment: .top) { if lib.culling { ToolHint(id: "cull") } }
@@ -117,8 +134,28 @@ struct GridView: View {
             }
     }
 
+    /// The slider's size, but never a lone huge preview in a narrow column (small window with both panels):
+    /// from about 360 pt there are at least two columns. Follows the width, never sets it.
+    private func cellSize(_ width: CGFloat) -> CGFloat {
+        let inner = innerWidth(width)
+        // Narrower: one column no wider than the column itself. 1 pt off two: no rounding down to one.
+        guard width >= 360 else { return max(1, min(lib.thumbSize, inner)) }
+        return min(lib.thumbSize, (inner - spacing) / 2 - 1)
+    }
+
     private func updateColumns(_ width: CGFloat) {
-        lib.columns = max(1, Int((width - pad * 2 + spacing) / (lib.thumbSize + spacing)))
+        lib.columns = columnCount(width)
+    }
+
+    private func columnCount(_ width: CGFloat) -> Int {
+        max(1, Int((innerWidth(width) + spacing) / (cellSize(width) + spacing)))
+    }
+
+    /// The grid's own width: a legacy (always shown) scroller takes its strip off the column.
+    private func innerWidth(_ width: CGFloat) -> CGFloat {
+        let scroller = scrollerStyle == .legacy
+            ? NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy) : 0
+        return width - scroller - pad * 2
     }
 }
 
@@ -210,7 +247,7 @@ struct Thumbnail: View {
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundStyle(r.isDefect ? .orange : .yellow)
                                 .padding(4)
-                                .background(.black.opacity(0.55), in: Circle())
+                                .overlayCircle()
                                 .help(r.title + "\n" + lib.explain(r, photo))
                         }
                     } else if v.suspect {
@@ -218,7 +255,7 @@ struct Thumbnail: View {
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(.orange)
                             .padding(4)
-                            .background(.black.opacity(0.55), in: Circle())
+                            .overlayCircle()
                             .help(v.reasons.filter(\.isDefect).map(\.title).joined(separator: ", "))
                     }
                 }
@@ -227,7 +264,7 @@ struct Thumbnail: View {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.85))
                         .padding(4)
-                        .background(.black.opacity(0.55), in: Circle())
+                        .overlayCircle()
                         .help(tr("Есть обработка"))
                 }
                 Spacer()
@@ -239,7 +276,7 @@ struct Thumbnail: View {
                     Text("\(lib.verdict(photo).score)")
                         .font(.system(size: 10, weight: .semibold).monospacedDigit())
                         .padding(.horizontal, 6).padding(.vertical, 3)
-                        .background(.black.opacity(0.55), in: Capsule())
+                        .overlayCapsule()
                         .help(tr("Техника и эстетика кадра, 0–100. Подсказка, а не приговор."))
                 }
             }
@@ -260,8 +297,7 @@ struct Badge: View {
             .lineLimit(1).fixedSize()   // never wrapped letter by letter when the tile is crowded
             .foregroundStyle(tint)
             .padding(.horizontal, 6).padding(.vertical, 3)
-            .background(.black.opacity(0.8), in: Capsule())   // solid enough to read over a bright photo
-            .overlay(Capsule().strokeBorder(.white.opacity(0.18)))
+            .overlayCapsule(edge: true)
     }
 }
 
@@ -328,8 +364,7 @@ struct SeriesBadge: View {
             .foregroundStyle(photo.isBestInSeries && !inside ? Theme.star : .white)
             .padding(.horizontal, 6).padding(.vertical, 3)
             // Solid, with an edge: a light photo under a see-through capsule hid the badge.
-            .background(.black.opacity(hover ? 0.9 : 0.8), in: Capsule())
-            .overlay(Capsule().strokeBorder(.white.opacity(hover ? 0.5 : 0.18)))
+            .overlayCapsule(edge: true, strong: hover)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)

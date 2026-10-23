@@ -27,7 +27,7 @@ struct Sidebar: View {
                 Text(tr("Источники")).tag(Tab.sources.rawValue)
                 Text(tr("Фильтры")).tag(Tab.filters.rawValue)
             }
-            .pickerStyle(.segmented).labelsHidden().controlSize(.small)
+            .tabs().controlSize(.small)
             .padding(.horizontal, 12).padding(.top, 6).padding(.bottom, 4)
             .help(tr("⌥⌘1 — источники, ⌥⌘2 — фильтры"))
             if tab == Tab.filters.rawValue {
@@ -59,8 +59,10 @@ struct Sidebar: View {
                         }
                     }
                     if !lib.browser.cards.isEmpty {
-                        Section(tr("Карты памяти"), isExpanded: $showCards) {
+                        Section(isExpanded: $showCards) {
                             ForEach(lib.browser.cards, id: \.self) { CardRow(url: $0) }
+                        } header: {
+                            SectionLabel(title: tr("Карты памяти"))
                         }
                     }
                     Section(isExpanded: $showFavorites) {
@@ -150,14 +152,23 @@ struct SectionTitle<Items: View>: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(title)
+            SectionLabel(title: title)
             Spacer(minLength: 4)
             Menu { items } label: {
                 Image(systemName: "ellipsis.circle").foregroundStyle(.secondary)
             }
-            .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            .plainMenu().fixedSize()
             .help(tr("Что это и как настроить"))
         }
+    }
+}
+
+/// The sidebar list's own header style is too pale on the dark canvas: the same look as the «Фильтры» tab's sections.
+/// A plain colour, not `.secondary`: in a list header that one is dimmed once more.
+struct SectionLabel: View {
+    let title: String
+    var body: some View {
+        Text(title.uppercased()).font(.caption2.weight(.semibold)).foregroundStyle(Color(nsColor: .secondaryLabelColor))
     }
 }
 

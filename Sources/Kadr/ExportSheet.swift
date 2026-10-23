@@ -28,24 +28,19 @@ struct ExportSheet: View {
         return VStack(alignment: .leading, spacing: 20) {
 
             section(tr("Что сохранить")) {
-                Picker("", selection: $lib.export.scope) {
-                    Text(tr("Отобранные — с оценкой или цветом (\(lib.photos(for: .rated).count))")).tag(ExportSettings.Scope.rated)
-                    Text(tr("Показанные сейчас: «\(lib.filter.title)» (\(lib.photos(for: .visible).count))")).tag(ExportSettings.Scope.visible)
-                    Text(lib.multiSelected ? tr("Выделенные (\(lib.targets.count))") : tr("Только текущий снимок")).tag(ExportSettings.Scope.selected)
+                // The same rows as «Размер»: one kind of radio button in the sheet.
+                VStack(spacing: 6) {
+                    scopeRow(tr("Отобранные — с оценкой или цветом (\(lib.photos(for: .rated).count))"), .rated)
+                    scopeRow(tr("Показанные сейчас: «\(lib.filter.title)» (\(lib.photos(for: .visible).count))"), .visible)
+                    scopeRow(lib.multiSelected ? tr("Выделенные (\(lib.targets.count))") : tr("Только текущий снимок"), .selected)
                 }
-                .pickerStyle(.radioGroup)
-                .labelsHidden()
             }
 
             // Three independent choices: file format → pixel size → compression quality.
             // No option changes another one behind your back.
             section(tr("Формат файла")) {
-                Picker("", selection: $lib.export.format) {
-                    Text(tr("Оригиналы RAW + XMP")).tag(ExportSettings.Format.original)
-                    Text(tr("JPEG (проявить RAW)")).tag(ExportSettings.Format.jpeg)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                ChoiceSegments(selection: $lib.export.format,
+                               options: [(ExportSettings.Format.original, tr("Оригиналы RAW + XMP")), (.jpeg, tr("JPEG (проявить RAW)"))])
                 if lib.export.format == .original {
                     Toggle(tr("Перенести, а не копировать"), isOn: $lib.export.move)
                         .help(tr("Файлы исчезнут из текущей папки"))
@@ -134,7 +129,7 @@ struct ExportSheet: View {
                     Button(tr("Выбрать…")) { lib.chooseExportFolder() }
                 }
                 .padding(10)
-                .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.05)))
+                .background(RoundedRectangle(cornerRadius: 8).fill(Theme.fill))
                 Toggle(tr("Создать подпапку «\(lib.folder?.lastPathComponent ?? "съёмка")»"), isOn: $lib.export.subfolder)
                 Text(tr("Совет: клавиша S отправляет текущий кадр в эту папку сразу, без окна."))
                     .font(.caption).foregroundStyle(.secondary)
@@ -194,22 +189,11 @@ struct ExportSheet: View {
 
     /// Size option row (single choice from a list).
     private func sizeRow(_ c: SizeChoice) -> some View {
-        let on = SizeChoice.current(lib.export) == c
-        return Button { c.apply(&lib.export) } label: {
-            HStack(spacing: 10) {
-                Image(systemName: on ? "largecircle.fill.circle" : "circle")
-                    .foregroundStyle(on ? Color.accentColor : .secondary)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(c.title).font(.callout.weight(on ? .semibold : .regular))
-                    Text(c.subtitle).font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 8).fill(on ? Color.accentColor.opacity(0.18) : .white.opacity(0.04)))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        RadioRow(title: c.title, subtitle: c.subtitle, on: SizeChoice.current(lib.export) == c) { c.apply(&lib.export) }
+    }
+
+    private func scopeRow(_ title: String, _ s: ExportSettings.Scope) -> some View {
+        RadioRow(title: title, on: lib.export.scope == s) { lib.export.scope = s }
     }
 
     private var namePreview: String {
@@ -261,7 +245,7 @@ struct PlanSummary: View {
             }
         }
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.05)))
+        .background(RoundedRectangle(cornerRadius: 8).fill(Theme.fill))
     }
 }
 

@@ -68,6 +68,8 @@ struct FilterBar: View {
         let seen = min(lib.viewed.count, total)   // reindex keeps `viewed` within the folder
         return HStack(spacing: 10) {
             HStack(spacing: 6) {
+                // Short form: the eye says this counts viewed frames, not the shown «N из M» at the right.
+                if !full { Image(systemName: "eye").font(.caption).foregroundStyle(.secondary) }
                 ProgressView(value: Double(seen), total: Double(max(total, 1))).frame(width: full ? 80 : 44)
                 Text(full ? tr("Просмотрено \(seen) из \(total)") : "\(seen)/\(total)")
                     .font(.caption.weight(.semibold)).monospacedDigit().lineLimit(1).fixedSize()
@@ -158,14 +160,18 @@ struct FilterBar: View {
         } label: {
             // Shortened in code, not by the layout: the label keeps `.fixedSize()` so ViewThatFits
             // measures its true width; a layout-truncated label would overflow onto the sort menu.
-            if icon {
-                Image(systemName: "folder")
-            } else {
-                Label(lib.folder.map { Self.shortName(FolderBrowser.displayName($0)) } ?? "", systemImage: "folder")
-                    .lineLimit(1)
+            HStack(spacing: 4) {
+                if icon {
+                    Image(systemName: "folder")
+                } else {
+                    Label(lib.folder.map { Self.shortName(FolderBrowser.displayName($0)) } ?? "", systemImage: "folder")
+                        .lineLimit(1)
+                }
+                MenuChevron()
             }
+            .contentShape(Rectangle())
         }
-        .menuStyle(.borderlessButton)
+        .plainMenu()
         .fixedSize()
         .help(lib.folder.map { tr("Открыта: \($0.path)") + "\n" + tr("Меню — перейти в папку выше") } ?? "")
     }
@@ -212,9 +218,11 @@ struct FilterBar: View {
                 } else {
                     Image(systemName: "arrow.up.arrow.down")
                 }
+                MenuChevron()
             }
+            .contentShape(Rectangle())
         }
-        .menuStyle(.borderlessButton)
+        .plainMenu()
         .fixedSize()
         .help(tr("Порядок кадров: \(lib.sortKey.title.lowercased()), \(lib.sortDescending ? tr("по убыванию") : tr("по возрастанию"))")
               + (lib.groupKey == .none ? "" : " · " + lib.groupKey.title.lowercased()))
@@ -268,7 +276,7 @@ struct FilterBar: View {
             }
         }
         .padding(2)
-        .background(.white.opacity(0.06), in: Capsule())
+        .background(Theme.control, in: Capsule())
     }
 
     private var decisionsMenu: some View {
@@ -291,9 +299,11 @@ struct FilterBar: View {
             HStack(spacing: 3) {
                 Image(systemName: n == nil ? "star" : "star.fill").foregroundStyle(n == nil ? .secondary : Theme.star)
                 if let n { Text("≥\(n)").monospacedDigit() }
+                MenuChevron()
             }
+            .contentShape(Rectangle())
         }
-        .menuStyle(.borderlessButton)
+        .plainMenu()
         .fixedSize()
         .help(tr("Фильтр по звёздам"))
     }
@@ -331,9 +341,11 @@ struct FilterBar: View {
             HStack(spacing: 4) {
                 Image(systemName: "line.3.horizontal.decrease.circle" + (extra ? ".fill" : ""))
                 if caption { Text(extra ? lib.filter.title : tr("Ещё")).lineLimit(1) }
+                MenuChevron()
             }
+            .contentShape(Rectangle())
         }
-        .menuStyle(.borderlessButton)
+        .plainMenu()
         .fixedSize()
         .help(tr("Панель фильтров (⌥⌘2), скрыть брак, подпапки"))
     }

@@ -89,7 +89,7 @@ struct TipCard: View {
                             .font(.caption2.monospaced().weight(.semibold))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 5).padding(.vertical, 1)
-                            .background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
+                            .background(Theme.key, in: RoundedRectangle(cornerRadius: 4))
                     }
                 }
                 Text(tip.text)

@@ -109,7 +109,7 @@ struct FiltersPanel: View {
                 Text("★\(k)").font(.caption.weight(.semibold)).monospacedDigit().fixedSize()
                     .foregroundStyle(n != nil && k <= n! ? Theme.star : .secondary)
                     .padding(.horizontal, 7).padding(.vertical, 4)
-                    .background(on ? Color.accentColor.opacity(0.25) : Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+                    .background(on ? Theme.selected : Theme.control, in: RoundedRectangle(cornerRadius: 6))
             }
             .buttonStyle(.plain)
             .help(String(repeating: "★", count: k) + (k < 5 ? tr(" и выше") : "") + " · \(lib.count(.stars(k)))")
@@ -231,12 +231,13 @@ struct FiltersPanel: View {
                         let on = lib.tagFilters.contains(t.id)
                         Button { lib.toggleTag(t.id, add: NSEvent.modifierFlags.contains(.command)) } label: {
                             HStack(spacing: 4) {
-                                Text(TagNames.title(t.id)).fontWeight(on ? .semibold : .regular)
+                                Text(TagNames.title(t.id)).fontWeight(on ? .semibold : .regular).lineLimit(1)
                                 Text("\(t.count)").foregroundStyle(on ? .primary : .tertiary).monospacedDigit()
+                                    .lineLimit(1).layoutPriority(1)
                             }
                             .font(.caption)
                             .padding(.horizontal, 8).padding(.vertical, 3)
-                            .background(on ? Color.accentColor.opacity(0.25) : Color.primary.opacity(0.06), in: Capsule())
+                            .background(on ? Theme.selected : Theme.control, in: Capsule())
                         }
                         .buttonStyle(.plain)
                     }
@@ -384,7 +385,7 @@ struct Chip: View {
             }
             .font(.caption)
             .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Color.accentColor.opacity(0.22), in: Capsule())
+            .background(Theme.selected, in: Capsule())
         }
         .buttonStyle(.plain)
         .help(tr("Снять этот фильтр"))
@@ -403,7 +404,7 @@ struct PersonTile: View {
         Button(action: action) {
             VStack(spacing: 3) {
                 ZStack {
-                    Circle().fill(Color.primary.opacity(0.1))
+                    Circle().fill(Theme.control)
                     if let face {
                         Image(decorative: face, scale: 1).resizable().scaledToFill()
                             .frame(width: 44, height: 44).clipShape(Circle())
@@ -450,7 +451,8 @@ struct PersonTile: View {
     }
 }
 
-/// Wrapping row of chips.
+/// Wrapping row of chips. Each chip is offered the row's width, not an unlimited one: a long person or
+/// tag name then truncates inside its chip instead of running past the panel's edge.
 struct Flow: Layout {
     var spacing: CGFloat = 6
 
@@ -458,7 +460,7 @@ struct Flow: Layout {
         let w = proposal.width ?? 300
         var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0
         for s in subviews {
-            let sz = s.sizeThatFits(.unspecified)
+            let sz = s.sizeThatFits(ProposedViewSize(width: w, height: nil))
             if x > 0 && x + sz.width > w { x = 0; y += rowH + spacing; rowH = 0 }
             x += sz.width + spacing
             rowH = max(rowH, sz.height)
@@ -469,7 +471,7 @@ struct Flow: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0
         for s in subviews {
-            let sz = s.sizeThatFits(.unspecified)
+            let sz = s.sizeThatFits(ProposedViewSize(width: bounds.width, height: nil))
             if x > 0 && x + sz.width > bounds.width { x = 0; y += rowH + spacing; rowH = 0 }
             s.place(at: CGPoint(x: bounds.minX + x, y: bounds.minY + y), proposal: ProposedViewSize(sz))
             x += sz.width + spacing
