@@ -47,6 +47,7 @@ struct ExifInfo: Equatable, Codable, Sendable {
     var focal: Double?
     var width: Int?
     var height: Int?
+    var orientation: Int?        // EXIF 1–8; nil in indexes written before it was stored
 
     var exposureLine: String {
         var parts: [String] = []

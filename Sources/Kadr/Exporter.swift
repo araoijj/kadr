@@ -365,18 +365,16 @@ enum Exporter {
 
     /// RAW development → edits → watermark → sRGB JPEG with the source EXIF.
     private static func writeJPEG(_ item: ExportItem, to target: URL, _ s: ExportSettings) -> Bool {
-        // How many pixels we need from the RAW: with headroom for our own crop.
-        var maxSide: CGFloat? = s.longSide > 0 ? CGFloat(s.longSide) : nil
-        if s.preset != .custom {
-            let need: CGFloat = s.preset == .web ? 2560 : 1920
-            maxSide = need / CGFloat(max(min(item.adj.cropW, item.adj.cropH), 0.2)) * 1.2
-        }
         // Even without edits, use the in-camera profile so colors match the preview.
         let adj = s.applyEdits ? item.adj : Adjustments()
-        guard var img = EditPipeline.source(item.url, maxSide: maxSide, raw: adj.raw) else { return false }
-        img = EditPipeline.apply(adj, to: img, cameraCube: adj.profile == .camera ? CameraMatch.shared.cube(for: item.url) : nil,
-                                 asShotK: ImageStore.shared.asShotK(item.url), denoised: Denoiser.shared.input(for: item.url, adj))
+        guard var img = EditPipeline.source(item.url, maxSide: sourceMaxSide(item.url, adj, s), raw: adj.raw) else { return false }
+        img = EditPipeline.render(adj, item.url, source: img)
         img = fitToPreset(img, s, userCropped: adj.hasCrop)
+        // Own long side: the source was developed with headroom, so it is brought to the exact size here.
+        if s.preset == .custom, s.longSide > 0 {
+            let out = outputSize(img.extent.size, userCropped: adj.hasCrop, s)
+            if out != img.extent.size { img = resize(img, to: out) }
+        }
         if s.watermarkOn {
             img = EditPipeline.watermark(img, text: s.watermarkText, sizePercent: s.watermarkSize,
                                          opacity: s.watermarkOpacity, position: s.watermarkPosition)
@@ -397,8 +395,84 @@ enum Exporter {
             tiff[kCGImagePropertyTIFFOrientation] = 1
             props[kCGImagePropertyTIFFDictionary] = tiff
         }
-        CGImageDestinationAddImage(dest, cg, props as CFDictionary)
-        return CGImageDestinationFinalize(dest)
+        // The source's Exif names the RAW's full size; the JPEG is cropped and scaled.
+        var exif = props[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
+        exif[kCGImagePropertyExifPixelXDimension] = cg.width
+        exif[kCGImagePropertyExifPixelYDimension] = cg.height
+        props[kCGImagePropertyExifDictionary] = exif
+        guard let xmp = culling(item.url) else {
+            CGImageDestinationAddImage(dest, cg, props as CFDictionary)
+            return CGImageDestinationFinalize(dest)
+        }
+        // Rating, label and keywords go in as XMP. ImageIO takes XMP only by copying an encoded image,
+        // so the JPEG is encoded in memory first and then copied (without recompression) with the XMP merged in.
+        let data = NSMutableData()
+        guard let mem = CGImageDestinationCreateWithData(data as CFMutableData, UTType.jpeg.identifier as CFString, 1, nil) else { return false }
+        CGImageDestinationAddImage(mem, cg, props as CFDictionary)
+        guard CGImageDestinationFinalize(mem), let src = CGImageSourceCreateWithData(data as CFData, nil) else { return false }
+        let opts: [CFString: Any] = [kCGImageDestinationMetadata: xmp, kCGImageDestinationMergeMetadata: true]
+        return CGImageDestinationCopyImageSource(dest, src, opts as CFDictionary, nil)
+    }
+
+    /// The photo's culling from its XMP (stars or reject, colour label, keywords) for the exported JPEG, so
+    /// Lightroom, Bridge and Photos see it there too; nil when there is none.
+    private static func culling(_ url: URL) -> CGImageMetadata? {
+        let v = Sidecar.read(for: url), words = Sidecar.keywords(for: url)
+        let label = v.label?.rawValue ?? v.otherLabel
+        guard v.rejected || v.rating > 0 || label != nil || !words.isEmpty else { return nil }
+        let m = CGImageMetadataCreateMutable()
+        if v.rejected || v.rating > 0 {
+            CGImageMetadataSetValueWithPath(m, nil, "xmp:Rating" as CFString, String(v.rejected ? -1 : v.rating) as CFString)
+        }
+        if let label { CGImageMetadataSetValueWithPath(m, nil, "xmp:Label" as CFString, label as CFString) }
+        if !words.isEmpty, let tag = CGImageMetadataTagCreate(kCGImageMetadataNamespaceDublinCore, kCGImageMetadataPrefixDublinCore,
+                                                              "subject" as CFString, .arrayUnordered, words as CFArray) {
+            CGImageMetadataSetTagWithPath(m, nil, "dc:subject" as CFString, tag)
+        }
+        return m
+    }
+
+    /// Final pixel size of a frame that is `px` after our own crop: the preset's plan, or the long side
+    /// (never enlarged), or as is. The same for the size estimate and for the export.
+    static func outputSize(_ px: CGSize, userCropped: Bool, _ s: ExportSettings) -> CGSize {
+        if let plan = ExportPlan.make(aspect: Double(px.width / px.height), userCropped: userCropped, s) {
+            return CGSize(width: plan.width, height: plan.height)
+        }
+        guard s.longSide > 0 else { return px }
+        let k = min(1, CGFloat(s.longSide) / max(px.width, px.height))
+        return CGSize(width: (px.width * k).rounded(), height: (px.height * k).rounded())
+    }
+
+    /// How far the RAW may be downscaled while developing: after our crop, the straightening zoom and a
+    /// preset's center crop it must still hold the final pixels on both axes, or the frame is upscaled and soft.
+    /// nil = full size. 6000×4000 cropped to half for 2560 px: 5222 px, the crop 2611 → 2560.
+    static func sourceMaxSide(_ url: URL, _ adj: Adjustments, _ s: ExportSettings) -> CGFloat? {
+        guard s.preset != .custom || s.longSide > 0 else { return nil }
+        let ex = ImageStore.shared.exif(url)
+        // Only a RAW has a camera crop to take from the preview (it is decoded for cropToCamera anyway).
+        let prev = ImageStore.rawExtensions.contains(url.pathExtension.lowercased()) ? ImageStore.shared.preview(url) : nil
+        let frame = ImageStore.frameSize(ex, previewAspect: prev.map { CGFloat($0.width) / CGFloat($0.height) })
+        let px = CGSize(width: frame.width * adj.cropW, height: frame.height * adj.cropH)
+        guard px.width > 0, px.height > 0, let native = ex.width.flatMap({ w in ex.height.map { max(w, $0) } }) else { return nil }
+        let out = outputSize(px, userCropped: adj.hasCrop, s)
+        // Cover, not fit: of a preset's center crop only the axis that fills it counts. 2% for rounding.
+        let k = max(out.width / px.width, out.height / px.height) * EditPipeline.straightenZoom(frame, angle: adj.angle) * 1.02
+        return k < 1 ? k * CGFloat(native) : nil
+    }
+
+    /// Lanczos to exactly `size` pixels.
+    static func resize(_ input: CIImage, to size: CGSize) -> CIImage {
+        let e = input.extent
+        let k = size.width / e.width
+        // Lanczos and the sub-pixel scale below sample past the edge of the image, where a CIImage is
+        // transparent: the outermost column came out half transparent and turned into a light 1-px stripe
+        // on the JPEG. Clamp first (edge pixels repeat outward), crop to the exact pixels last.
+        var img = input.transformed(by: CGAffineTransform(translationX: -e.minX, y: -e.minY))
+            .clampedToExtent().applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k])
+        // Bring it to the exact pixels (1080×1350, not 1080×1349 due to rounding).
+        let e2 = CGSize(width: e.width * k, height: e.height * k)
+        img = img.transformed(by: CGAffineTransform(scaleX: size.width / e2.width, y: size.height / e2.height))
+        return img.cropped(to: CGRect(origin: .zero, size: size))
     }
 
     /// To the social network's planned requirements: center crop (if needed) and exact pixel size.
@@ -413,15 +487,6 @@ enum Exporter {
                 : CGRect(x: e.minX, y: e.midY - e.width / target / 2, width: e.width, height: e.width / target)).integral
             img = img.cropped(to: r).transformed(by: CGAffineTransform(translationX: -r.minX, y: -r.minY))
         }
-        let e2 = img.extent
-        let k = CGFloat(plan.width) / e2.width
-        // Lanczos and the sub-pixel scale below sample past the edge of the image, where a CIImage is
-        // transparent: the outermost column came out half transparent and turned into a light 1-px stripe
-        // on the JPEG. Clamp first (edge pixels repeat outward), crop to the plan's pixels last.
-        img = img.clampedToExtent().applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k])
-        // Bring it to the plan's exact pixels (1080×1350, not 1080×1349 due to rounding).
-        let e3 = CGSize(width: e2.width * k, height: e2.height * k)
-        img = img.transformed(by: CGAffineTransform(scaleX: CGFloat(plan.width) / e3.width, y: CGFloat(plan.height) / e3.height))
-        return img.cropped(to: CGRect(x: 0, y: 0, width: plan.width, height: plan.height))
+        return resize(img, to: CGSize(width: plan.width, height: plan.height))
     }
 }

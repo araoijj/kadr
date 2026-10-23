@@ -20,7 +20,7 @@ struct LoupeView: View {
                         HStack(spacing: 6) {
                             if p.seriesID != nil, !lib.cropMode, !lib.removeMode { seriesBadge(p) }
                             // AI edits in effect on this photo — always visible, so nothing works unnoticed.
-                            if p.adj.aiDenoise > 0, Denoiser.shared.hasResult(p.url) {
+                            if p.adj.aiDenoise > 0, Denoiser.shared.hasResult(p.url, p.adj.raw) {
                                 Badge(text: tr("AI-шумоподавление \(Int(p.adj.aiDenoise))"), icon: "wand.and.stars", tint: Color.accentColor)
                             }
                             if !p.adj.removals.isEmpty {
@@ -59,10 +59,11 @@ struct LoupeView: View {
             .task(id: lib.currentID) {
                 // Prepare the current frame's RAW in advance so the first style applies instantly.
                 guard let u = lib.currentID, ImageStore.rawExtensions.contains(u.pathExtension.lowercased()) else { return }
+                let raw = lib.current?.adj.raw ?? RawDevelop()
                 try? await Task.sleep(for: .milliseconds(400))
                 guard !Task.isCancelled else { return }
                 let screen = NSScreen.main.map { max($0.frame.width, $0.frame.height) * $0.backingScaleFactor } ?? 2560
-                Renderer.shared.prewarm(u, maxSide: min(screen, 3200))
+                Renderer.shared.prewarm(u, maxSide: min(screen, 3200), raw: raw)
             }
             Filmstrip()
         }
@@ -199,7 +200,7 @@ struct SharpPreview: View {
             if let i = vis.firstIndex(where: { $0.id == photo.id }) {
                 for j in [i + 1, i + 2, i - 1] where vis.indices.contains(j) && vis[j].adj.isIdentity
                     && ImageStore.rawExtensions.contains(vis[j].url.pathExtension.lowercased()) {
-                    Renderer.shared.prewarm(vis[j].url, maxSide: side)
+                    Renderer.shared.prewarm(vis[j].url, maxSide: side, raw: vis[j].adj.raw)
                 }
                 let ahead = vis[min(i + 1, vis.count)..<min(i + 6, vis.count)].map(\.url)
                 Task.detached(priority: .utility) { for u in ahead { _ = ImageStore.shared.preview(u) } }
@@ -249,8 +250,10 @@ struct EditedImage: View {
         .task(id: ThumbKey(url: photo.url, adj: adj)) {
             if shownFor != photo.url { image = nil; exact = false; shownFor = photo.url }
             let url = photo.url, a = adj
-            // Until the exact RAW is ready, show the edits over the camera preview right away (tens of ms).
-            if !exact, let quick = await Task.detached(priority: .userInitiated, operation: { Renderer.shared.thumbnail(url, a, size: 1600) }).value {
+            // Until the exact RAW is ready, show the grid's thumbnail (same colors) or the edits over the camera preview (tens of ms).
+            if !exact, let quick = await Task.detached(priority: .userInitiated, operation: {
+                Renderer.shared.cachedThumbnail(url, a) ?? Renderer.shared.quick(url, a)
+            }).value {
                 image = quick
             }
             rendering = true

@@ -10,6 +10,7 @@ final class CameraMatch: @unchecked Sendable {
 
     private let lock = NSLock()
     private var cache: [String: (size: Int, data: Data)?] = [:]
+    private var order: [String] = []   // ~78 KB a cube: edited thumbnails fit one for every RAW scrolled past
     private let context = CIContext(options: [.workingFormat: CIFormat.RGBAh, .cacheIntermediates: false])
 
     func cube(for url: URL) -> (size: Int, data: Data)? {
@@ -18,7 +19,10 @@ final class CameraMatch: @unchecked Sendable {
         if let c = cache[url.path] { lock.unlock(); return c }
         lock.unlock()
         let c = fit(url)
-        lock.lock(); cache[url.path] = c; lock.unlock()
+        lock.lock()
+        if cache.updateValue(c, forKey: url.path) == nil { order.append(url.path) }
+        while order.count > 400 { cache[order.removeFirst()] = nil }
+        lock.unlock()
         return c
     }
 

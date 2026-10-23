@@ -132,6 +132,11 @@ struct EditPanel: View {
                     Spacer()
                     Button(tr("Вернуть все")) { var a = p.adj; a.removals = []; lib.setAdjustments(a) }.controlSize(.small)
                 }
+                if p.adj.removals.contains(where: { $0.isStale(p.url, p.adj.raw) }) {
+                    Label(tr("Объекты убраны до смены настроек RAW — заплатки могут не совпасть с кадром. Верните и уберите заново."),
+                          systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.orange)
+                }
             }
             // AI noise reduction: computed once per photo (~1 min), then a strength slider.
             VStack(alignment: .leading, spacing: 8) {
@@ -140,7 +145,7 @@ struct EditPanel: View {
                     Spacer()
                     // State at a glance: what this photo has right now.
                     Text(denoiseState(p)).font(.caption.weight(.semibold))
-                        .foregroundStyle(p.adj.aiDenoise > 0 && Denoiser.shared.hasResult(p.url) ? Color.accentColor : .secondary)
+                        .foregroundStyle(p.adj.aiDenoise > 0 && Denoiser.shared.hasResult(p.url, p.adj.raw) ? Color.accentColor : .secondary)
                 }
                 if lib.denoiseRunning {
                     ProgressView(value: (Double(lib.denoiseDone) + lib.denoiseFraction) / Double(max(lib.denoiseTotal, 1)))
@@ -149,7 +154,7 @@ struct EditPanel: View {
                         Spacer()
                         Button(tr("Стоп")) { lib.stopDenoise() }.controlSize(.small)
                     }
-                } else if Denoiser.shared.hasResult(p.url) {
+                } else if Denoiser.shared.hasResult(p.url, p.adj.raw) {
                     Toggle(tr("Применить к этому кадру"), isOn: Binding(get: { p.adj.aiDenoise > 0 }, set: { on in
                         var a = p.adj; a.aiDenoise = on ? 70 : 0; lib.setAdjustments(a)
                     }))
@@ -433,7 +438,7 @@ struct EditPanel: View {
     /// "Off", "Computing…", "Computed, off" or "On · 70" — for the denoise header.
     private func denoiseState(_ p: Photo) -> String {
         if lib.denoiseRunning { return tr("считается…") }
-        guard Denoiser.shared.hasResult(p.url) else { return tr("не применено") }
+        guard Denoiser.shared.hasResult(p.url, p.adj.raw) else { return tr("не применено") }
         return p.adj.aiDenoise > 0 ? tr("включено · \(Int(p.adj.aiDenoise))") : tr("посчитано, выключено")
     }
 
@@ -691,7 +696,7 @@ struct StylePreview: View {
             guard let url = photo?.url else { return }
             let a = adj
             if let c = Renderer.shared.cachedThumbnail(url, a, size: 220) { image = c; return }
-            image = await Task.detached(priority: .utility) { Renderer.shared.thumbnail(url, a, size: 220) }.value
+            image = await Task.detached(priority: .utility) { await Renderer.shared.thumbnail(url, a, size: 220) }.value
         }
     }
 }

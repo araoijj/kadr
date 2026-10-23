@@ -89,7 +89,7 @@ struct ZoomableLoupe: View {
         let whole = place(CGRect(x: 0, y: 0, width: 1, height: 1))
         return ZStack(alignment: .topLeading) {
             // Backdrop: the whole frame at low resolution, shown immediately (while the sharp tile is being rendered).
-            if let low = Renderer.shared.cachedThumbnail(photo.url, adj, size: 1600) ?? ImageStore.shared.cachedPreview(photo.url) {
+            if let low = Renderer.shared.cachedLowRes(photo.url, adj) ?? ImageStore.shared.cachedPreview(photo.url) {
                 Image(decorative: low, scale: 1).resizable().interpolation(.medium)
                     .frame(width: whole.width, height: whole.height)
                     .offset(x: whole.minX, y: whole.minY)
@@ -172,14 +172,20 @@ struct RegionKey: Hashable {
     let adj: Adjustments
     let region: CGRect
     let pixels: CGSize
+    /// Read in body, so a LUT replaced under the same name re-renders the tile (like ThumbKey).
+    var luts = LUTRevision.shared.value
 
     func hash(into h: inout Hasher) {
-        h.combine(url); h.combine(adj)
+        h.combine(url); h.combine(adj); h.combine(luts)
         for v in [region.minX, region.minY, region.width, region.height] { h.combine((v * 2000).rounded()) }
         h.combine(pixels.width); h.combine(pixels.height)
     }
 
-    static func == (a: RegionKey, b: RegionKey) -> Bool { a.hashValue == b.hashValue }
+    // Field by field on the same rounding as the hash: equal hashes of different keys must not count as equal.
+    static func == (a: RegionKey, b: RegionKey) -> Bool {
+        func q(_ r: CGRect) -> [CGFloat] { [r.minX, r.minY, r.width, r.height].map { ($0 * 2000).rounded() } }
+        return a.url == b.url && a.adj == b.adj && a.luts == b.luts && q(a.region) == q(b.region) && a.pixels == b.pixels
+    }
 }
 
 /// Corner thumbnail with a box around the visible area; click or drag to jump there.
@@ -190,7 +196,7 @@ struct Navigator: View {
     @Environment(Library.self) private var lib
 
     var body: some View {
-        if let img = Renderer.shared.cachedThumbnail(photo.url, adj, size: 1600) ?? ImageStore.shared.cachedPreview(photo.url) {
+        if let img = Renderer.shared.cachedLowRes(photo.url, adj) ?? ImageStore.shared.cachedPreview(photo.url) {
             let w: CGFloat = 170, h = w * CGFloat(img.height) / CGFloat(img.width)
             ZStack(alignment: .topLeading) {
                 Image(decorative: img, scale: 1).resizable().frame(width: w, height: h).opacity(0.85)

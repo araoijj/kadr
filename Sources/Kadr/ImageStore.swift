@@ -52,7 +52,19 @@ final class ImageStore: @unchecked Sendable {
         }
         if raw, max(img.width, img.height) < 1000, let big = make(true) { img = big }
         thumbs.setObject(img, forKey: url as NSURL, cost: img.bytesPerRow * img.height)
+        aspectLock.lock(); aspects[url] = CGFloat(img.width) / CGFloat(img.height); aspectLock.unlock()
         return img
+    }
+
+    private let aspectLock = NSLock()
+    private var aspects: [URL: CGFloat] = [:]
+
+    /// Shape of a preview decoded this session (orientation and camera crop), kept after the preview
+    /// itself leaves the cache: sizes are then right without decoding it again.
+    func previewAspect(_ url: URL) -> CGFloat? {
+        if let c = thumbs.object(forKey: url as NSURL) { return CGFloat(c.width) / CGFloat(c.height) }
+        aspectLock.lock(); defer { aspectLock.unlock() }
+        return aspects[url]
     }
 
     /// JPEG downscaled while decoding (4× DCT: 6000 px → 1500 px), twice as fast as a full decode.
@@ -147,7 +159,22 @@ final class ImageStore: @unchecked Sendable {
         info.focal = ex[kCGImagePropertyExifFocalLength] as? Double
         info.width = p[kCGImagePropertyPixelWidth] as? Int
         info.height = p[kCGImagePropertyPixelHeight] as? Int
+        info.orientation = p[kCGImagePropertyOrientation] as? Int
         return info
+    }
+
+    /// Frame size in pixels as shown: dimensions from EXIF, the shape (orientation and the camera crop,
+    /// e.g. a 4:3 shot in a 3:2 RAW) from the preview. Preview proportions are inexact (1616×1080 ≠ 3:2),
+    /// so only their "shape" is taken. Without a preview the EXIF orientation turns the frame.
+    static func frameSize(_ ex: ExifInfo, previewAspect pa: CGFloat?) -> CGSize {
+        let W = CGFloat(ex.width ?? 0), H = CGFloat(ex.height ?? 0)
+        guard W > 0, H > 0 else { return CGSize(width: 1000 * (pa ?? 1.5), height: 1000) }
+        guard let pa else { return (5...8).contains(ex.orientation ?? 1) ? CGSize(width: H, height: W) : CGSize(width: W, height: H) }
+        let long = max(W, H), short = min(W, H)
+        var w = pa >= 1 ? long : short, h = pa >= 1 ? short : long
+        // The camera cropped (e.g. 4:3): the preview proportions are noticeably different.
+        if abs(w / h - pa) / pa > 0.02 { if pa < w / h { w = h * pa } else { h = w / pa } }
+        return CGSize(width: w.rounded(), height: h.rounded())
     }
 
     // MARK: - Analysis: similarity and sharpness
@@ -170,7 +197,8 @@ final class ImageStore: @unchecked Sendable {
     func sharpness(_ img: CGImage) -> Double? {
         let w = 640, h = Int(Double(w) * Double(img.height) / Double(img.width))
         guard h > 4, let g = grayscale(img, width: w, height: h) else { return nil }
-        let x0 = w / 6, x1 = w - w / 6, y0 = h / 6, y1 = h - h / 6
+        // The Laplacian reads the neighbours: keep a 1-px border even when a panorama leaves only a few rows.
+        let x0 = max(1, w / 6), x1 = min(w - 1, w - w / 6), y0 = max(1, h / 6), y1 = min(h - 1, h - h / 6)
         var sum = 0.0, sq = 0.0, n = 0.0
         for y in y0..<y1 {
             for x in x0..<x1 {

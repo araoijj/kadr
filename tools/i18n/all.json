@@ -5958,5 +5958,15 @@
   "Keywords not written",
   "No se escribieron las palabras clave",
   "Parole chiave non scritte"
+ ],
+ "Модель «Убрать объект» другой версии: нет «{}». Переустановите модели (Настройки → AI).": [
+  "The Remove Object model is a different version: “{}” is missing. Reinstall the models (Settings → AI).",
+  "El modelo de «Eliminar objeto» es de otra versión: falta «{}». Reinstala los modelos (Ajustes → IA).",
+  "Il modello «Rimuovi oggetto» è di un'altra versione: manca «{}». Reinstalla i modelli (Impostazioni → IA)."
+ ],
+ "Объекты убраны до смены настроек RAW — заплатки могут не совпасть с кадром. Верните и уберите заново.": [
+  "Objects were removed before the RAW settings changed — the patches may not match the photo. Restore them and remove again.",
+  "Los objetos se quitaron antes de cambiar los ajustes RAW: los parches pueden no coincidir con la foto. Restáuralos y quítalos de nuevo.",
+  "Gli oggetti sono stati rimossi prima di cambiare le impostazioni RAW: le toppe potrebbero non coincidere con la foto. Ripristinali e rimuovili di nuovo."
  ]
 }

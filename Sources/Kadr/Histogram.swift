@@ -87,9 +87,9 @@ struct HistogramView: View {
         .task(id: photo.map { ThumbKey(url: $0.url, adj: $0.adj) }) {
             guard let p = photo else { return }
             let url = p.url, adj = p.adj
-            // Compute from the preview with the same edits: fast, and it matches what's on screen.
+            // A small render through the same develop chain as the loupe, so it matches what's on screen.
             let d = await Task.detached(priority: .utility) { () -> HistogramData? in
-                Renderer.shared.thumbnail(url, adj, size: 480).map(HistogramData.compute)
+                await Renderer.shared.thumbnail(url, adj, size: 480).map(HistogramData.compute)
             }.value
             if let d { withAnimation(.easeOut(duration: 0.15)) { data = d } }
         }

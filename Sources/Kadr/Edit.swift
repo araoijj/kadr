@@ -2,6 +2,7 @@ import AppKit
 import CoreImage
 import Foundation
 import ImageIO
+import Observation
 
 /// Per-frame edit settings. Sliders are −100…100 (exposure in EV, hues in degrees); 0 means no change.
 struct Adjustments: Codable, Equatable, Hashable {
@@ -381,6 +382,13 @@ enum StyleStore {
     }
 }
 
+/// Bumped when a LUT file is replaced under the same name. Settings only name the LUT, so the views' ThumbKey
+/// reads this (observed in body) to render again. Touched on the main thread only.
+@Observable final class LUTRevision {
+    static let shared = LUTRevision()
+    var value = 0
+}
+
 /// LUTs: .cube (3D) or HaldCLUT .png of any level. Parsed once and kept in memory.
 /// Stored in the app's LUT folder, including collection subfolders.
 final class LUTStore: @unchecked Sendable {
@@ -429,7 +437,14 @@ final class LUTStore: @unchecked Sendable {
         var ok: [String] = []
         for u in urls where Self.isLUT(u.lastPathComponent) {
             let dest = AppFolders.luts.appendingPathComponent(u.lastPathComponent)
-            try? FileManager.default.removeItem(at: dest)
+            // A file with the same name replaces the old LUT: forget its parsed cube and the thumbnails made with it,
+            // and re-render the views showing it (their ThumbKey carries the revision).
+            if FileManager.default.fileExists(atPath: dest.path) {
+                try? FileManager.default.removeItem(at: dest)
+                lock.withLock { cache[u.lastPathComponent] = nil }
+                Renderer.shared.clearThumbnails()
+                LUTRevision.shared.value += 1
+            }
             if (try? FileManager.default.copyItem(at: u, to: dest)) != nil, cube(u.lastPathComponent) != nil {
                 ok.append(u.lastPathComponent)
             } else {
@@ -450,26 +465,66 @@ final class LUTStore: @unchecked Sendable {
         return parsed
     }
 
+    /// Malformed lines are skipped. DOMAIN_MIN/MAX is the range of input values the grid spans; such cubes are
+    /// resampled onto 0…1, the range Core Image looks them up in. Output values are taken as they are.
     private static func parseCube(_ url: URL) -> (size: Int, data: Data)? {
         guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
         var size = 0
         var values: [Float] = []
         var lo: [Float] = [0, 0, 0], hi: [Float] = [1, 1, 1]
+        func triple(_ parts: [Substring]) -> [Float]? {
+            let v = parts.dropFirst().prefix(3).compactMap { Float($0) }
+            return v.count == 3 ? v : nil
+        }
         for raw in text.split(whereSeparator: \.isNewline) {
             let line = raw.trimmingCharacters(in: .whitespaces)
             if line.isEmpty || line.hasPrefix("#") { continue }
             let parts = line.split(whereSeparator: { $0 == " " || $0 == "\t" })
-            if line.hasPrefix("LUT_3D_SIZE"), parts.count > 1 { size = Int(parts[1]) ?? 0; continue }
-            if line.hasPrefix("DOMAIN_MIN"), parts.count > 3 { lo = parts[1...3].compactMap { Float($0) }; continue }
-            if line.hasPrefix("DOMAIN_MAX"), parts.count > 3 { hi = parts[1...3].compactMap { Float($0) }; continue }
+            if parts[0] == "LUT_3D_SIZE" { size = parts.count > 1 ? Int(parts[1]) ?? 0 : 0; continue }
+            if parts[0] == "DOMAIN_MIN" { lo = triple(parts) ?? lo; continue }
+            if parts[0] == "DOMAIN_MAX" { hi = triple(parts) ?? hi; continue }
             if line.first?.isLetter == true { continue }   // TITLE, LUT_1D_SIZE and the like
             let rgb = parts.prefix(3).compactMap { Float($0) }
             guard rgb.count == 3 else { continue }
-            for i in 0..<3 { values.append((rgb[i] - lo[i]) / max(hi[i] - lo[i], 0.0001)) }
+            values.append(contentsOf: rgb)
             values.append(1)
         }
-        guard size >= 2, values.count == size * size * size * 4 else { return nil }
+        guard (2...256).contains(size), values.count == size * size * size * 4 else { return nil }
+        if lo != [0, 0, 0] || hi != [1, 1, 1] {
+            guard (0..<3).allSatisfy({ hi[$0] > lo[$0] }) else { return nil }
+            values = resample(values, size, lo, hi)
+        }
         return (size, values.withUnsafeBufferPointer { Data(buffer: $0) })
+    }
+
+    /// Cube over the input range lo…hi → the same cube over 0…1 (trilinear; inputs outside the range are clamped to it).
+    private static func resample(_ src: [Float], _ n: Int, _ lo: [Float], _ hi: [Float]) -> [Float] {
+        var out = [Float](repeating: 1, count: src.count)
+        func at(_ r: Int, _ g: Int, _ b: Int, _ ch: Int) -> Float { src[(r + g * n + b * n * n) * 4 + ch] }
+        func coord(_ i: Int, _ ch: Int) -> (Int, Int, Float) {
+            let x = Float(i) / Float(n - 1)
+            let f = min(max((x - lo[ch]) / (hi[ch] - lo[ch]), 0), 1) * Float(n - 1)
+            let i0 = min(Int(f), n - 2)
+            return (i0, i0 + 1, f - Float(i0))
+        }
+        for b in 0..<n {
+            let (b0, b1, db) = coord(b, 2)
+            for g in 0..<n {
+                let (g0, g1, dg) = coord(g, 1)
+                for r in 0..<n {
+                    let (r0, r1, dr) = coord(r, 0)
+                    let i = (r + g * n + b * n * n) * 4
+                    for ch in 0..<3 {
+                        let c00 = at(r0, g0, b0, ch) * (1 - dr) + at(r1, g0, b0, ch) * dr
+                        let c10 = at(r0, g1, b0, ch) * (1 - dr) + at(r1, g1, b0, ch) * dr
+                        let c01 = at(r0, g0, b1, ch) * (1 - dr) + at(r1, g0, b1, ch) * dr
+                        let c11 = at(r0, g1, b1, ch) * (1 - dr) + at(r1, g1, b1, ch) * dr
+                        out[i + ch] = (c00 * (1 - dg) + c10 * dg) * (1 - db) + (c01 * (1 - dg) + c11 * dg) * db
+                    }
+                }
+            }
+        }
+        return out
     }
 
     /// HaldCLUT of level L: an L³×L³ image, an L² cube; cubes larger than 64 are resampled to 64.
@@ -531,17 +586,21 @@ enum EditPipeline {
     private static let mixKernel = CIColorKernel(source:
         "kernel vec4 mixk(__sample a, __sample b, float k) { return vec4(max(a.rgb + (b.rgb - a.rgb) * k, vec3(0.0)), a.a); }")!
 
+    /// How much straightening by `angle` degrees zooms a `size` frame in so there are no empty corners.
+    static func straightenZoom(_ size: CGSize, angle: Double) -> CGFloat {
+        guard angle != 0, size.width > 0, size.height > 0 else { return 1 }
+        let t: CGFloat = CGFloat(abs(angle)) * .pi / 180
+        let w: CGFloat = size.width, h: CGFloat = size.height
+        let c: CGFloat = cos(t), sn: CGFloat = sin(t)
+        return max((w * c + h * sn) / w, (w * sn + h * c) / h)
+    }
+
     /// Horizon straightening (with zoom so there are no empty corners) and cropping.
     static func geometry(_ input: CIImage, _ a: Adjustments) -> CIImage {
         var img = input
         let e = input.extent
         if a.angle != 0 {
-            let t: CGFloat = CGFloat(abs(a.angle)) * .pi / 180
-            let w: CGFloat = e.width, h: CGFloat = e.height
-            let c: CGFloat = cos(t), sn: CGFloat = sin(t)
-            let sx: CGFloat = (w * c + h * sn) / w
-            let sy: CGFloat = (w * sn + h * c) / h
-            let s: CGFloat = max(sx, sy)
+            let s = straightenZoom(e.size, angle: a.angle)
             let rot: CGFloat = CGFloat(-a.angle) * .pi / 180
             var tr = CGAffineTransform(translationX: -e.midX, y: -e.midY)
             tr = tr.concatenating(CGAffineTransform(rotationAngle: rot))
@@ -557,8 +616,33 @@ enum EditPipeline {
         return img
     }
 
+    /// Where a rectangle of the source frame (fractions, y top-down) lands in the edited frame after `geometry`:
+    /// turned and zoomed by the straightening around the center, then cut by the crop. `size` is the source frame.
+    static func outputRect(_ r: CGRect, _ a: Adjustments, size: CGSize) -> CGRect {
+        guard size.width > 0, size.height > 0 else { return r }
+        var c = CGPoint(x: r.midX * size.width, y: r.midY * size.height)
+        var w = r.width * size.width, h = r.height * size.height
+        if a.angle != 0 {
+            // geometry turns by -angle with y up, which is +angle with y down.
+            let s = straightenZoom(size, angle: a.angle), t = CGFloat(a.angle) * .pi / 180
+            let dx = c.x - size.width / 2, dy = c.y - size.height / 2
+            c = CGPoint(x: size.width / 2 + s * (dx * cos(t) - dy * sin(t)), y: size.height / 2 + s * (dx * sin(t) + dy * cos(t)))
+            w *= s; h *= s
+        }
+        let f = CGRect(x: (c.x - w / 2) / size.width, y: (c.y - h / 2) / size.height, width: w / size.width, height: h / size.height)
+        return CGRect(x: (f.minX - a.cropX) / a.cropW, y: (f.minY - a.cropY) / a.cropH, width: f.width / a.cropW, height: f.height / a.cropH)
+    }
+
     private static let grainKernel = CIColorKernel(source:
         "kernel vec4 grain(__sample s, __sample n, float a) { return vec4(s.rgb * (1.0 + (n.r - 0.5) * a), s.a); }")!
+
+    /// The develop chain the loupe, thumbnails, estimate and export share: the settings over a developed `source`,
+    /// with this photo's camera profile, as-shot white balance and AI noise reduction result.
+    /// `small`: a downscaled noise reduction result will do (thumbnails up to 1600 px).
+    static func render(_ a: Adjustments, _ url: URL, source: CIImage, small: Bool = false) -> CIImage {
+        apply(a, to: source, cameraCube: a.profile == .camera ? CameraMatch.shared.cube(for: url) : nil,
+              asShotK: ImageStore.shared.asShotK(url), denoised: Denoiser.shared.input(for: url, a, small: small))
+    }
 
     /// Applies the settings to a linear image (CIRAWFilter output or a preview).
     /// cameraCube is the fitted "Camera matching" profile (developed RAW only).
@@ -604,7 +688,10 @@ enum EditPipeline {
         if a.clarity != 0 {
             let radius = longSide * 0.012
             if a.clarity > 0 {
-                img = img.applyingFilter("CIUnsharpMask", parameters: [kCIInputRadiusKey: radius, kCIInputIntensityKey: a.clarity / 100 * 0.6])
+                // Clamped first: otherwise the blur pulls in transparency and the mask brightens every edge.
+                img = img.clampedToExtent()
+                    .applyingFilter("CIUnsharpMask", parameters: [kCIInputRadiusKey: radius, kCIInputIntensityKey: a.clarity / 100 * 0.6])
+                    .cropped(to: e)
             } else {
                 let blur = img.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: radius]).cropped(to: e)
                 img = img.applyingFilter("CIDissolveTransition", parameters: [kCIInputTargetImageKey: blur, kCIInputTimeKey: -a.clarity / 100 * 0.35])
@@ -646,11 +733,11 @@ enum EditPipeline {
         if a.shadowSat > 0 { img = tone(img, hue: a.shadowHue, sat: a.shadowSat, shadows: true) }
         if a.highlightSat > 0 { img = tone(img, hue: a.highlightHue, sat: a.highlightSat, shadows: false) }
 
-        // 6½. Sharpening of luminance only (no color fringes). The radius grows with the frame size,
-        // so the preview and a full-size export look alike.
+        // 6½. Sharpening of luminance only (no color fringes). The radius is strictly proportional to the frame size,
+        // so a small preview looks like the full-size export scaled down. Clamped, so the edges don't sample transparency.
         if a.sharpen > 0 {
-            img = img.applyingFilter("CISharpenLuminance", parameters: [
-                "inputSharpness": a.sharpen / 100 * 2, kCIInputRadiusKey: max(1, longSide / 4000),
+            img = img.clampedToExtent().applyingFilter("CISharpenLuminance", parameters: [
+                "inputSharpness": a.sharpen / 100 * 2, kCIInputRadiusKey: longSide / 4000,
             ]).cropped(to: e)
         }
 
@@ -662,13 +749,15 @@ enum EditPipeline {
         }
 
         // 8. Grain: each pixel is multiplied by 1 ± noise (mean brightness is unchanged; verified by measurement).
-        // Noise is scaled up with the frame size, so it looks the same in the preview and in the export.
+        // A grain cell is 1/2400 of the long side, so the preview is the export scaled down. Below a pixel the noise
+        // can't be drawn smaller, so it is drawn per pixel and weakened instead: a pixel averaging 1/scale² cells
+        // has 1/scale times less noise.
         if a.grain > 0 {
-            let scale = max(1, longSide / 2400)
+            let scale = longSide / 2400
             let noise = CIFilter(name: "CIRandomGenerator")!.outputImage!
-                .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                .transformed(by: CGAffineTransform(scaleX: max(scale, 1), y: max(scale, 1)))
                 .cropped(to: e)
-            img = grainKernel.apply(extent: e, arguments: [img, noise, a.grain / 100 * 0.7]) ?? img
+            img = grainKernel.apply(extent: e, arguments: [img, noise, a.grain / 100 * 0.7 * min(scale, 1)]) ?? img
         }
         return img.cropped(to: e)
     }
@@ -689,9 +778,11 @@ enum EditPipeline {
     /// The source as a linear CIImage. maxSide downscales during development (faster); nil means full size.
     /// For RAW we replicate the camera crop: if the camera JPEG has a different aspect ratio (e.g. shot in 4:3),
     /// we center-crop the same way; otherwise extra edges would appear in the frame after the first edit.
-    static func source(_ url: URL, maxSide: CGFloat?, raw develop: RawDevelop = RawDevelop()) -> CIImage? {
+    /// `draft`: the RAW's faster, rougher development, for thumbnails.
+    static func source(_ url: URL, maxSide: CGFloat?, raw develop: RawDevelop = RawDevelop(), draft: Bool = false) -> CIImage? {
         if ImageStore.rawExtensions.contains(url.pathExtension.lowercased()), let raw = CIRAWFilter(imageURL: url) {
             develop.apply(to: raw)
+            if draft { raw.isDraftModeEnabled = true }
             if let maxSide {
                 let n = raw.nativeSize
                 let k = maxSide / max(n.width, n.height)
@@ -700,17 +791,19 @@ enum EditPipeline {
             guard let img = raw.outputImage else { return nil }
             return cropToCamera(img, url)
         }
-        guard var img = CIImage(contentsOf: url, options: [.applyOrientationProperty: true]) else { return nil }
-        if let maxSide {
-            let e = img.extent
-            let k = maxSide / max(e.width, e.height)
-            // Clamped before and cropped after, or the edge pixels sample transparency (a light 1-px line).
-            if k < 1 {
-                img = img.clampedToExtent().applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k])
-                    .cropped(to: CGRect(x: e.minX * k, y: e.minY * k, width: e.width * k, height: e.height * k).integral)
-            }
-        }
-        return img
+        guard let img = CIImage(contentsOf: url, options: [.applyOrientationProperty: true]) else { return nil }
+        return maxSide.map { fit(img, maxSide: $0) } ?? img
+    }
+
+    /// Downscales so the long side is at most maxSide, to whole pixels.
+    /// Clamped before and cropped after, or the edge pixels sample transparency (a light 1-px line).
+    static func fit(_ img: CIImage, maxSide: CGFloat) -> CIImage {
+        let e = img.extent
+        let k = min(1, maxSide / max(e.width, e.height))
+        guard k < 1 || e != e.integral else { return img }
+        let scaled = k < 1 ? img.clampedToExtent().applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: k])
+                           : img.clampedToExtent()
+        return scaled.cropped(to: CGRect(x: e.minX * k, y: e.minY * k, width: e.width * k, height: e.height * k).integral)
     }
 
     static func cropToCamera(_ img: CIImage, _ url: URL) -> CIImage {

@@ -145,6 +145,8 @@ enum CullAnalyzer {
         if base == nil { d.modules = [] }   // a fresh record has nothing computed yet (not the legacy "everything")
         var m = modules
         if m.contains(.identity) { m.insert(.faces) }   // recognition aligns by the face mesh points
+        // New faces drop the identity vectors: recompute them along, or the photo stays "computed" without people.
+        if m.contains(.faces), d.computed.contains(.identity) { m.insert(.identity) }
         // Subject sharpness and clipping on the face/subject depend on the faces: recompute them along.
         if m.contains(.faces) || m.contains(.subject) { m.formUnion(d.computed.intersection([.subject, .exposure])) }
         if #available(macOS 15.0, *) {

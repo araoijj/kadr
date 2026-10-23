@@ -32,17 +32,14 @@ extension Library {
     }
 
     /// RAW frame size in pixels: orientation and camera crop come from the preview, dimensions from EXIF.
-    /// Preview proportions are inexact (1616×1080 ≠ 3:2), so we only take their "shape".
+    /// The preview is decoded once if this session hasn't seen it: only it knows a RAW's camera crop
+    /// (4:3 in a 3:2 sensor); other formats need it only for an index from before the orientation was stored.
     func pixelSize(_ p: Photo) -> CGSize {
         let ex = p.exif.width != nil ? p.exif : ImageStore.shared.exif(p.url)
-        let prev = ImageStore.shared.cachedPreview(p.url) ?? ImageStore.shared.preview(p.url)
-        let pa = prev.map { CGFloat($0.width) / CGFloat($0.height) } ?? 1.5
-        let long = CGFloat(max(ex.width ?? 0, ex.height ?? 0)), short = CGFloat(min(ex.width ?? 0, ex.height ?? 0))
-        guard long > 0, short > 0 else { return CGSize(width: 1000 * pa, height: 1000) }
-        var w = pa >= 1 ? long : short, h = pa >= 1 ? short : long
-        // The camera cropped (e.g. 4:3): the preview proportions are noticeably different.
-        if abs(w / h - pa) / pa > 0.02 { if pa < w / h { w = h * pa } else { h = w / pa } }
-        return CGSize(width: w.rounded(), height: h.rounded())
+        let needs = ex.orientation == nil || ImageStore.rawExtensions.contains(p.url.pathExtension.lowercased())
+        let pa = ImageStore.shared.previewAspect(p.url)
+            ?? (needs ? ImageStore.shared.preview(p.url).map { CGFloat($0.width) / CGFloat($0.height) } : nil)
+        return ImageStore.frameSize(ex, previewAspect: pa)
     }
 
     /// The largest centered box of the requested format.
@@ -151,7 +148,7 @@ struct CropEditor: View {
                     RoundedRectangle(cornerRadius: 2).fill(Color.white).frame(width: 14, height: 14).offset(x: pt.x - 7, y: pt.y - 7)
                 }
                 // Result size.
-                Text(sizeLabel(r, a))
+                Text(sizeLabel(r))
                     .font(.caption.monospacedDigit())
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(.black.opacity(0.65), in: Capsule())
@@ -179,13 +176,10 @@ struct CropEditor: View {
         }
     }
 
-    private func sizeLabel(_ r: CGRect, _ a: Double) -> String {
-        let ex = photo.exif
-        let long = Double(max(ex.width ?? 0, ex.height ?? 0)), short = Double(min(ex.width ?? 0, ex.height ?? 0))
-        guard long > 0 else { return "" }
-        var w = a >= 1 ? long : short, h = a >= 1 ? short : long
-        if abs(w / h - a) / a > 0.02 { if a < w / h { w = h * a } else { h = w / a } }
-        return "\(Int(w * r.width)) × \(Int(h * r.height))"
+    private func sizeLabel(_ r: CGRect) -> String {
+        guard (photo.exif.width ?? 0) > 0 else { return "" }
+        let s = lib.pixelSize(photo)
+        return "\(Int(s.width * r.width)) × \(Int(s.height * r.height))"
     }
 
     private func hit(_ p: CGPoint, _ b: CGRect) -> Handle {

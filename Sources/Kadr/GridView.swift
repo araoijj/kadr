@@ -252,6 +252,8 @@ struct Stars: View {
 struct ThumbKey: Hashable {
     let url: URL
     let adj: Adjustments
+    /// Read in body, so a LUT replaced under the same name re-renders the view.
+    var luts = LUTRevision.shared.value
 }
 
 struct SectionHeader: View {

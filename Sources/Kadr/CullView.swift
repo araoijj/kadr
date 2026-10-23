@@ -107,13 +107,12 @@ struct FaceCrop: View {
             }
         }
         .task(id: ThumbKey(url: photo.url, adj: photo.adj)) {
-            // Face in the cropped image's coordinates; a square around the face at ~100% (380 px on Retina).
+            // Face in the edited image's coordinates (straightened and cropped); a square around the face at ~100% (380 px on Retina).
             let a = photo.adj
             // Square in pixels (a 3:2 frame makes it a rectangle in fractions), within the image bounds.
             let ps = lib.pixelSize(photo)
             let W = ps.width * a.cropW, H = ps.height * a.cropH
-            var f = face.rect
-            f = CGRect(x: (f.minX - a.cropX) / a.cropW, y: (f.minY - a.cropY) / a.cropH, width: f.width / a.cropW, height: f.height / a.cropH)
+            let f = EditPipeline.outputRect(face.rect, a, size: ps)
             let sidePx = min(max(f.width * W, f.height * H) * 1.5, W, H)
             let rw = sidePx / W, rh = sidePx / H
             let r = CGRect(x: min(max(f.midX - rw / 2, 0), 1 - rw), y: min(max(f.midY - rh / 2, 0), 1 - rh), width: rw, height: rh)

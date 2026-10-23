@@ -8,12 +8,24 @@ import Foundation
 struct Removal: Codable, Hashable, Sendable {
     var id: String
     var x: Double, y: Double, w: Double, h: Double
+    /// The RAW development the patch was painted on (`RawDevelop.base(for:)`); nil = the default (older patches too).
+    var raw: RawDevelop?
     var rect: CGRect { CGRect(x: x, y: y, width: w, height: h) }
+
+    /// Painted on a differently developed base (e.g. before lens correction was turned on): it no longer
+    /// lines up with the photo or matches its tone, and should be redone.
+    func isStale(_ url: URL, _ develop: RawDevelop) -> Bool { (raw ?? RawDevelop()) != develop.base(for: url) }
+}
+
+/// A Core ML model without an output or input the code relies on (another version of the model was installed).
+struct ModelFeatureMissing: LocalizedError {
+    let name: String
+    var errorDescription: String? { tr("Модель «Убрать объект» другой версии: нет «\(name)». Переустановите модели (Настройки → AI).") }
 }
 
 /// "Remove Object": click → SAM 2.1 (Meta, Apache 2.0; Core ML by Apple) selects the object →
-/// LaMa (Apache 2.0) paints it out. The patch is computed from the developed RAW base (before the profile
-/// and edits), so colors match; the photo itself is never changed.
+/// LaMa (Apache 2.0) paints it out. The patch is computed from the developed RAW base with the photo's RAW
+/// settings and earlier removals (before the profile and edits), so colors match; the photo itself is never changed.
 final class Retouch: @unchecked Sendable {
     static let shared = Retouch()
     static let files = ["SAM2_1SmallImageEncoderFLOAT16", "SAM2_1SmallPromptEncoderFLOAT16", "SAM2_1SmallMaskDecoderFLOAT16", "LaMa"]
@@ -24,6 +36,8 @@ final class Retouch: @unchecked Sendable {
     private var installedCache: Bool?
     private var embedding: (url: URL, out: MLFeatureProvider)?
     private let context = CIContext(options: [.workingFormat: CIFormat.RGBAh, .cacheIntermediates: false])
+    /// One context for the mask helpers: creating a CIContext per call costs more than the work itself.
+    private static let maskContext = CIContext(options: [.cacheIntermediates: false])
     var folder: URL { FaceMesh.shared.folder }
 
     var installed: Bool {
@@ -88,7 +102,8 @@ final class Retouch: @unchecked Sendable {
 
     /// Mask of the object under the clicks (fractions of the frame, top-down) at the preview's size:
     /// of SAM's three candidates, the largest one with a decent score — the whole object, not a part of it.
-    func segment(_ url: URL, points: [CGPoint]) -> Selection? {
+    /// Throws ModelFeatureMissing when the installed SAM is a version with other feature names.
+    func segment(_ url: URL, points: [CGPoint]) throws -> Selection? {
         guard let enc = model(Self.files[0]), let pe = model(Self.files[1]), let dec = model(Self.files[2]),
               let prev = ImageStore.shared.preview(url), !points.isEmpty else { return nil }
         // The image embedding (the slow part, ~0.3 s) is computed once per photo.
@@ -100,6 +115,11 @@ final class Retouch: @unchecked Sendable {
             e = out
         }
         guard let e else { return nil }
+        func feature(_ n: String) throws -> MLFeatureValue {
+            guard let v = e.featureValue(for: n) else { throw ModelFeatureMissing(name: n) }
+            return v
+        }
+        let emb = try feature("image_embedding"), s0 = try feature("feats_s0"), s1 = try feature("feats_s1")
         // One click at a time (the prompt encoder takes one point); masks of several clicks are united.
         var union: [Float]?
         var score = 1.0, lastMissed = false
@@ -112,8 +132,7 @@ final class Retouch: @unchecked Sendable {
             if let po = try? pe.prediction(from: MLDictionaryFeatureProvider(dictionary: ["points": pts, "labels": lab])),
                let sp = po.featureValue(for: "sparse_embeddings"), let de = po.featureValue(for: "dense_embeddings"),
                let out = try? dec.prediction(from: MLDictionaryFeatureProvider(dictionary: [
-                   "image_embedding": e.featureValue(for: "image_embedding")!, "sparse_embedding": sp, "dense_embedding": de,
-                   "feats_s0": e.featureValue(for: "feats_s0")!, "feats_s1": e.featureValue(for: "feats_s1")!])),
+                   "image_embedding": emb, "sparse_embedding": sp, "dense_embedding": de, "feats_s0": s0, "feats_s1": s1])),
                let masks = out.featureValue(for: "low_res_masks")?.multiArrayValue,
                let scores = out.featureValue(for: "scores")?.multiArrayValue {
                 for k in 0..<3 where scores[k].floatValue >= 0.5 {
@@ -177,9 +196,12 @@ final class Retouch: @unchecked Sendable {
     /// Paints out the masked object. LaMa works on a square around it (1.8× the object, at least 512 px of the
     /// frame) at 800×800, so a large object comes out softer: it needs that much surrounding background to
     /// invent a believable one (splitting it into smaller squares was tried — sharper but blotchy).
-    func remove(_ url: URL, mask: CGImage) -> [Removal] {
-        guard let lama = model(Self.files[3]), let base = EditPipeline.source(url, maxSide: nil),
+    /// `raw` and `earlier` are the photo's RAW settings and removals: the patch is painted on the base as the photo
+    /// shows it, so it matches its geometry and tone, and earlier objects don't come back as ghosts in it.
+    func remove(_ url: URL, mask: CGImage, raw: RawDevelop, earlier: [Removal]) -> [Removal] {
+        guard let lama = model(Self.files[3]), let src = EditPipeline.source(url, maxSide: nil, raw: raw),
               let mb = Self.boundingBox(mask) else { return [] }
+        let base = earlier.isEmpty ? src : Self.composite(src, earlier)
         let e = base.extent.integral
         let W = Double(e.width), H = Double(e.height)
         let grow = 0.008   // ~0.8% of the frame: covers the soft rim of the object without biting into neighbors
@@ -228,7 +250,8 @@ final class Retouch: @unchecked Sendable {
                 try context.writePNGRepresentation(of: patch, to: Self.cacheDir.appendingPathComponent(id + ".png"), format: .RGBA8, colorSpace: srgb)
             }
         } catch { return [] }
-        return [Removal(id: id, x: frac.minX, y: frac.minY, w: frac.width, h: frac.height)]
+        let r = raw.base(for: url)
+        return [Removal(id: id, x: frac.minX, y: frac.minY, w: frac.width, h: frac.height, raw: r.isDefault ? nil : r)]
     }
 
     private static func gain(_ g: Double) -> [String: Any] {
@@ -285,7 +308,7 @@ final class Retouch: @unchecked Sendable {
         let ci = CIImage(cgImage: crop).transformed(by: CGAffineTransform(scaleX: Double(size) / Double(crop.width), y: Double(size) / Double(crop.height)))
             .applyingFilter("CIMorphologyMaximum", parameters: [kCIInputRadiusKey: max(1, r)])
             .cropped(to: CGRect(x: 0, y: 0, width: size, height: size))
-        return CIContext().createCGImage(ci, from: CGRect(x: 0, y: 0, width: size, height: size), format: .L8, colorSpace: CGColorSpaceCreateDeviceGray())
+        return maskContext.createCGImage(ci, from: CGRect(x: 0, y: 0, width: size, height: size), format: .L8, colorSpace: CGColorSpaceCreateDeviceGray())
     }
 }
 
@@ -354,10 +377,15 @@ extension Library {
         removeBusy = true
         removeBusyText = Retouch.shared.hasEmbedding(url) ? tr("Выделяю…") : tr("AI изучает кадр… (в первый раз — до 10 с)")
         Task.detached(priority: .userInitiated) {
-            let sel = Retouch.shared.segment(url, points: pts)
+            let res = Result { try Retouch.shared.segment(url, points: pts) }
             await MainActor.run { [weak self] in
                 guard let self, self.currentID == id else { return }
                 self.removeBusy = false; self.removeBusyText = nil
+                guard case .success(let sel) = res else {
+                    if case .failure(let err) = res { self.removeStatus = RemoveStatus(level: .fail, text: err.localizedDescription, blocksApply: true) }
+                    _ = self.removePoints.popLast()
+                    return
+                }
                 self.removeStatus = RemoveStatus.assess(sel)
                 if let sel {
                     self.removeMask = sel.mask; self.removeArea = sel.area
@@ -373,10 +401,10 @@ extension Library {
     func applyRemove() {
         guard let p = current, let mask = removeMask, !removeBusy else { return }
         if removeStatus?.blocksApply == true { flash(removeStatus!.text); return }
-        let url = p.url, id = p.id, large = removeArea > RemoveStatus.largeArea
+        let url = p.url, id = p.id, large = removeArea > RemoveStatus.largeArea, raw = p.adj.raw, earlier = p.adj.removals
         removeBusy = true; removeBusyText = tr("Убираю объект…")
         Task.detached(priority: .userInitiated) {
-            let parts = Retouch.shared.remove(url, mask: mask)
+            let parts = Retouch.shared.remove(url, mask: mask, raw: raw, earlier: earlier)
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.removeBusy = false; self.removeBusyText = nil

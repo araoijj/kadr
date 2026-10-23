@@ -434,9 +434,11 @@ struct PersonTile: View {
             if best == nil || q > best!.q { best = (r, f, q) }
         }
         guard let best, let p = lib.photos.first(where: { $0.url == best.ref.photo }) else { return nil }
-        let adj = p.adj
+        // The face coordinates are of the whole frame: the thumbnail keeps the edits' look but not the crop or straightening.
+        var adj = p.adj
+        adj.cropRect = CGRect(x: 0, y: 0, width: 1, height: 1); adj.angle = 0
         return await Task.detached(priority: .utility) {
-            guard let img = Renderer.shared.thumbnail(best.ref.photo, adj, size: 640) else { return nil }
+            guard let img = await Renderer.shared.thumbnail(best.ref.photo, adj, size: 640) else { return nil }
             let f = best.info
             let W = CGFloat(img.width), H = CGFloat(img.height)
             let side = max(f.w * W, f.h * H) * 1.6
