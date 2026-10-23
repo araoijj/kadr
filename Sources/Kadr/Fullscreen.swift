@@ -72,7 +72,8 @@ struct FullscreenView: View {
         .onChange(of: lib.currentID) { _, _ in reveal() }
         // Sheets open on the library window, under this one: step out so the sheet is seen and gets the keys.
         .onChange(of: lib.showShortcuts || lib.showCullSummary || lib.showExport || lib.showImport) { _, on in
-            if on { Fullscreen.shared.exit() }
+            // Deferred: exit() releases this view's own window, which must not happen mid-update.
+            if on { DispatchQueue.main.async { Fullscreen.shared.exit() } }
         }
         .onContinuousHover { phase in if case .active = phase { reveal() } }
     }
