@@ -528,19 +528,23 @@ private struct ScreenProbe: NSViewRepresentable {
     final class ProbeView: NSView {
         var changed: ((ScreenMetrics) -> Void)?
         // nonisolated(unsafe): deinit removes it; NotificationCenter's removeObserver is thread-safe.
-        nonisolated(unsafe) private var observer: NSObjectProtocol?
+        nonisolated(unsafe) private var observers: [NSObjectProtocol] = []
 
-        deinit { observer.map(NotificationCenter.default.removeObserver) }
+        deinit { observers.forEach(NotificationCenter.default.removeObserver) }
 
         override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            observer.map(NotificationCenter.default.removeObserver)
-            observer = nil
+            observers.forEach(NotificationCenter.default.removeObserver)
+            observers = []
             guard let w = window else { return }
-            observer = NotificationCenter.default.addObserver(forName: NSWindow.didChangeScreenNotification, object: w, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.report() }
+            // Moved to another screen, or the screen itself changed (resolution, scaling) under the window.
+            let nc = NotificationCenter.default
+            for (name, object) in [(NSWindow.didChangeScreenNotification, w as AnyObject?), (NSApplication.didChangeScreenParametersNotification, nil)] {
+                observers.append(nc.addObserver(forName: name, object: object, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.report() }
+                })
             }
             report()
         }
