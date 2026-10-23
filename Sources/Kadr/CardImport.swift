@@ -245,7 +245,19 @@ final class CardImporter {
                     return !cardNames.contains(x.lastPathComponent.lowercased()) && fm.fileExists(atPath: x.path)
                 }
             }
-            if present.count == group.count, present.contains(true) || joinsSibling() || !orphanXMP() { break }
+            // Another camera's photo with this frame number, shot at a different moment, is already here:
+            // under its name this frame would pass for that photo's twin (hidden, moved and exported with it).
+            func strangerSibling() -> Bool {
+                let ours = Set(group.map { name($0.url, suffix: suffix).lowercased() })
+                return ImageStore.imageExtensions.contains { e in
+                    [e, e.uppercased()].contains { ext in
+                        let u = dir.appendingPathComponent(base + suffix + "." + ext)
+                        guard !ours.contains(u.lastPathComponent.lowercased()), fm.fileExists(atPath: u.path) else { return false }
+                        return ImageStore.shared.exif(u).date.map { abs($0.timeIntervalSince(date)) > 2 } ?? false
+                    }
+                }
+            }
+            if present.count == group.count, present.contains(true) || joinsSibling() || (!orphanXMP() && !strangerSibling()) { break }
             n += 1
             suffix = "-\(n)"
         }

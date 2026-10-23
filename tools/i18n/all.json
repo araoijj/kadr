@@ -5953,5 +5953,10 @@
   "Folder unavailable: the drive isn't connected or the folder was moved",
   "Carpeta no disponible: el disco no está conectado o la carpeta se ha movido",
   "Cartella non disponibile: il disco non è collegato o la cartella è stata spostata"
+ ],
+ "Ключевые слова не записаны": [
+  "Keywords not written",
+  "No se escribieron las palabras clave",
+  "Parole chiave non scritte"
  ]
 }

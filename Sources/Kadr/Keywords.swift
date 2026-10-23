@@ -29,7 +29,9 @@ extension Library {
             }
             let done = files, lost = failed
             await MainActor.run { [weak self] in
-                self?.flashWritten(done == 0 ? tr("Ключевые слова уже записаны") : tr("Ключевые слова добавлены, кадров: \(done)"), failed: lost)
+                let head = done > 0 ? tr("Ключевые слова добавлены, кадров: \(done)")
+                    : lost > 0 ? tr("Ключевые слова не записаны") : tr("Ключевые слова уже записаны")
+                self?.flashWritten(head, failed: lost)
             }
         }
     }

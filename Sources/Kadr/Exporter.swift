@@ -300,19 +300,37 @@ enum Exporter {
                 return out
             }
             var target = folder.appendingPathComponent(base).appendingPathExtension("jpg"), n = 2
-            while renamex_np(tmp.path, target.path, UInt32(RENAME_EXCL)) != 0 {
-                guard errno == EEXIST else {
-                    let reason = String(cString: strerror(errno))
+            var failure = renameExclusive(tmp, to: target)
+            while failure != 0 {
+                guard failure == EEXIST else {
+                    let reason = String(cString: strerror(failure))
                     try? fm.removeItem(at: tmp)
                     out.errors.append("\(item.url.lastPathComponent): \(reason)")
                     return out
                 }
                 target = folder.appendingPathComponent("\(base)-\(n)").appendingPathExtension("jpg")
                 n += 1
+                failure = renameExclusive(tmp, to: target)
             }
             out.ok = true
         }
         return out
+    }
+
+    /// Renames `tmp` to `target` unless something is already there; 0 or the errno.
+    /// exFAT and FAT have no RENAME_EXCL (ENOTSUP): there the name is claimed first with O_EXCL,
+    /// then the finished file takes the place of that empty claim.
+    private static func renameExclusive(_ tmp: URL, to target: URL) -> Int32 {
+        if renamex_np(tmp.path, target.path, UInt32(RENAME_EXCL)) == 0 { return 0 }
+        let e = errno
+        guard e == ENOTSUP || e == EINVAL || e == ENOTTY else { return e }
+        let fd = open(target.path, O_CREAT | O_EXCL | O_WRONLY, 0o644)
+        guard fd >= 0 else { return errno }
+        close(fd)
+        if rename(tmp.path, target.path) == 0 { return 0 }
+        let r = errno
+        unlink(target.path)
+        return r
     }
 
     /// The files that travel with a photo: itself, its XMP and — only for a RAW — the camera's JPEG/HEIF twin.
